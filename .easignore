@@ -1,0 +1,70 @@
+# EAS Build upload allowlist. WARNING: when this file exists, EAS CLI ignores
+# `.gitignore` entirely — so this file starts as a full copy of `.gitignore`,
+# then adds EAS-only excludes below (marked [eas]).
+# Docs: https://docs.expo.dev/build-reference/easignore/
+
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env
+.env*.local
+google-services.json
+GoogleService-Info.plist
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/android
+/ios
+
+# Docusaurus site (documentation/ has its own deps, installed via `pnpm --dir documentation install`)
+documentation/node_modules/
+documentation/build/
+documentation/.docusaurus/
+
+# [eas] Everything below is EAS-only: needed in git, useless (or huge) on build workers.
+
+# Docusaurus source + deps: not a workspace package, never part of the app build.
+documentation/
+
+# Template scaffolding CLI: not part of the app build.
+packages/
+
+# Agent/editor scratch dirs.
+.claude/
+.commandcode/
+.vscode/
+
+# Test coverage output.
+coverage/

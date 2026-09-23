@@ -1,0 +1,41 @@
+name: PR Preview (EAS Update on preview channel)
+
+# Each PR (opened / synced) → publish an OTA update to the `preview` channel then comment
+# the link + QR (Orbit) on the PR. QA opens the installed preview build to get the new JS,
+# no native rebuild needed. Requirement: the preview build from the `preview` profile
+# (pinned channel + runtime fingerprint) must have been installed once before:
+# `pnpm exec eas build --profile preview --platform all`.
+#
+# Manual run: `pnpm exec eas workflow:run .eas/workflows/pr-preview.yml`
+on:
+  pull_request:
+    branches: ["*"]
+
+concurrency:
+  cancel_in_progress: true
+  group: ${{ workflow.filename }}-${{ github.ref }}
+
+defaults:
+  tools:
+    # Keep in sync with ci.yml (SDK 57 requires Node 22.13+, lockfileVersion 9 → pnpm 9+).
+    node: "22"
+    pnpm: "9"
+
+jobs:
+  publish_preview:
+    name: Publish PR preview update
+    type: update
+    environment: preview
+    params:
+      channel: preview
+      # Equivalent to `pnpm exec eas update --channel preview --message "pr-$N"`.
+      # Without `message` the job uses the commit message — set it explicitly so
+      # QA can trace which PR an update belongs to from the dashboard.
+      message: "pr-${{ github.event.pull_request.number }}"
+
+  comment:
+    name: Comment preview link on PR
+    needs: [publish_preview]
+    type: github-comment
+    params:
+      message: "Preview update (channel `preview`) published — open it with the preview build or Orbit, force-close and reopen the app up to 2 times to receive the update."

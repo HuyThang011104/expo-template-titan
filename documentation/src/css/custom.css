@@ -1,0 +1,140 @@
+/**
+ * Titan Docs — Cyberpunk Tím Neon.
+ * Primary: violet neon + cyan accent. Glow mạnh ở hero/navbar/footer,
+ * giữ chữ dễ đọc ở cả light và dark mode.
+ */
+
+/* Light mode: tím đậm làm chủ đạo để đủ contrast trên nền trắng. */
+:root {
+  --ifm-color-primary: #7c3aed;
+  --ifm-color-primary-dark: #6f27eb;
+  --ifm-color-primary-darker: #6922e8;
+  --ifm-color-primary-darkest: #5618c2;
+  --ifm-color-primary-light: #8d53ef;
+  --ifm-color-primary-lighter: #9664f1;
+  --ifm-color-primary-lightest: #b185f5;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(124, 58, 237, 0.12);
+
+  --titan-neon-pink: #e879f9;
+  --titan-cyan: #06b6d4;
+  --titan-deep: #1e1b4b;
+  --titan-glow: 0 0 24px rgba(168, 85, 247, 0.45);
+}
+
+/* Dark mode: tím sáng phát quang trên nền tối. */
+[data-theme='dark'] {
+  --ifm-color-primary: #c084fc;
+  --ifm-color-primary-dark: #ad62fb;
+  --ifm-color-primary-darker: #a44ffb;
+  --ifm-color-primary-darkest: #8327f8;
+  --ifm-color-primary-light: #d3a6fd;
+  --ifm-color-primary-lighter: #dcb9fd;
+  --ifm-color-primary-lightest: #f1e1ff;
+  --docusaurus-highlighted-code-line-bg: rgba(192, 132, 252, 0.22);
+
+  --ifm-background-color: #0b0518;
+  --ifm-background-surface-color: #150a2e;
+  --titan-glow: 0 0 28px rgba(192, 132, 252, 0.35);
+}
+
+/* Chữ bôi đen: hồng neon. */
+::selection {
+  background: var(--titan-neon-pink);
+  color: #12041f;
+}
+
+/* Navbar: viền phát sáng tím-cyan. */
+.navbar {
+  border-bottom: 1px solid rgba(168, 85, 247, 0.4);
+  box-shadow: 0 1px 24px rgba(124, 58, 237, 0.25);
+}
+
+.navbar__title {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: linear-gradient(90deg, var(--ifm-color-primary), var(--titan-cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Link hover chuyển cyan + phát sáng nhẹ. */
+a:hover {
+  text-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
+}
+
+/* Nút primary: gradient tím-cyan, glow. */
+.button--primary,
+.hero .button--secondary {
+  box-shadow: var(--titan-glow);
+  border: none;
+  font-weight: 700;
+}
+
+/* Footer: nền chàm đen + viền neon trên cùng. */
+.footer--dark {
+  --ifm-footer-background-color: #0f0520;
+  border-top: 2px solid transparent;
+  border-image: linear-gradient(90deg, #7c3aed, #e879f9, #06b6d4) 1;
+}
+
+/* Menu active: viền trái neon. */
+.menu__link--active {
+  border-left: 3px solid var(--titan-cyan);
+  background: linear-gradient(
+    90deg,
+    rgba(124, 58, 237, 0.18),
+    transparent
+  );
+}
+
+/* Bảng + code block viền tím mờ cho đúng vibe. */
+pre,
+div[class*='codeBlockContainer'] {
+  border: 1px solid rgba(168, 85, 247, 0.3) !important;
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.15);
+}
+
+table thead tr {
+  background: linear-gradient(90deg, rgba(124, 58, 237, 0.25), rgba(6, 182, 212, 0.25));
+}
+
+/* Landing terminal: pill đen + nút copy neon. */
+.titan-terminal {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: left;
+  padding: 0.8rem 0.9rem 0.8rem 1.1rem;
+  border-radius: 12px;
+  background: rgba(8, 2, 20, 0.92);
+  border: 1px solid rgba(232, 121, 249, 0.4);
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.35);
+  position: relative;
+  z-index: 1;
+}
+
+.titan-terminal__prompt {
+  color: var(--titan-neon-pink);
+  font-weight: 800;
+}
+
+.titan-terminal__cmd {
+  flex: 1;
+  color: #fff;
+  font-size: 0.85rem;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.titan-terminal__btn {
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #12041f;
+  background: linear-gradient(90deg, #e879f9, #06b6d4);
+}

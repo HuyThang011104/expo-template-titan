@@ -1,0 +1,33 @@
+# Maestro E2E — happy path auth + feed.
+#
+# 1. Cold boot with cleared state lands on sign-in when logged out
+# 2. Sign in (mock — `sign-in-button` sets the dev session)
+# 3. See the first feed item
+# 4. Tap like (optimistic; cross-cache verified in unit tests)
+#
+# Run locally (app installed on emulator/simulator):
+#   maestro test e2e/flows/auth-and-feed.yaml
+# On EAS: `.eas/workflows/e2e.yml` builds the `e2e-test` profile
+# (mock backend via EXPO_PUBLIC_API_MOCK) and runs this flow on it.
+#
+# Requires a build serving `GET /feed/home` (mock or staging). Id `feed-p-1`
+# is the first item of the deterministic mock feed (40 posts / 8 users);
+# point it at staging's first item when running against staging.
+#
+# Known caveat: the like button sits inside a `Link`-wrapped card, so tapping
+# like may also open detail. This flow asserts nothing after the like tap.
+
+appId: com.example.titan.dev
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "sign-in-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 30000
+- assertVisible:
+    id: "post-card-feed-p-1"
+- tapOn:
+    id: "like-button-feed-p-1"

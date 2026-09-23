@@ -1,0 +1,40 @@
+{
+  // Cloud builds need your own project: run `eas init` to fill in the
+  // project id, then set EXPO_OWNER / EAS_PROJECT_ID. Local runs ignore this.
+  "cli": {
+    "version": ">= 16.0.1",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "environment": "development",
+      "env": { "APP_VARIANT": "development" },
+      "ios": { "simulator": true }
+    },
+    "development-device": {
+      "extends": "development",
+      "ios": { "simulator": false }
+    },
+    "e2e-test": {
+      "withoutCredentials": true,
+      "ios": { "simulator": true },
+      "android": { "buildType": "apk" },
+      "env": { "EXPO_PUBLIC_API_MOCK": "true" }
+    },
+    "preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "channel": "preview",
+      "env": { "APP_VARIANT": "preview" }
+    },
+    "production": {
+      "autoIncrement": true,
+      "environment": "production",
+      "channel": "production",
+      "env": { "APP_VARIANT": "production" }
+    }
+  },
+  "submit": { "production": {} }
+}

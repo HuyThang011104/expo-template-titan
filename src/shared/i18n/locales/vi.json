@@ -1,0 +1,18 @@
+{
+  "common": {
+    "ok": "OK",
+    "cancel": "Hủy",
+    "retry": "Thử lại",
+    "loading": "Đang tải…",
+    "empty": "Chưa có gì ở đây"
+  },
+  "auth": {
+    "signIn": "Đăng nhập",
+    "signUp": "Đăng ký",
+    "signOut": "Đăng xuất"
+  },
+  "feed": {
+    "title": "Trang chủ",
+    "empty": "Chưa có bài viết"
+  }
+}

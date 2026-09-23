@@ -1,0 +1,83 @@
+name: Docs — build, check, deploy Pages
+
+# Web docs live in documentation/ (Docusaurus, isolated from the pnpm
+# workspace). PRs touching the site run checks only; pushes to main also
+# deploy to GitHub Pages (project site). Vercel alternative: point rootDir
+# at documentation/ and drop the deploy job — no content change needed.
+on:
+  pull_request:
+    paths:
+      - "documentation/**"
+      - ".github/workflows/docs.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "documentation/**"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs-build:
+    name: Build + lint + spell
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: documentation/pnpm-lock.yaml
+      - name: Install (frozen lockfile)
+        working-directory: documentation
+        run: pnpm install --frozen-lockfile
+      - name: Markdown lint
+        working-directory: documentation
+        run: pnpm lint:md
+      - name: Spell check
+        working-directory: documentation
+        run: pnpm spell
+      - name: Build (broken links throw)
+        working-directory: documentation
+        run: pnpm build
+      - name: Verify AI + SEO outputs
+        run: |
+          ls documentation/build/llms.txt documentation/build/llms-full.txt documentation/build/sitemap.xml
+          test "$(find documentation/build/docs -name '*.md' | wc -l)" -gt 0
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name == 'push'
+    needs: docs-build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: documentation/pnpm-lock.yaml
+      - name: Install (frozen lockfile)
+        working-directory: documentation
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm docs:build
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: documentation/build
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5

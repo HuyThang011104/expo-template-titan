@@ -1,0 +1,58 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: "Asia/Ho_Chi_Minh"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - dependencies
+      - automated
+    open-pull-requests-limit: 5
+    groups:
+      # Only auto-update patch for non-Expo libs. Minor/major are ignored below.
+      npm-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "patch"
+    ignore:
+      # Expo SDK 57 must move as a set via `npx expo upgrade` — never via Dependabot.
+      - dependency-name: "expo"
+      - dependency-name: "expo-*"
+      - dependency-name: "@expo/*"
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "react-native"
+      - dependency-name: "react-native-*"
+      - dependency-name: "jest-expo"
+      - dependency-name: "eslint-config-expo"
+      # Non-Expo libs: patch only, review minor/major manually.
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-major"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "03:00"
+      timezone: "Asia/Ho_Chi_Minh"
+    commit-message:
+      prefix: "chore(ci)"
+    labels:
+      - dependencies
+      - automated
+    open-pull-requests-limit: 5
+    groups:
+      actions-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

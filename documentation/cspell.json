@@ -1,0 +1,7 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "ignorePaths": ["node_modules/**", "build/**", ".docusaurus/**"],
+  "dictionaries": ["typescript", "node"],
+  "words": ["docusaurus", "sidebars", "frontmatter", "pnpm", "hrefs"]
+}

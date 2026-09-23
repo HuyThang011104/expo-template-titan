@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(npx expo install eslint prettier eslint-config-expo 2 >& 1)",
+      "Shell(dir:*)",
+      "Shell(pnpm:*)",
+      "Shell(mkdir:*)",
+      "Shell(findstr:*)",
+      "powershell"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}

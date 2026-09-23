@@ -1,0 +1,35 @@
+name: Development builds (nightly / main)
+
+# Build the Dev Client when native config changes (fingerprint / app.config / package
+# native) + nightly so main always has the latest binary. Uses the
+# `development` profile in eas.json (which already has `ios.simulator: true`, so the same profile
+# builds both Android devices and the iOS simulator).
+#
+# Manual run: `pnpm exec eas workflow:run .eas/workflows/development-builds.yml`
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "app.config.ts"
+      - "eas.json"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "plugins/**"
+  schedule:
+    # Nightly 02:00 GMT — only runs on the default branch per EAS.
+    - cron: "0 2 * * *"
+
+jobs:
+  build_android:
+    name: Build Android (development)
+    type: build
+    params:
+      platform: android
+      profile: development
+
+  build_ios_simulator:
+    name: Build iOS Simulator (development)
+    type: build
+    params:
+      platform: ios
+      profile: development

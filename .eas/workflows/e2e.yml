@@ -1,0 +1,59 @@
+name: E2E (Maestro on e2e-test builds)
+
+# Builds the `e2e-test` profile (mock backend baked in via EXPO_PUBLIC_API_MOCK,
+# no credentials needed) then runs Maestro flows against it.
+# The `maestro` job type is in alpha; expect occasional infra flakes — rerun first.
+#
+# Triggers: PRs touching app code or flows (emulator builds cost minutes, so no
+# push-to-main trigger), plus manual runs any time:
+# `pnpm exec eas workflow:run .eas/workflows/e2e.yml`
+on:
+  pull_request:
+    branches: ["*"]
+    paths:
+      - "src/**"
+      - "e2e/**"
+      - "eas.json"
+      - ".eas/workflows/e2e.yml"
+
+concurrency:
+  cancel_in_progress: true
+  group: ${{ workflow.filename }}-${{ github.ref }}
+
+defaults:
+  tools:
+    # Keep in sync with ci.yml (SDK 57 requires Node 22.13+, lockfileVersion 9 → pnpm 9+).
+    node: "22"
+    pnpm: "9"
+
+jobs:
+  build_android:
+    name: Build Android for E2E
+    type: build
+    params:
+      platform: android
+      profile: e2e-test
+
+  build_ios:
+    name: Build iOS Simulator for E2E
+    type: build
+    params:
+      platform: ios
+      profile: e2e-test
+
+  test_android:
+    name: Maestro on Android
+    needs: [build_android]
+    type: maestro
+    params:
+      build_id: ${{ needs.build_android.outputs.build_id }}
+      # Flow appId must match the built variant (e2e-test defaults to development).
+      flow_path: ["e2e/flows/auth-and-feed.yaml"]
+
+  test_ios:
+    name: Maestro on iOS Simulator
+    needs: [build_ios]
+    type: maestro
+    params:
+      build_id: ${{ needs.build_ios.outputs.build_id }}
+      flow_path: ["e2e/flows/auth-and-feed.yaml"]

@@ -1,0 +1,54 @@
+name: CI — app checks
+
+# Gate for Dependabot + manual PRs touching the root app.
+# Docs site has its own workflow (docs.yml).
+on:
+  pull_request:
+    paths:
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "app.config.ts"
+      - "tsconfig.json"
+      - "eslint.config.js"
+      - "jest.config.json"
+      - "src/**"
+      - ".github/workflows/ci.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "app.config.ts"
+      - "tsconfig.json"
+      - "eslint.config.js"
+      - "jest.config.json"
+      - "src/**"
+      - ".github/workflows/ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Typecheck + lint + test + expo check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Expo SDK compatibility check
+        run: npx expo install --check
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint boundaries
+        run: pnpm lint:boundaries
+      - name: Test
+        run: pnpm test -- --ci

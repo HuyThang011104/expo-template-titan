@@ -1,0 +1,13 @@
+allowBuilds:
+  '@sentry/cli': true
+  unrs-resolver: true
+minimumReleaseAgeExclude:
+  - '@tanstack/query-core@5.103.2'
+  - '@tanstack/react-query@5.103.2'
+  - '@tanstack/query-async-storage-persister@5.103.2'
+  - '@tanstack/query-persist-client-core@5.103.2'
+  - '@tanstack/react-query-persist-client@5.103.2'
+
+# NOTE (D1): documentation/ is intentionally NOT a workspace package.
+# The Docusaurus site has its own deps (React 18) isolated from the Expo app
+# (React 19). Install it with `pnpm --dir documentation install`.

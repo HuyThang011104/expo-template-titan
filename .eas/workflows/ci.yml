@@ -1,0 +1,38 @@
+name: CI — typecheck, lint, test
+
+# Every PR (all branches) + push to main. No path filters: empty (docs-only) PRs
+# must still run and finish in < 5 minutes (lightweight job, linux-medium, no native build).
+on:
+  pull_request:
+    branches: ["*"]
+  push:
+    branches: ["main"]
+
+concurrency:
+  cancel_in_progress: true
+  group: ${{ workflow.filename }}-${{ github.ref }}
+
+defaults:
+  tools:
+    # SDK 57 requires Node 22.13+ (see https://docs.expo.dev/versions/v57.0.0/).
+    node: "22"
+    # pnpm-lock.yaml is currently lockfileVersion 9 → readable by pnpm 9+.
+    pnpm: "9"
+
+jobs:
+  quality:
+    name: Typecheck + lint + test
+    steps:
+      - uses: eas/checkout
+      # Equivalent to `pnpm install --frozen-lockfile` when a lockfile is present.
+      - uses: eas/install_node_modules
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint (expo)
+        run: pnpm lint
+      - name: Lint boundaries (feature isolation)
+        # Dedicated guard: intentionally importing `features/chat` from `features/feed`
+        # must fail CI (foundation DoD).
+        run: pnpm lint:boundaries
+      - name: Unit tests
+        run: pnpm test -- --ci

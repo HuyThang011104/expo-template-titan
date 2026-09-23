@@ -1,0 +1,18 @@
+{
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancelar",
+    "retry": "Reintentar",
+    "loading": "Cargando…",
+    "empty": "Nada aquí todavía"
+  },
+  "auth": {
+    "signIn": "Iniciar sesión",
+    "signUp": "Registrarse",
+    "signOut": "Cerrar sesión"
+  },
+  "feed": {
+    "title": "Inicio",
+    "empty": "Aún no hay publicaciones"
+  }
+}
