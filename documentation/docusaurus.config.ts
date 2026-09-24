@@ -66,8 +66,19 @@ const config: Config = {
   ],
 
   plugins: [
-    // Re-enable when docs return: 'docusaurus-plugin-llms' scans docs and
-    // currently has nothing to index. See git history for the old options.
+    // LLM-friendly outputs (llms.txt, llms-full.txt, per-page .md) required
+    // by the docs.yml "Verify AI + SEO outputs" step.
+    [
+      'docusaurus-plugin-llms',
+      {
+        generateLLMsTxt: true,
+        generateLLMsFullTxt: true,
+        generateMarkdownFiles: true,
+        includeBlog: false,
+        title: 'Titan',
+        description: 'Expo boilerplate with working example.',
+      },
+    ],
     // Re-add `@docusaurus/plugin-client-redirects` per deleted/moved page
     // when the new IA lands (old decisions/* -> stack-choices targets are
     // gone with docs/). Do not bulk-redirect everything to /.

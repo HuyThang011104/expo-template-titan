@@ -47,7 +47,7 @@ jobs:
       - name: Verify AI + SEO outputs
         run: |
           ls documentation/build/llms.txt documentation/build/llms-full.txt documentation/build/sitemap.xml
-          test "$(find documentation/build/docs -name '*.md' | wc -l)" -gt 0
+          test "$(find documentation/build -name '*.md' | wc -l)" -gt 0
 
   deploy:
     name: Deploy to GitHub Pages
