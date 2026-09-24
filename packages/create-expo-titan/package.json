@@ -1,7 +1,7 @@
 {
   "name": "create-expo-titan",
   "version": "1.0.0",
-  "description": "Scaffold an Expo SDK 57 Titan app from the expo-sdk-57-template boilerplate. Zero-prompt with --yes.",
+  "description": "Scaffold an Expo SDK 57 Titan app from the expo-sdk-57-template boilerplate. Zero-prompt, no questions asked.",
   "license": "MIT",
   "type": "commonjs",
   "bin": {

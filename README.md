@@ -7,8 +7,17 @@
 Scaffold a fresh app in one line (no prompts, no logins), or clone this repo as a contributor:
 
 ```bash
-pnpm dlx create-expo-titan@latest MyApp --yes
+pnpm create expo-titan@latest MyApp
 cd MyApp && pnpm start
+```
+
+Other package managers work too (npm needs the extra `--` only when forwarding flags):
+
+```bash
+npm create expo-titan@latest MyApp
+npx create-expo-titan@latest MyApp
+yarn create expo-titan MyApp
+bunx create-expo-titan@latest MyApp
 ```
 
 ## Overview

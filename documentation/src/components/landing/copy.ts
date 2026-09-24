@@ -3,7 +3,7 @@ export const GITHUB_URL =
 export const FEEDBACK_URL =
   'https://github.com/HuyThang011104/expo-template-titan/issues/new?labels=docs';
 export const DOCS_URL = '/docs/introduction/overview';
-export const SCAFFOLD_CMD = 'pnpm dlx create-expo-titan@latest MyApp --yes';
+export const SCAFFOLD_CMD = 'pnpm create expo-titan@latest MyApp';
 
 export const STACK_BADGES = [
   'Expo SDK 57',

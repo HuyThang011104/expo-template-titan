@@ -41,9 +41,9 @@ function grepCount(dest, pattern) {
 }
 
 describe("create-expo-titan", () => {
-  test("scaffolds with --yes defaults (name+slug renamed, ids stay hardcoded)", () => {
+  test("scaffolds with defaults, no prompts (name+slug renamed, ids stay hardcoded)", () => {
     const dest = path.join(tmpRoot, "MyApp");
-    scaffold([dest, "--yes", "--no-install", "--no-git"]);
+    scaffold([dest, "--no-install", "--no-git"]);
 
     expect(readJSON(dest, "package.json").name).toBe("myapp");
     expect(read(dest, ".env")).toBe(read(dest, ".env.example"));
@@ -52,7 +52,7 @@ describe("create-expo-titan", () => {
     expect(config).toContain('name: variant === "production" ? "MyApp" : `MyApp (${variant})`');
     expect(config).toContain('slug: "myapp"');
 
-    // --yes uses hardcoded identity defaults: bundle prefix, schemes,
+    // Zero-prompt defaults: bundle prefix, schemes,
     // and host are untouched.
     expect(config).toContain('"com.example.titan.dev"');
     expect(config).toContain('"titan-dev"');
@@ -73,7 +73,7 @@ describe("create-expo-titan", () => {
 
   test("custom --scheme leaves no stale titan-dev behind", () => {
     const dest = path.join(tmpRoot, "CustomScheme");
-    scaffold([dest, "--yes", "--no-install", "--no-git", "--scheme", "myapp"]);
+    scaffold([dest, "--no-install", "--no-git", "--scheme", "myapp"]);
 
     const config = read(dest, "app.config.ts");
     expect(config).toContain('"myapp-dev"');
@@ -85,7 +85,7 @@ describe("create-expo-titan", () => {
 
   test("custom --bundle-id renames repo-wide (e2e included, documentation excluded)", () => {
     const dest = path.join(tmpRoot, "AcmeApp");
-    scaffold([dest, "--yes", "--no-install", "--no-git", "--bundle-id", "com.acme.foo"]);
+    scaffold([dest, "--no-install", "--no-git", "--bundle-id", "com.acme.foo"]);
 
     expect(read(dest, "app.config.ts")).toContain('"com.acme.foo.dev"');
     expect(read(dest, "e2e/flows/auth-and-feed.yaml")).toContain("appId: com.acme.foo.dev");
@@ -97,8 +97,14 @@ describe("create-expo-titan", () => {
     const dest = path.join(tmpRoot, "Taken");
     fs.mkdirSync(dest, { recursive: true });
     fs.writeFileSync(path.join(dest, "keep.txt"), "keep");
-    expect(() => scaffold([dest, "--yes", "--no-install", "--no-git"])).toThrow(/already exists/);
+    expect(() => scaffold([dest, "--no-install", "--no-git"])).toThrow(/already exists/);
     expect(read(dest, "keep.txt")).toBe("keep");
+  });
+
+  test("--yes is accepted as a deprecated no-op", () => {
+    const dest = path.join(tmpRoot, "LegacyYes");
+    scaffold([dest, "--yes", "--no-install", "--no-git"]);
+    expect(readJSON(dest, "package.json").name).toBe("legacyyes");
   });
 
   test("scaffolded app carries a working setup script", () => {
