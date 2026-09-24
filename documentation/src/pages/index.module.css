@@ -88,6 +88,14 @@
   opacity: 0.9;
 }
 
+.terminalHint code {
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+}
+
 .strip {
   padding: 1rem 0;
   border-bottom: 1px solid var(--ifm-color-emphasis-200);
