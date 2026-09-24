@@ -11,7 +11,7 @@ pnpm create expo-titan@latest MyApp
 cd MyApp && pnpm start
 ```
 
-Other package managers work too (npm needs the extra `--` only when forwarding flags):
+Other package managers work too:
 
 ```bash
 npm create expo-titan@latest MyApp
@@ -73,14 +73,16 @@ app (routes)
 ## Dev Client build
 
 ```bash
-# Android (APK install directly, no store):
-pnpm exec eas build --platform android --profile development
+# Android (APK internal, profile development):
+pnpm eas:android:dev
+
+# iOS (need Apple Developer Program + UDID, profile development-device):
+pnpm eas:ios:dev
 ```
 
-Then install the APK and run `pnpm start:dev`. Daily JS changes only need
+Then install the APK (Android) / build on device (iOS) and run `pnpm start:dev`. Daily JS changes only need
 `pnpm start:dev` — rebuild native only when native libs, config, or SDK change.
-iOS device builds (`--profile development-device`) need the Apple Developer
-Program ($99/year) + UDID registration; iOS simulator only runs on macOS.
+iOS simulator only runs on macOS (`eas build --platform ios --profile development`).
 
 ## Requirements
 

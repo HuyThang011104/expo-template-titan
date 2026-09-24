@@ -66,6 +66,8 @@
     "setup": "node ./scripts/setup.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "eas:android:dev": "eas build --platform android --profile development",
+    "eas:ios:dev": "eas build --platform ios --profile development-device",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
