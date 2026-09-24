@@ -1,22 +1,29 @@
 # create-expo-titan
 
-Scaffold an Expo SDK 57 Titan app from this boilerplate. Zero-prompt with `--yes`.
+Scaffold an Expo SDK 57 Titan app from this boilerplate. Zero-prompt, no questions asked.
 
 ```bash
-pnpm dlx create-expo-titan@latest MyApp --yes
+pnpm create expo-titan@latest MyApp
 cd MyApp && pnpm start
 ```
 
-Without `--yes` only two questions are asked (app name, install or not).
+Other package managers:
+
+```bash
+npm create expo-titan@latest MyApp
+npx create-expo-titan@latest MyApp
+yarn create expo-titan MyApp
+bunx create-expo-titan@latest MyApp
+```
+
 Bundle ID and scheme are never prompted; override them explicitly when forking:
 
 ```bash
-create-expo-titan MyApp --yes --bundle-id com.acme.myapp --scheme myapp --slug myapp
+create-expo-titan MyApp --bundle-id com.acme.myapp --scheme myapp --slug myapp
 ```
 
 | Flag | Effect |
 | ---- | ------ |
-| `--yes, -y` | Use all defaults, no prompts |
 | `--bundle-id <prefix>` | Bundle prefix (default `com.example.titan`) |
 | `--scheme <base>` | Deep-link scheme base (default `titan`) |
 | `--slug <slug>` | Expo slug (default: derived from directory) |

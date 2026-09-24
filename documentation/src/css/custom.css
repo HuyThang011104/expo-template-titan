@@ -122,7 +122,10 @@ table thead tr {
 
 .titan-terminal__cmd {
   flex: 1;
-  color: #fff;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #fff !important;
   font-size: 0.85rem;
   overflow-x: auto;
   white-space: nowrap;

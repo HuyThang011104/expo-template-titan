@@ -38,7 +38,7 @@ function parseArgs(argv) {
   const rest = [];
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
-    if (a === "--yes" || a === "-y") opts.yes = true;
+    if (a === "--yes" || a === "-y") opts.yes = true; // deprecated no-op, kept so old commands keep working
     else if (a === "--no-install") opts.install = false;
     else if (a === "--no-git") opts.git = false;
     else if (a === "--help" || a === "-h") opts.help = true;
@@ -59,10 +59,9 @@ function parseArgs(argv) {
 
 function printHelp() {
   process.stdout.write(
-    `Usage: create-expo-titan <directory> [--yes] [--bundle-id <prefix>] [--scheme <base>] [--slug <slug>] [--no-install] [--no-git]
+    `Usage: create-expo-titan <directory> [--bundle-id <prefix>] [--scheme <base>] [--slug <slug>] [--no-install] [--no-git]
 
   <directory>   Folder (and app name) for the new project.
-  --yes, -y     Zero-prompt: use defaults, install deps, init git.
   --bundle-id   Opt-in bundle prefix (default: com.example.titan).
   --scheme      Opt-in deep-link scheme base (default: titan).
   --slug        Opt-in Expo slug (default: derived from directory).
@@ -70,23 +69,6 @@ function printHelp() {
   --no-git      Skip git init.
 `,
   );
-}
-
-function prompt(question) {
-  return new Promise((resolve) => {
-    process.stdout.write(question);
-    let data = "";
-    process.stdin.setEncoding("utf8");
-    process.stdin.resume();
-    process.stdin.on("data", (c) => {
-      data += c;
-      if (data.includes("\n")) {
-        process.stdin.pause();
-        resolve(data.trim());
-      }
-    });
-    process.stdin.on("end", () => resolve(data.trim()));
-  });
 }
 
 function copyDir(src, dest) {
@@ -118,7 +100,7 @@ function listFiles(dir, base = dir) {
 
 function validateAppName(raw) {
   const name = (raw ?? "").trim();
-  if (!name) fail("missing <directory> (usage: create-expo-titan MyApp --yes)");
+  if (!name) fail("missing <directory> (usage: create-expo-titan MyApp)");
   if (name.length > 100) fail(`invalid directory "${name}" (max 100 chars)`);
   const base = path.basename(path.resolve(name));
   if (!VALID_NAME.test(base)) {
@@ -135,15 +117,12 @@ async function run(argv, env = {}) {
   }
   const { name, base } = validateAppName(opts.dir);
 
-  let appName = base;
-  let install = opts.install;
-  let initGit = opts.git;
-  if (!opts.yes) {
-    const answer = await prompt(`App name [${base}]: `);
-    if (answer) appName = answer;
-    const installAnswer = await prompt("Install dependencies? [Y/n]: ");
-    install = !/^n(o)?$/i.test(installAnswer.trim());
-  }
+  // Zero-prompt by design: no questions are asked. Defaults apply unless
+  // overridden explicitly (--bundle-id/--scheme/--slug/--no-install/--no-git).
+  // --yes/-y is accepted as a no-op for backward compatibility.
+  const appName = base;
+  const install = opts.install;
+  const initGit = opts.git;
 
   const dest = path.resolve(name);
   if (fs.existsSync(dest) && fs.readdirSync(dest).length > 0) {
