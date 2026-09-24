@@ -6,13 +6,11 @@ slug: /introduction/agent-instructions
 description: Working rules for agents and contributors, mirrored from the repository AGENTS.md file.
 ---
 
-# Agent Instructions
-
 Source: [`AGENTS.md`](https://github.com/HuyThang011104/expo-template-titan/blob/main/AGENTS.md).
 
 ## Expo HAS CHANGED
 
-Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before writing any code.
+Read the exact versioned docs at [Expo SDK 57](https://docs.expo.dev/versions/v57.0.0/) before writing any code.
 
 ## What Titan is
 

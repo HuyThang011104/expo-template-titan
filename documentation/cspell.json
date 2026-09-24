@@ -3,5 +3,5 @@
   "language": "en",
   "ignorePaths": ["node_modules/**", "build/**", ".docusaurus/**"],
   "dictionaries": ["typescript", "node"],
-  "words": ["docusaurus", "sidebars", "frontmatter", "pnpm", "hrefs"]
+  "words": ["docusaurus", "sidebars", "frontmatter", "pnpm", "hrefs", "easignore", "pushable", "repost", "mmkv"]
 }

@@ -6,8 +6,6 @@ slug: /introduction/overview
 description: A production-grade Expo boilerplate with enforced module boundaries, a normalized data layer, and native code generated from config.
 ---
 
-# Overview
-
 Most React Native/Expo projects are slowed down by having to rebuild the same foundational pieces from scratch.
 
 But having a solid enough foundation to survive in a production environment is much more challenging than we might think. It is not simply about implementing **data caching**, building wrappers for **API calls**, setting up **routing**, or integrating popular libraries such as `Tailwind`, `React Query`, `Axios`, `Zod`, `Zustand`, and so on. These are already fundamental building blocks of most frontend projects, from web to mobile.
@@ -18,7 +16,7 @@ This template separates all of these foundational concerns into a unified starti
 
 ## Architecture at a glance
 
-```
+```text
 titan/
 ├── app.config.ts                 # typed config, variants, plugins
 ├── eas.json                      # development / preview / production
