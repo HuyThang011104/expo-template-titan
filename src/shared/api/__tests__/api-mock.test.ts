@@ -28,12 +28,13 @@ describe("mock backend switch", () => {
 
   it("serves the deterministic mock feed when enabled", async () => {
     process.env.EXPO_PUBLIC_API_MOCK = "true";
-    let client: { get: <T>(path: string, options?: object) => Promise<T> } | null = null;
+    let client: typeof import("../client").client | undefined;
     jest.isolateModules(() => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      client = require("../client").client;
+      client = require("../client").client as typeof import("../client").client;
     });
-    const data = await (client as NonNullable<typeof client>).get<{
+    if (!client) throw new Error("expected client to load");
+    const data = await client.get<{
       items: { post: { id: string } }[];
     }>("/feed/home", { auth: false });
     expect(data.items[0]?.post.id).toBe("feed-p-1");
@@ -41,11 +42,12 @@ describe("mock backend switch", () => {
 
   it("does not touch the mock backend when disabled", async () => {
     delete process.env.EXPO_PUBLIC_API_MOCK;
-    let env: { apiMock: boolean } | null = null;
+    let env: typeof import("../../config/env").env | undefined;
     jest.isolateModules(() => {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      env = require("../../config/env").env;
+      env = require("../../config/env").env as typeof import("../../config/env").env;
     });
-    expect((env as NonNullable<typeof env>).apiMock).toBe(false);
+    if (!env) throw new Error("expected env to load");
+    expect(env.apiMock).toBe(false);
   });
 });
