@@ -6,11 +6,9 @@ slug: /introduction/project-structure
 description: The four project folders in src - app, features, entities, and shared - and their dependency rules.
 ---
 
-# Project Structure
-
 All product code lives in `src/` and is split into four folders with one-way dependencies.
 
-```
+```text
 src/
 ├── app/                      # ONLY routes + _layout. Thin.
 ├── features/
@@ -19,7 +17,7 @@ src/
 └── app-providers.tsx         # the single provider tree
 ```
 
-```
+```text
 app (routes)
   → features/*
     → entities/*        (Post, User, Conversation)
@@ -37,7 +35,7 @@ app (routes)
 
 Routes are URLs/deep links, not the place that holds real UI.
 
-```
+```text
 src/app/
 ├── _layout.tsx                   # SessionProvider, QueryClient, Theme, ...
 ├── +not-found.tsx
@@ -114,7 +112,7 @@ export default HomeFeedScreen;
 
 Each feature is a "mini-app" with a narrow public API. The only public import is `@/features/<name>`.
 
-```
+```text
 src/features/
 ├── feed/
 │   ├── index.ts                  # the only public export
@@ -158,7 +156,7 @@ Rules:
 
 Entities own the canonical models and cache shared by every feature. A feature never defines its own Post or User type.
 
-```
+```text
 src/entities/
 ├── user/
 │   ├── model.ts                  # User, Handle, Relationship
@@ -193,7 +191,7 @@ Rules:
 
 Technical code used by entities and features. It contains no business logic and never imports from above.
 
-```
+```text
 src/shared/
 ├── api/
 │   ├── client.ts                 # fetch wrapper, timeout, tracing
