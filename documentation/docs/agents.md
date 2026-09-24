@@ -10,7 +10,6 @@ description: Working rules for agents and contributors, mirrored from the reposi
 
 Source: [`AGENTS.md`](https://github.com/HuyThang011104/expo-template-titan/blob/main/AGENTS.md).
 
-```
 ## Expo HAS CHANGED
 
 Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before writing any code.
@@ -70,4 +69,3 @@ Read the exemplar and match it. Do not load the whole social app for a kernel ch
 ## Stack
 
 Expo SDK 57, React Native 0.86, React 19.2.3, New Architecture. Development builds are the default. Daily JavaScript uses `npx expo start`. Rebuild native only when adding a native library, changing `app.config`, or upgrading the SDK.
-```
