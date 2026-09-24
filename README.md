@@ -88,8 +88,9 @@ iOS simulator only runs on macOS (`eas build --platform ios --profile developmen
 > ... calculated during build` and the diff only shows `.pnpm/...` path
 > renames: your local `node_modules` layout is stale. Run a clean reinstall
 > (`Remove-Item -Recurse -Force node_modules; pnpm install --frozen-lockfile`).
-> The `.npmrc` pin (`virtual-store-dir-max-length=60`) keeps Windows and Linux
-> layouts identical so fingerprints match.
+> The `virtualStoreDirMaxLength: 60` pin in `pnpm-workspace.yaml` keeps Windows
+> and Linux layouts identical so fingerprints match (pnpm 11 only reads this
+> from YAML — a copy in `.npmrc` is silently ignored).
 
 ## Requirements
 
