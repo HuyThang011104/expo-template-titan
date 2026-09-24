@@ -84,6 +84,13 @@ Then install the APK (Android) / build on device (iOS) and run `pnpm start:dev`.
 `pnpm start:dev` — rebuild native only when native libs, config, or SDK change.
 iOS simulator only runs on macOS (`eas build --platform ios --profile development`).
 
+> If EAS fails with `Runtime version calculated on local machine not equal to
+> ... calculated during build` and the diff only shows `.pnpm/...` path
+> renames: your local `node_modules` layout is stale. Run a clean reinstall
+> (`Remove-Item -Recurse -Force node_modules; pnpm install --frozen-lockfile`).
+> The `.npmrc` pin (`virtual-store-dir-max-length=60`) keeps Windows and Linux
+> layouts identical so fingerprints match.
+
 ## Requirements
 
 - Node 22.13+

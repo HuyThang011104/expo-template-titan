@@ -25,15 +25,14 @@ function readVariant(): AppVariant {
 
 const variant = readVariant();
 
-// Personal identity lives in env, never hardcoded: local runs work with
-// both unset (owner unattached, updates disabled). Cloud builds get real
-// values from `eas init` / EAS secrets.
-const owner = process.env.EXPO_OWNER ?? undefined;
-const easProjectId = process.env.EAS_PROJECT_ID ?? "REPLACE_AFTER_eas_init";
+// Linked EAS project @huythang/expo-template-titan. Env overrides file
+// default so fresh clones still work unlinked; EAS cloud env also overrides.
+const owner = process.env.EXPO_OWNER ?? "huythang";
+const easProjectId = process.env.EAS_PROJECT_ID ?? "734aed1f-e6b6-474d-8883-25631b395eb3";
 
 const config: ExpoConfig = {
   name: variant === "production" ? "Titan" : `Titan (${variant})`,
-  slug: "titan",
+  slug: "expo-template-titan",
   owner,
   scheme: SCHEMES[variant],
   version: "1.0.0",
@@ -103,7 +102,8 @@ const config: ExpoConfig = {
   },
   extra: {
     appVariant: variant,
-    eas: { projectId: easProjectId },
+    // Omit placeholder ID so `eas init` can create/link a real project.
+    ...(easProjectId === "REPLACE_AFTER_eas_init" ? {} : { eas: { projectId: easProjectId } }),
   },
   // EAS Update: `url` points at the Expo hosted service for this project.
   // Unset locally — the placeholder disables updates so `expo config` stays green.
