@@ -1,6 +1,15 @@
 allowBuilds:
   '@sentry/cli': true
   unrs-resolver: true
+# Pin pnpm virtual-store naming so every OS produces the same node_modules layout.
+# pnpm defaults virtualStoreDirMaxLength to 60 on Windows and 120 on
+# Linux/macOS. @expo/fingerprint hashes the resulting .pnpm/... paths, so a
+# Windows install and an EAS (Linux) install compute different runtime
+# versions and EAS rejects the build ("Runtime version ... not equal").
+# 60 matches the Windows default: shortest names, no MAX_PATH risk.
+# NOTE (pnpm 11): pnpm-specific settings are only read from YAML files
+# (pnpm-workspace.yaml), NOT from .npmrc — a copy in .npmrc is silently ignored.
+virtualStoreDirMaxLength: 60
 minimumReleaseAgeExclude:
   - '@tanstack/query-core@5.103.2'
   - '@tanstack/react-query@5.103.2'
