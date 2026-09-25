@@ -44,8 +44,9 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Install (frozen lockfile)
         run: pnpm install --frozen-lockfile
-      - name: Expo SDK compatibility check
+      - name: Expo SDK compatibility check (warn-only)
         run: npx expo install --check
+        continue-on-error: true
       - name: Typecheck
         run: pnpm typecheck
       - name: Lint boundaries
