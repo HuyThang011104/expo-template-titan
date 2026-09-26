@@ -32,3 +32,10 @@ export {
   logComposerPost,
   logComposerSuccess,
 } from "./analytics";
+export {
+  dispatchComposerOutboxJob,
+  handlePostCreateJob,
+  parsePostCreatePayload,
+  type ComposerOutboxJob,
+  type ComposerSenderOptions,
+} from "./outbox-sender";
