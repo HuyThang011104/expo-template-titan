@@ -1,12 +1,14 @@
 /**
  * Post canonical cache.
  *
- * - Only file allowed to `setQueryData(queryKeys.post…)`.
+ * - Only file allowed to `setQueryData(queryKeys.post…)` or patch the
+ *   home-feed id list. Features call these helpers, never `setQueryData` directly.
  * - `hydrateFeedItem` writes both post and author canonical entries.
  * - `likePost` is read → optimistic flip → server wins → rollback.
+ * - `addCreatedPost` writes the canonical entry + prepends page 0 (no full invalidate).
  */
 
-import type { QueryClient } from "@tanstack/react-query";
+import type { InfiniteData, QueryClient } from "@tanstack/react-query";
 
 import { logger } from "@/shared/observability/logger";
 import { queryKeys } from "@/shared/query";
@@ -81,4 +83,36 @@ export async function likePost(
   }
   setPost(qc, prev);
   logger.warn("[post] like failed, rolled back", { postId: id });
+}
+
+type HomeFeedPageShape = {
+  postIds: string[];
+  nextCursor: string | null;
+};
+
+/**
+ * Insert a newly created post: canonical entry + prepend to home-feed page 0.
+ * Dedupe by id; creates page 0 when the feed was never fetched (no full invalidate,
+ * so scroll position elsewhere is preserved).
+ */
+export function addCreatedPost(qc: QueryClient, post: Post): void {
+  setPost(qc, post);
+  qc.setQueryData<InfiniteData<HomeFeedPageShape, string | null>>(
+    queryKeys.homeFeed(),
+    (old) => {
+      if (!old) {
+        return {
+          pages: [{ postIds: [post.id], nextCursor: null }],
+          pageParams: [null],
+        };
+      }
+      const [first, ...rest] = old.pages;
+      if (!first) return old;
+      if (first.postIds.includes(post.id)) return old;
+      return {
+        ...old,
+        pages: [{ ...first, postIds: [post.id, ...first.postIds] }, ...rest],
+      };
+    },
+  );
 }

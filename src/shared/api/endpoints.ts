@@ -22,6 +22,7 @@ export const endpoints = {
   userByHandle: (handle: string) => `/users/handle/${encode(handle)}`,
   followers: (id: string) => `/users/${encode(id)}/followers`,
   post: (id: string) => `/posts/${encode(id)}`,
+  createPost: () => "/posts",
   homeFeed: (cursor?: string | null) =>
     cursor ? `/feed/home?cursor=${encode(cursor)}` : "/feed/home",
   likePost: (id: string) => `/posts/${encode(id)}/like`,

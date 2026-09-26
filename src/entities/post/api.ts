@@ -6,6 +6,7 @@
  */
 
 import { client } from "@/shared/api";
+import { endpoints } from "@/shared/api/endpoints";
 
 import type { Post } from "./model";
 import { parsePost } from "./schema";
@@ -33,6 +34,24 @@ export async function likePostRemote(
   const data = await client.post<unknown>(
     `/posts/${encodeURIComponent(id)}/like`,
     { liked },
+    { fetchImpl: opts.fetchImpl },
+  );
+  return parsePost(data);
+}
+
+/**
+ * POST `/posts` with `{ body, mediaIds }` → `Post | null`.
+ * Throws on transport/HTTP errors (callers decide retry vs outbox);
+ * `null` only means the server payload failed schema validation.
+ */
+export async function createPostRemote(
+  body: string,
+  mediaIds: string[],
+  opts: FetchOptions = {},
+): Promise<Post | null> {
+  const data = await client.post<unknown>(
+    endpoints.createPost(),
+    { body, mediaIds },
     { fetchImpl: opts.fetchImpl },
   );
   return parsePost(data);

@@ -255,6 +255,43 @@ function splitIdPath(path: string): { base: string; id: string | null } {
   return { base: path, id: null };
 }
 
+function mockCreatePostResponse(bodyText: string | null): Response {
+  let body = "";
+  let mediaIds: unknown = [];
+  try {
+    const parsed: unknown = bodyText ? (JSON.parse(bodyText) as unknown) : null;
+    if (parsed !== null && typeof parsed === "object") {
+      const candidate = parsed as { body?: unknown; mediaIds?: unknown };
+      if (typeof candidate.body === "string") body = candidate.body.trim();
+      mediaIds = candidate.mediaIds;
+    }
+  } catch {
+    return jsonResponse({ message: "[mock] Invalid JSON" }, 400);
+  }
+  if (body.length < 1 || body.length > 280 || !Array.isArray(mediaIds) || mediaIds.length > 4) {
+    return jsonResponse({ message: "[mock] Invalid create-post input" }, 400);
+  }
+  const media = (mediaIds as unknown[]).slice(0, 4).map((id, index) => ({
+    kind: "image",
+    url: `https://picsum.photos/seed/new-${Date.now()}-${index}/800/600`,
+    _id: typeof id === "string" ? id : undefined,
+  }));
+  // Strip the echo helper before responding; Post schema allows only kind+url.
+  const cleanMedia = media.map(({ kind, url }) => ({ kind, url }));
+  return jsonResponse(
+    {
+      id: `feed-p-new-${Date.now().toString(36)}`,
+      authorId: mockUsers[0]?.id ?? "u-1",
+      body,
+      media: cleanMedia,
+      likeCount: 0,
+      likedByMe: false,
+      createdAt: new Date().toISOString(),
+    },
+    201,
+  );
+}
+
 function mockLikeResponse(id: string, bodyText: string | null): Response {
   const base = [...mockPosts, ...feedPosts].find((post) => post.id === id);
   if (!base) return notFound("POST", `/posts/${id}/like`);
@@ -310,6 +347,9 @@ function defaultEntityResponse(
     // Receives the Expo push token after login; always ok, no body validation.
     if (path === "/devices") {
       return jsonResponse({ ok: true }, 200);
+    }
+    if (path === "/posts") {
+      return mockCreatePostResponse(bodyText);
     }
     const likeMatch = /^\/posts\/([^/]+)\/like$/.exec(path);
     if (likeMatch?.[1]) {
