@@ -28,6 +28,8 @@ export type InputProps = {
   multiline?: boolean;
   maxLength?: number;
   editable?: boolean;
+  autoFocus?: boolean;
+  accessibilityLabel?: string;
   onSubmitEditing?: () => void;
   style?: StyleProp<TextStyle>;
   testID?: string;
@@ -46,6 +48,8 @@ export function Input({
   multiline = false,
   maxLength,
   editable = true,
+  autoFocus = false,
+  accessibilityLabel,
   onSubmitEditing,
   style,
   testID,
@@ -72,9 +76,10 @@ export function Input({
         multiline={multiline}
         maxLength={maxLength}
         editable={editable}
+        autoFocus={autoFocus}
         onSubmitEditing={onSubmitEditing}
         testID={testID}
-        accessibilityLabel={label}
+        accessibilityLabel={accessibilityLabel ?? label}
         accessibilityState={{ disabled: !editable }}
         style={[
           styles.field,
