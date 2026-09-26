@@ -1,8 +1,10 @@
 /**
- * Tests for F1.1 `useComposerCreatePost`:
+ * Tests for F1.1 text + F1.2 media `useComposerCreatePost`:
  * - success prepends the feed (via the entity, no full invalidate)
  * - HTTP failure throws and does NOT prepend / enqueue
  * - NETWORK failure enqueues `post.create` once and reports `queued`
+ * - `submitWithMedia` uploads each asset first, then posts with `mediaIds`
+ * - offline upload enqueues with `localUris` for the F1.3 sender
  */
 
 import { act, renderHook } from "@testing-library/react-native";
@@ -103,6 +105,52 @@ describe("useComposerCreatePost", () => {
     expect(mockedEnqueue).toHaveBeenCalledWith(
       COMPOSER_OUTBOX_KIND,
       expect.stringContaining("offline post"),
+    );
+  });
+
+  it("submitWithMedia uploads then posts with one media entry", async () => {
+    const { wrapper, qc, fetchImpl } = setup();
+    const { result } = await renderHook(() => useComposerCreatePost({ fetchImpl }), {
+      wrapper,
+    });
+
+    let postId = "";
+    await act(async () => {
+      const out = await result.current.submitWithMedia("photo post", [
+        { uri: "file:///a.jpg", width: 100, height: 100, kind: "image", mimeType: "image/jpeg" },
+      ]);
+      if (out.status !== "posted") throw new Error("expected posted");
+      postId = out.postId;
+    });
+
+    expect(getPostData(qc, postId)?.media).toHaveLength(1);
+    const feed = qc.getQueryData<{ pages: { postIds: string[] }[] }>(queryKeys.homeFeed());
+    expect(feed?.pages[0]?.postIds[0]).toBe(postId);
+    expect(mockedEnqueue).not.toHaveBeenCalled();
+  });
+
+  it("offline upload enqueues post.create with localUris", async () => {
+    const offlineFetch = (async () => {
+      throw new ApiError({ status: null, code: "NETWORK", url: "/uploads", message: "offline" });
+    }) as unknown as typeof fetch;
+    const { wrapper } = setup(offlineFetch);
+    const { result } = await renderHook(() => useComposerCreatePost({ fetchImpl: offlineFetch }), {
+      wrapper,
+    });
+
+    let status = "";
+    await act(async () => {
+      const out = await result.current.submitWithMedia("offline photo", [
+        { uri: "file:///a.jpg", width: 100, height: 100, kind: "image", mimeType: "image/jpeg" },
+      ]);
+      status = out.status;
+    });
+
+    expect(status).toBe("queued");
+    expect(mockedEnqueue).toHaveBeenCalledTimes(1);
+    expect(mockedEnqueue).toHaveBeenCalledWith(
+      COMPOSER_OUTBOX_KIND,
+      expect.stringContaining("file:///a.jpg"),
     );
   });
 });

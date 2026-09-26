@@ -255,6 +255,18 @@ function splitIdPath(path: string): { base: string; id: string | null } {
   return { base: path, id: null };
 }
 
+function mockUploadResponse(): Response {
+  const stamp = Date.now().toString(36);
+  return jsonResponse(
+    {
+      mediaId: `m-new-${stamp}`,
+      url: `https://picsum.photos/seed/upload-${stamp}/800/600`,
+      kind: "image",
+    },
+    200,
+  );
+}
+
 function mockCreatePostResponse(bodyText: string | null): Response {
   let body = "";
   let mediaIds: unknown = [];
@@ -350,6 +362,11 @@ function defaultEntityResponse(
     }
     if (path === "/posts") {
       return mockCreatePostResponse(bodyText);
+    }
+    // Multipart upload target (F1.2 composer media). The client sends
+    // `FormData`, so there is no JSON body to validate — always succeed.
+    if (path === "/uploads") {
+      return mockUploadResponse();
     }
     const likeMatch = /^\/posts\/([^/]+)\/like$/.exec(path);
     if (likeMatch?.[1]) {

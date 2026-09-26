@@ -13,6 +13,11 @@ export {
   useComposerDraft,
   type ComposerDraftShape,
 } from "./hooks/use-composer-draft";
+export { useComposerMedia } from "./hooks/use-composer-media";
+export {
+  ComposerMediaStrip,
+  type ComposerMediaStripProps,
+} from "./components/composer-media-strip";
 export {
   COMPOSER_OUTBOX_KIND,
   buildComposerOutboxPayload,

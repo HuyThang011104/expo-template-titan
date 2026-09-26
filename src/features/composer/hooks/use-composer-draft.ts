@@ -1,10 +1,10 @@
 /**
- * Composer draft hook (F1.1 text-only, forward-compatible with F1.2 media).
+ * Composer draft hook (F1.1 text + F1.2 media uris).
  *
  * - Single durable key `composer:draft` (opaque JSON string).
  * - Loads once on mount; saves debounced 500ms; `clear()` removes the key.
- * - Draft holds text + local uris; F1.1 only edits `body`, `localUris` stays `[]`.
- * - Tmp picker files may vanish after kill — text survives, UI warns on re-pick.
+ * - Draft holds text + local uris. Tmp picker files may vanish after kill —
+ *   text survives, the screen warns that photos may need re-picking.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -38,9 +38,10 @@ function parseShape(raw: string | null): ComposerDraftShape {
 
 export function useComposerDraft() {
   const [body, setBodyState] = useState("");
+  const [localUris, setLocalUrisState] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const bodyRef = useRef("");
+  const draftRef = useRef<ComposerDraftShape>({ body: "", localUris: [] });
 
   useEffect(() => {
     let cancelled = false;
@@ -48,8 +49,9 @@ export function useComposerDraft() {
       .then((raw) => {
         if (cancelled) return;
         const shape = parseShape(raw);
-        bodyRef.current = shape.body;
+        draftRef.current = shape;
         setBodyState(shape.body);
+        setLocalUrisState(shape.localUris);
         setLoaded(true);
       })
       .catch(() => {
@@ -61,29 +63,40 @@ export function useComposerDraft() {
     };
   }, []);
 
-  const scheduleSave = useCallback((nextBody: string) => {
+  const scheduleSave = useCallback((next: ComposerDraftShape) => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      const payload: ComposerDraftShape = { body: nextBody, localUris: [] };
-      void saveDraft(COMPOSER_DRAFT_KEY, JSON.stringify(payload)).catch(() => {});
+      void saveDraft(COMPOSER_DRAFT_KEY, JSON.stringify(next)).catch(() => {});
     }, SAVE_DEBOUNCE_MS);
   }, []);
 
   const setBody = useCallback(
     (next: string) => {
-      bodyRef.current = next;
+      const merged: ComposerDraftShape = { ...draftRef.current, body: next };
+      draftRef.current = merged;
       setBodyState(next);
-      scheduleSave(next);
+      scheduleSave(merged);
+    },
+    [scheduleSave],
+  );
+
+  const setLocalUris = useCallback(
+    (next: string[]) => {
+      const merged: ComposerDraftShape = { ...draftRef.current, localUris: next };
+      draftRef.current = merged;
+      setLocalUrisState(next);
+      scheduleSave(merged);
     },
     [scheduleSave],
   );
 
   const clear = useCallback(async () => {
     if (timer.current) clearTimeout(timer.current);
-    bodyRef.current = "";
+    draftRef.current = { body: "", localUris: [] };
     setBodyState("");
+    setLocalUrisState([]);
     await deleteDraft(COMPOSER_DRAFT_KEY).catch(() => {});
   }, []);
 
-  return { body, setBody, loaded, clear };
+  return { body, setBody, localUris, setLocalUris, loaded, clear };
 }
