@@ -7,9 +7,10 @@
 
 import { client } from "@/shared/api";
 import { endpoints } from "@/shared/api/endpoints";
+import { logger } from "@/shared/observability/logger";
 
-import type { Post } from "./model";
-import { parsePost } from "./schema";
+import type { FeedWireItem, Post } from "./model";
+import { parseFeedWireItem, parsePost } from "./schema";
 
 export type FetchOptions = {
   fetchImpl?: typeof fetch;
@@ -55,4 +56,43 @@ export async function createPostRemote(
     { fetchImpl: opts.fetchImpl },
   );
   return parsePost(data);
+}
+
+export type UserPostsPage = {
+  items: FeedWireItem[];
+  nextCursor: string | null;
+};
+
+/**
+ * GET `/users/:id/posts?cursor=` → parsed wire items.
+ * `null` only when the page shape itself is invalid; individual bad
+ * items are skipped (same rule as the home feed).
+ */
+export async function fetchUserPostsRemote(
+  userId: string,
+  cursor: string | null,
+  opts: FetchOptions = {},
+): Promise<UserPostsPage | null> {
+  const data: unknown = await client.get<unknown>(endpoints.userPosts(userId, cursor), {
+    fetchImpl: opts.fetchImpl,
+  });
+  if (
+    data === null ||
+    typeof data !== "object" ||
+    !("items" in data) ||
+    !Array.isArray((data as { items: unknown }).items)
+  ) {
+    logger.warn("[post] invalid user-posts page shape", { userId, cursor });
+    return null;
+  }
+  const raw = data as { items: unknown[]; nextCursor?: unknown };
+  const items: FeedWireItem[] = [];
+  for (const item of raw.items) {
+    const parsed = parseFeedWireItem(item);
+    if (parsed) items.push(parsed);
+  }
+  return {
+    items,
+    nextCursor: typeof raw.nextCursor === "string" ? raw.nextCursor : null,
+  };
 }

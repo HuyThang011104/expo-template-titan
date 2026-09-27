@@ -199,6 +199,24 @@ function feedPageResponse(cursor: string | null): Response {
   );
 }
 
+function userPostsPageResponse(userId: string, cursor: string | null): Response {
+  const mine = feedPosts.filter((post) => post.authorId === userId);
+  let offset = 0;
+  if (cursor !== null) {
+    const parsed = Number.parseInt(cursor, 10);
+    if (Number.isInteger(parsed) && parsed >= 0) offset = parsed;
+  }
+  const items = mine.slice(offset, offset + FEED_PAGE_SIZE).map((post) => ({
+    post,
+    author: feedAuthors.find((author) => author.id === post.authorId) ?? feedAuthors[0],
+  }));
+  const next = offset + FEED_PAGE_SIZE;
+  return jsonResponse(
+    { items, nextCursor: next < mine.length ? String(next) : null },
+    200,
+  );
+}
+
 const defaultRoutes: MockRoute[] = [
   {
     method: "GET",
@@ -338,10 +356,22 @@ function defaultEntityResponse(
   if (method === "GET" && path === "/feed/home") {
     return feedPageResponse(query["cursor"] ?? null);
   }
-  if (method === "GET" && path === "/me") {
+  if (method === "GET" && (path === "/me" || path === "/users/me")) {
     return jsonResponse(mockUsers[0], 200);
   }
   if (method === "GET") {
+    const handleMatch = /^\/users\/handle\/([^/]+)$/.exec(path);
+    if (handleMatch?.[1]) {
+      const want = decodeURIComponent(handleMatch[1]).toLowerCase();
+      const user = [...mockUsers, ...feedAuthors].find(
+        (candidate) => candidate.handle.toLowerCase() === want,
+      );
+      return user ? jsonResponse(user, 200) : notFound(method, path);
+    }
+    const postsMatch = /^\/users\/([^/]+)\/posts$/.exec(path);
+    if (postsMatch?.[1]) {
+      return userPostsPageResponse(decodeURIComponent(postsMatch[1]), query["cursor"] ?? null);
+    }
     const { base, id } = splitIdPath(path);
     if (base === "/users" && id) {
       const user = mockUsers.find((candidate) => candidate.id === id);

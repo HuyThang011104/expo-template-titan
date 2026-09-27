@@ -7,6 +7,7 @@
  */
 
 import { client } from "@/shared/api";
+import { endpoints } from "@/shared/api/endpoints";
 
 import type { User } from "./model";
 import { parseUser } from "./schema";
@@ -17,14 +18,25 @@ export type FetchOptions = {
 
 /** GET `/users/:id` → `User | null`. */
 export async function fetchUser(id: string, opts: FetchOptions = {}): Promise<User | null> {
-  const data = await client.get<unknown>(`/users/${encodeURIComponent(id)}`, {
+  const data = await client.get<unknown>(endpoints.user(id), {
     fetchImpl: opts.fetchImpl,
   });
   return parseUser(data);
 }
 
-/** GET `/me` → `User | null` (used with `queryKeys.me`). */
+/** GET `/users/me` → `User | null` (used with `queryKeys.me`). */
 export async function fetchMe(opts: FetchOptions = {}): Promise<User | null> {
-  const data = await client.get<unknown>("/me", { fetchImpl: opts.fetchImpl });
+  const data = await client.get<unknown>(endpoints.me(), { fetchImpl: opts.fetchImpl });
+  return parseUser(data);
+}
+
+/** GET `/users/handle/:handle` → `User | null`. */
+export async function fetchUserByHandle(
+  handle: string,
+  opts: FetchOptions = {},
+): Promise<User | null> {
+  const data = await client.get<unknown>(endpoints.userByHandle(handle), {
+    fetchImpl: opts.fetchImpl,
+  });
   return parseUser(data);
 }

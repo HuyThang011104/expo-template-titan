@@ -7,12 +7,13 @@
  *   prepends via `addCreatedPost` on success.
  */
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { logger } from "@/shared/observability/logger";
 import { queryKeys } from "@/shared/query";
 
-import { createPostRemote, fetchPost, likePostRemote } from "./api";
-import { addCreatedPost, likePost } from "./cache";
+import { createPostRemote, fetchPost, fetchUserPostsRemote, likePostRemote } from "./api";
+import { addCreatedPost, hydrateFeedItem, likePost } from "./cache";
 import type { CreatePostInput } from "./schema";
 import type { FeedWireItem } from "./model";
 
@@ -55,6 +56,50 @@ export function useCreatePost(opts: QueryFetchOptions = {}) {
       addCreatedPost(qc, post);
     },
   });
+}
+
+export type UserPostsPage = {
+  postIds: string[];
+  nextCursor: string | null;
+};
+
+export function useUserPosts(userId: string, opts: QueryFetchOptions = {}) {
+  const qc = useQueryClient();
+  const infinite = useInfiniteQuery({
+    queryKey: queryKeys.userPosts(userId),
+    queryFn: async ({ pageParam }): Promise<UserPostsPage> => {
+      const page = await fetchUserPostsRemote(userId, pageParam, opts);
+      if (!page) {
+        logger.warn("[post] invalid user-posts page", { userId });
+        throw new Error(`[post] Invalid user-posts page for ${userId}`);
+      }
+      const postIds: string[] = [];
+      for (const item of page.items) {
+        postIds.push(hydrateFeedItem(qc, item).postId);
+      }
+      return { postIds, nextCursor: page.nextCursor };
+    },
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage: UserPostsPage) => lastPage.nextCursor ?? undefined,
+    enabled: userId.length > 0,
+  });
+
+  const postIds = (infinite.data?.pages ?? []).flatMap((page) => page.postIds);
+
+  /** Warm the canonical post so detail opens without loading. */
+  const prefetchPost = (id: string): void => {
+    void qc.prefetchQuery({
+      queryKey: queryKeys.post(id),
+      queryFn: async () => {
+        const post = await fetchPost(id, opts);
+        if (!post) throw new Error(`Invalid post ${id}`);
+        return post;
+      },
+      staleTime: 30_000,
+    });
+  };
+
+  return { ...infinite, postIds, prefetchPost };
 }
 
 export type PostAuthor = FeedWireItem["author"];

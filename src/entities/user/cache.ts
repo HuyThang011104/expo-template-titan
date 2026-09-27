@@ -21,6 +21,17 @@ export function getUserData(qc: QueryClient, id: string): User | undefined {
   return qc.getQueryData<User>(queryKeys.user(id));
 }
 
+/** Remember a `handle → user` resolution (same canonical entry, second key). */
+export function setUserByHandle(qc: QueryClient, handle: string, user: User): void {
+  setUser(qc, user);
+  qc.setQueryData(queryKeys.userByHandle(handle.toLowerCase()), user);
+}
+
+/** Read a cached `handle → user` resolution (no fetch). */
+export function getUserByHandleData(qc: QueryClient, handle: string): User | undefined {
+  return qc.getQueryData<User>(queryKeys.userByHandle(handle.toLowerCase()));
+}
+
 /** Named alias for the feed hydrator — same as `setUser`. */
 export function hydrateUser(qc: QueryClient, user: User): void {
   setUser(qc, user);
