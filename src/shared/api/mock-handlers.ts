@@ -217,6 +217,51 @@ function userPostsPageResponse(userId: string, cursor: string | null): Response 
   );
 }
 
+/**
+ * Search mock (F3): filters the deterministic feed fixtures in memory.
+ * - `q` matches post body OR author handle/displayName (case-insensitive).
+ * - `users` are the top 5 matching authors (not paginated).
+ * - `items` are matching `{ post, author }` wire items, paginated by offset cursor.
+ * - Empty/short `q` returns an empty 200 (client gates `enabled` on `q.length >= 2`).
+ */
+function searchResponse(rawQuery: string, cursor: string | null): Response {
+  const q = rawQuery.trim().toLowerCase();
+  if (q.length === 0) {
+    return jsonResponse({ users: [], items: [], nextCursor: null }, 200);
+  }
+  const matchedAuthors = feedAuthors.filter(
+    (author) =>
+      author.handle.toLowerCase().includes(q) ||
+      author.displayName.toLowerCase().includes(q),
+  );
+  const authorById = new Map(feedAuthors.map((author) => [author.id, author]));
+  const matchedPosts = feedPosts.filter((post) => {
+    if (post.body.toLowerCase().includes(q)) return true;
+    const author = authorById.get(post.authorId) ?? feedAuthors[0];
+    return (
+      author.handle.toLowerCase().includes(q) || author.displayName.toLowerCase().includes(q)
+    );
+  });
+  let offset = 0;
+  if (cursor !== null) {
+    const parsed = Number.parseInt(cursor, 10);
+    if (Number.isInteger(parsed) && parsed >= 0) offset = parsed;
+  }
+  const items = matchedPosts.slice(offset, offset + FEED_PAGE_SIZE).map((post) => ({
+    post,
+    author: authorById.get(post.authorId) ?? feedAuthors[0],
+  }));
+  const next = offset + FEED_PAGE_SIZE;
+  return jsonResponse(
+    {
+      users: matchedAuthors.slice(0, 5),
+      items,
+      nextCursor: next < matchedPosts.length ? String(next) : null,
+    },
+    200,
+  );
+}
+
 const defaultRoutes: MockRoute[] = [
   {
     method: "GET",
@@ -360,6 +405,9 @@ function defaultEntityResponse(
     return jsonResponse(mockUsers[0], 200);
   }
   if (method === "GET") {
+    if (path === "/search") {
+      return searchResponse(query["q"] ?? "", query["cursor"] ?? null);
+    }
     const handleMatch = /^\/users\/handle\/([^/]+)$/.exec(path);
     if (handleMatch?.[1]) {
       const want = decodeURIComponent(handleMatch[1]).toLowerCase();

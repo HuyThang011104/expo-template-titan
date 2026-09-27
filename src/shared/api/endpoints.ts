@@ -27,6 +27,10 @@ export const endpoints = {
   createPost: () => "/posts",
   homeFeed: (cursor?: string | null) =>
     cursor ? `/feed/home?cursor=${encode(cursor)}` : "/feed/home",
+  search: (q: string, cursor?: string | null) => {
+    const base = `/search?q=${encode(q.trim())}`;
+    return cursor ? `${base}&cursor=${encode(cursor)}` : base;
+  },
   likePost: (id: string) => `/posts/${encode(id)}/like`,
   repost: (id: string) => `/posts/${encode(id)}/repost`,
   uploadSessions: () => "/uploads",

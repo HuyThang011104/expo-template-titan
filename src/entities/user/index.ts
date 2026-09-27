@@ -6,6 +6,8 @@
  */
 
 export type { User, UserId } from "./model";
+// Parses wire users; raw zod schema stays private (mirrors entities/post).
+export { parseUser } from "./schema";
 export {
   fetchMe,
   fetchUser,

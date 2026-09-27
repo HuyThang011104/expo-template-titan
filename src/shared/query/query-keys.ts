@@ -10,4 +10,5 @@ export const queryKeys = {
   userPosts: (id: string) => ["users", id, "posts"] as const,
   post: (id: string) => ["posts", id] as const,
   homeFeed: (cursor?: string) => ["feed", "home", cursor ?? ""] as const,
+  search: (q: string) => ["search", q.trim().toLowerCase()] as const,
 };
