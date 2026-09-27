@@ -9,6 +9,7 @@ const {
   buildReplacements,
   applyReplacements,
 } = require("./placeholders");
+const { resolveTemplate, localTemplateRoot } = require("./template");
 
 const VALID_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
@@ -33,6 +34,7 @@ function parseArgs(argv) {
     schemeBase: TEMPLATE_DEFAULTS.schemeBase,
     slug: null,
     host: TEMPLATE_DEFAULTS.host,
+    ref: null,
     help: false,
   };
   const rest = [];
@@ -48,6 +50,8 @@ function parseArgs(argv) {
     else if (a.startsWith("--scheme=")) opts.schemeBase = a.slice("--scheme=".length);
     else if (a === "--slug") opts.slug = requiredValue(argv, (i += 1), a);
     else if (a.startsWith("--slug=")) opts.slug = a.slice("--slug=".length);
+    else if (a === "--ref") opts.ref = requiredValue(argv, (i += 1), a);
+    else if (a.startsWith("--ref=")) opts.ref = a.slice("--ref=".length);
     else if (a.startsWith("--")) fail(`unknown flag ${a} (see --help)`);
     else if (a.startsWith("-") && a.length > 1) fail(`unknown flag ${a} (see --help)`);
     else rest.push(a);
@@ -59,12 +63,13 @@ function parseArgs(argv) {
 
 function printHelp() {
   process.stdout.write(
-    `Usage: create-expo-titan <directory> [--bundle-id <prefix>] [--scheme <base>] [--slug <slug>] [--no-install] [--no-git]
+    `Usage: create-expo-titan <directory> [--bundle-id <prefix>] [--scheme <base>] [--slug <slug>] [--ref <tag|branch>] [--no-install] [--no-git]
 
   <directory>   Folder (and app name) for the new project.
   --bundle-id   Opt-in bundle prefix (default: com.example.titan).
   --scheme      Opt-in deep-link scheme base (default: titan).
   --slug        Opt-in Expo slug (default: derived from directory).
+  --ref         Template git ref (default: CLI version tag, fallback main).
   --no-install  Skip dependency install (CI).
   --no-git      Skip git init.
 `,
@@ -77,7 +82,7 @@ function copyDir(src, dest) {
     const rel = entry.name;
     const from = path.join(src, rel);
     const to = path.join(dest, rel);
-    const relFromRoot = path.relative(templateRoot(), from);
+    const relFromRoot = path.relative(src, from);
     if (!shouldCopyFile(relFromRoot)) continue;
     if (entry.isDirectory()) copyDir(from, to);
     else if (entry.isFile()) fs.copyFileSync(from, to);
@@ -85,7 +90,7 @@ function copyDir(src, dest) {
 }
 
 function templateRoot() {
-  return path.resolve(__dirname, "..", "..", "..");
+  return localTemplateRoot();
 }
 
 function listFiles(dir, base = dir) {
@@ -139,7 +144,7 @@ async function run(argv, env = {}) {
     host: opts.host,
   });
 
-  copyDir(templateRoot(), dest);
+  copyDir(await resolveTemplate({ ref: opts.ref, env }), dest);
 
   for (const rel of listFiles(dest)) {
     const full = path.join(dest, rel);

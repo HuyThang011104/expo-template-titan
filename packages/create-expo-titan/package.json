@@ -15,12 +15,26 @@
   "engines": {
     "node": ">=18"
   },
+  "dependencies": {
+    "tar": "^7.5.2"
+  },
+  "keywords": [
+    "expo",
+    "react-native",
+    "boilerplate",
+    "starter",
+    "sdk-57"
+  ],
+  "homepage": "https://github.com/HuyThang011104/expo-template-titan#readme",
+  "bugs": {
+    "url": "https://github.com/HuyThang011104/expo-template-titan/issues"
+  },
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/HuyThang011104/expo-sdk-57-template.git",
+    "url": "https://github.com/HuyThang011104/expo-template-titan.git",
     "directory": "packages/create-expo-titan"
   }
 }

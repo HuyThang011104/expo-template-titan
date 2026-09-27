@@ -6,7 +6,7 @@ const path = require("path");
 
 const TEMPLATE_DEFAULTS = {
   appName: "Titan",
-  slug: "titan",
+  slug: "expo-template-titan",
   bundleIdPrefix: "com.example.titan",
   schemeBase: "titan",
   host: "titan.example",
@@ -137,7 +137,7 @@ function buildReplacements({ appName, slug, bundleIdPrefix, schemeBase, host }) 
     files: ["package.json"],
   });
   replacements.push({
-    from: `name: variant === "production" ? "${TEMPLATE_DEFAULTS.appName}" : \`Titan (\${variant})\``,
+    from: `name: variant === "production" ? "${TEMPLATE_DEFAULTS.appName}" : \`${TEMPLATE_DEFAULTS.appName} (\${variant})\``,
     to: `name: variant === "production" ? "${appName}" : \`${appName} (\${variant})\``,
     files: ["app.config.ts"],
   });
