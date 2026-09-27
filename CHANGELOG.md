@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — publish-ready `create-expo-titan`
+
+Scaffolder can now be published to npm (previously local-only):
+
+- CLI downloads the template from GitHub at its own version tag
+  (`create-expo-titan@vX.Y.Z` → `vX.Y.Z` → `main`), cached in tmp;
+  monorepo checkouts still scaffold offline from source.
+- New `--ref` flag (`CREATE_EXPO_TITAN_REF`) to pin the template ref.
+- Fixed stale `TEMPLATE_DEFAULTS.slug` (`titan` → `expo-template-titan`)
+  so scaffolded apps no longer keep the template slug.
+- Fixed `repository` URL (`expo-template-titan`), added `tar` dep,
+  CLI joined the pnpm workspace.
+- `.github/workflows/publish-cli.yml`: tag `create-expo-titan@v*`
+  runs CLI tests then `npm publish --provenance` (needs `NPM_TOKEN`).
+
 ## Unreleased — rename Social → Titan
 
 Project identity renamed `social` → `titan`; social demo code untouched:

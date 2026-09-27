@@ -1,0 +1,37 @@
+# Maestro E2E — profile me + user detail (F2).
+#
+# 1. Cold boot with cleared state lands on sign-in when logged out
+# 2. Sign in (mock — `sign-in-button` sets the dev session)
+# 3. Open the Profile tab, see the me header (`profile-header-ava`, mock u-1)
+#    and the user's own posts (`profile-list`)
+# 4. Open a post, tap back — placeholder for author→profile deep-link
+#    (nested Link inside the post card bubbles to post detail today,
+#    so author tap is verified by hand + unit tests instead).
+#
+# Run locally (app installed on emulator/simulator):
+#   maestro test e2e/flows/profile.yaml
+# On EAS: `.eas/workflows/e2e.yml` builds the `e2e-test` profile
+# (mock backend via EXPO_PUBLIC_API_MOCK) and runs this flow on it.
+#
+# Requires a build serving `GET /users/me`, `GET /users/handle/:handle`,
+# and `GET /users/:id/posts` (mock covers all three).
+
+appId: com.example.titan.dev
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "sign-in-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 30000
+- tapOn: "Profile"
+- extendedWaitUntil:
+    visible:
+      id: "profile-screen"
+    timeout: 15000
+- assertVisible:
+    id: "profile-header-ava"
+- assertVisible:
+    id: "profile-list"

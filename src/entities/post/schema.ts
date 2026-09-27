@@ -68,3 +68,18 @@ export function parseFeedWireItem(data: unknown): FeedWireItem | null {
   }
   return shaped.data;
 }
+
+export const createPostInputSchema = z.object({
+  body: z.string().trim().min(1).max(280),
+  mediaIds: z.array(z.string().min(1)).max(4),
+});
+
+export type CreatePostInput = z.infer<typeof createPostInputSchema>;
+
+/** Parse composer input → trimmed `CreatePostInput | null` (no throw). */
+export function parseCreatePostInput(data: unknown): CreatePostInput | null {
+  const result = createPostInputSchema.safeParse(data);
+  if (result.success) return result.data;
+  logger.warn("[entity] schema parse failed", { entity: "post-create-input" });
+  return null;
+}

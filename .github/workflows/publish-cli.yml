@@ -1,0 +1,72 @@
+name: Publish create-expo-titan
+
+# Release the scaffolder to npm (public) by pushing a tag:
+#   1. Bump version: edit packages/create-expo-titan/package.json
+#      (e.g. 1.0.0 -> 1.0.1) and commit.
+#   2. Tag: git tag create-expo-titan@v1.0.1 && git push origin create-expo-titan@v1.0.1
+# The tag MUST match the package version (checked below).
+# The published CLI downloads the template from the same tag
+# (fallback: vX.Y.Z, then main) — see packages/create-expo-titan/src/template.js.
+#
+# One-time setup (repo admin):
+# - Classic: create a granular npm token (read+write on create-expo-titan only)
+#   and save it as repo secret NPM_TOKEN (Settings -> Secrets -> Actions).
+# - Or trusted publishing: link the package to this repo+workflow on npmjs.com
+#   and delete the NODE_AUTH_TOKEN line below (OIDC needs only id-token: write).
+on:
+  push:
+    tags:
+      - "create-expo-titan@v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: CLI tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Scaffolder tests
+        run: pnpm exec jest packages/create-expo-titan --ci --watchman=false
+
+  publish:
+    name: Publish to npm
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance attestation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+          registry-url: "https://registry.npmjs.org"
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Tag must match package version
+        run: |
+          TAG="${GITHUB_REF_NAME#create-expo-titan@}"
+          PKG="v$(node -p "require('./packages/create-expo-titan/package.json').version")"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "tag create-expo-titan@$TAG does not match package version $PKG"
+            exit 1
+          fi
+      - name: Publish
+        run: npm publish --provenance --access public
+        working-directory: packages/create-expo-titan
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

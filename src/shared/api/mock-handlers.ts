@@ -199,6 +199,24 @@ function feedPageResponse(cursor: string | null): Response {
   );
 }
 
+function userPostsPageResponse(userId: string, cursor: string | null): Response {
+  const mine = feedPosts.filter((post) => post.authorId === userId);
+  let offset = 0;
+  if (cursor !== null) {
+    const parsed = Number.parseInt(cursor, 10);
+    if (Number.isInteger(parsed) && parsed >= 0) offset = parsed;
+  }
+  const items = mine.slice(offset, offset + FEED_PAGE_SIZE).map((post) => ({
+    post,
+    author: feedAuthors.find((author) => author.id === post.authorId) ?? feedAuthors[0],
+  }));
+  const next = offset + FEED_PAGE_SIZE;
+  return jsonResponse(
+    { items, nextCursor: next < mine.length ? String(next) : null },
+    200,
+  );
+}
+
 const defaultRoutes: MockRoute[] = [
   {
     method: "GET",
@@ -255,6 +273,55 @@ function splitIdPath(path: string): { base: string; id: string | null } {
   return { base: path, id: null };
 }
 
+function mockUploadResponse(): Response {
+  const stamp = Date.now().toString(36);
+  return jsonResponse(
+    {
+      mediaId: `m-new-${stamp}`,
+      url: `https://picsum.photos/seed/upload-${stamp}/800/600`,
+      kind: "image",
+    },
+    200,
+  );
+}
+
+function mockCreatePostResponse(bodyText: string | null): Response {
+  let body = "";
+  let mediaIds: unknown = [];
+  try {
+    const parsed: unknown = bodyText ? (JSON.parse(bodyText) as unknown) : null;
+    if (parsed !== null && typeof parsed === "object") {
+      const candidate = parsed as { body?: unknown; mediaIds?: unknown };
+      if (typeof candidate.body === "string") body = candidate.body.trim();
+      mediaIds = candidate.mediaIds;
+    }
+  } catch {
+    return jsonResponse({ message: "[mock] Invalid JSON" }, 400);
+  }
+  if (body.length < 1 || body.length > 280 || !Array.isArray(mediaIds) || mediaIds.length > 4) {
+    return jsonResponse({ message: "[mock] Invalid create-post input" }, 400);
+  }
+  const media = (mediaIds as unknown[]).slice(0, 4).map((id, index) => ({
+    kind: "image",
+    url: `https://picsum.photos/seed/new-${Date.now()}-${index}/800/600`,
+    _id: typeof id === "string" ? id : undefined,
+  }));
+  // Strip the echo helper before responding; Post schema allows only kind+url.
+  const cleanMedia = media.map(({ kind, url }) => ({ kind, url }));
+  return jsonResponse(
+    {
+      id: `feed-p-new-${Date.now().toString(36)}`,
+      authorId: mockUsers[0]?.id ?? "u-1",
+      body,
+      media: cleanMedia,
+      likeCount: 0,
+      likedByMe: false,
+      createdAt: new Date().toISOString(),
+    },
+    201,
+  );
+}
+
 function mockLikeResponse(id: string, bodyText: string | null): Response {
   const base = [...mockPosts, ...feedPosts].find((post) => post.id === id);
   if (!base) return notFound("POST", `/posts/${id}/like`);
@@ -289,10 +356,22 @@ function defaultEntityResponse(
   if (method === "GET" && path === "/feed/home") {
     return feedPageResponse(query["cursor"] ?? null);
   }
-  if (method === "GET" && path === "/me") {
+  if (method === "GET" && (path === "/me" || path === "/users/me")) {
     return jsonResponse(mockUsers[0], 200);
   }
   if (method === "GET") {
+    const handleMatch = /^\/users\/handle\/([^/]+)$/.exec(path);
+    if (handleMatch?.[1]) {
+      const want = decodeURIComponent(handleMatch[1]).toLowerCase();
+      const user = [...mockUsers, ...feedAuthors].find(
+        (candidate) => candidate.handle.toLowerCase() === want,
+      );
+      return user ? jsonResponse(user, 200) : notFound(method, path);
+    }
+    const postsMatch = /^\/users\/([^/]+)\/posts$/.exec(path);
+    if (postsMatch?.[1]) {
+      return userPostsPageResponse(decodeURIComponent(postsMatch[1]), query["cursor"] ?? null);
+    }
     const { base, id } = splitIdPath(path);
     if (base === "/users" && id) {
       const user = mockUsers.find((candidate) => candidate.id === id);
@@ -310,6 +389,14 @@ function defaultEntityResponse(
     // Receives the Expo push token after login; always ok, no body validation.
     if (path === "/devices") {
       return jsonResponse({ ok: true }, 200);
+    }
+    if (path === "/posts") {
+      return mockCreatePostResponse(bodyText);
+    }
+    // Multipart upload target (F1.2 composer media). The client sends
+    // `FormData`, so there is no JSON body to validate — always succeed.
+    if (path === "/uploads") {
+      return mockUploadResponse();
     }
     const likeMatch = /^\/posts\/([^/]+)\/like$/.exec(path);
     if (likeMatch?.[1]) {

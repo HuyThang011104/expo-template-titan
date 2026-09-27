@@ -6,11 +6,13 @@ import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
+import { dispatchComposerOutboxJob } from "@/features/composer";
 import { SessionProvider } from "@/shared/auth";
 import { NotificationsBootstrap } from "@/shared/notifications";
 import { ObservabilityBootstrap, initObservability } from "@/shared/observability";
 import { queryClient, setupOnlineManager, startQueryPersistence } from "@/shared/query";
 import { RealtimeProvider } from "@/shared/realtime";
+import { startOutboxSync } from "@/shared/storage/db/outbox-worker";
 import { ThemeProvider } from "@/shared/ui";
 
 type AppProvidersProps = {
@@ -50,6 +52,13 @@ export function AppProviders({ children }: AppProvidersProps) {
   const colorScheme = useColorScheme();
 
   useEffect(() => setupOnlineManager(), []);
+  // Offline mutation queue (F1.3 composer `post.create`): drains once when
+  // online + on every offline->online transition. Unknown kinds are dropped
+  // inside the dispatcher so they never head-of-line block the queue.
+  useEffect(() => {
+    const stop = startOutboxSync((job) => dispatchComposerOutboxJob(job));
+    return stop;
+  }, []);
   // Background cache restore (identity/profile keys only) + throttled writes.
   // Best-effort: never blocks first paint, failures only warn.
   useEffect(() => {

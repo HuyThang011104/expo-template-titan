@@ -1,0 +1,50 @@
+# Maestro E2E — composer text-only post (F1.1/F1.4).
+#
+# 1. Cold boot with cleared state lands on sign-in when logged out
+# 2. Sign in (mock — `sign-in-button` sets the dev session)
+# 3. Open the composer via the Create tab (`tabPress` pushes `/composer`)
+# 4. Type into `composer-input` (autofocused) and tap `composer-post-button`
+# 5. Sheet dismisses back to Home; the new post body is visible in `feed-list`
+#
+# Run locally (app installed on emulator/simulator):
+#   maestro test e2e/flows/composer.yaml
+# On EAS: `.eas/workflows/e2e.yml` builds the `e2e-test` profile
+# (mock backend via EXPO_PUBLIC_API_MOCK) and runs this flow on it.
+#
+# Requires a build serving `POST /posts` (mock or staging). The mock echoes
+# the body with `id: feed-p-new-<ts>`, so asserting the typed text proves the
+# prepend path (`addCreatedPost` → feed page 0, no full refetch).
+#
+# Known caveats:
+# - The Create tab is `disabled` (blocks native switch, still emits
+#   `tabPress`), so tap by visible label text, not by test id.
+# - Photo picking (`composer-media-add`) opens the OS library — not scripted
+#   here; media upload is covered by unit tests (`submitWithMedia`).
+# - Offline queue (`composer-queued-badge` → outbox drain) needs airplane-mode
+#   toggling; verify by hand on the device checklist instead.
+
+appId: com.example.titan.dev
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "sign-in-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 30000
+- tapOn: "Create"
+- extendedWaitUntil:
+    visible:
+      id: "composer-input"
+    timeout: 15000
+- tapOn:
+    id: "composer-input"
+- inputText: "Hello F1 from Maestro"
+- tapOn:
+    id: "composer-post-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 30000
+- assertVisible: "Hello F1 from Maestro"

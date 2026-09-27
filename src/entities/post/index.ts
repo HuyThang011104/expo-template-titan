@@ -7,10 +7,18 @@
  */
 
 export type { FeedWireItem, Post, PostId, PostMedia, PostMediaKind } from "./model";
-export { fetchPost, likePostRemote, type FetchOptions as PostFetchOptions } from "./api";
-// Parses wire feed items; raw zod schemas stay private.
-export { parseFeedWireItem } from "./schema";
 export {
+  createPostRemote,
+  fetchPost,
+  fetchUserPostsRemote,
+  likePostRemote,
+  type FetchOptions as PostFetchOptions,
+  type UserPostsPage as UserPostsRemotePage,
+} from "./api";
+// Parses wire feed items + composer input; raw zod schemas stay private.
+export { parseCreatePostInput, parseFeedWireItem, type CreatePostInput } from "./schema";
+export {
+  addCreatedPost,
   getPostData,
   hydrateFeedItem,
   likePost,
@@ -20,11 +28,14 @@ export {
   type LikeRemoteFn,
 } from "./cache";
 export {
+  useCreatePost,
   useLikePost,
   usePost,
   usePostAuthor,
+  useUserPosts,
   type PostAuthor,
   type QueryFetchOptions as UsePostOptions,
+  type UserPostsPage,
 } from "./queries";
 export { PostActions, type PostActionsProps } from "./ui/post-actions";
 export { PostCard, type PostCardProps } from "./ui/post-card";
