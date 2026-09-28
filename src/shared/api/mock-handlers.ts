@@ -154,6 +154,78 @@ const feedFailPost: FeedMockPost = {
   createdAt: "2026-09-07T12:00:00.000Z",
 };
 
+/**
+ * Deterministic notifications mock (F5): 25 items cycling
+ * like/follow/post/mention, first 5 unread. `cursor` is an offset.
+ */
+const NOTIFICATIONS_PAGE_SIZE = 10;
+
+type NotificationMockItem = {
+  id: string;
+  kind: "like" | "follow" | "post" | "mention";
+  actorId: string;
+  postId: string | null;
+  read: boolean;
+  createdAt: string;
+};
+
+const NOTIFICATION_KINDS = ["like", "follow", "post", "mention"] as const;
+
+function buildNotifications(): NotificationMockItem[] {
+  const baseTime = Date.parse("2026-09-09T10:00:00.000Z");
+  const items: NotificationMockItem[] = [];
+  for (let i = 1; i <= 25; i++) {
+    const kind = NOTIFICATION_KINDS[(i - 1) % NOTIFICATION_KINDS.length] ?? "like";
+    const author = feedAuthors[i % feedAuthors.length] ?? feedAuthors[0];
+    const post = feedPosts[(i - 1) % feedPosts.length] ?? feedPosts[0];
+    items.push({
+      id: `n-${i}`,
+      kind,
+      actorId: author.id,
+      postId: kind === "follow" ? null : post.id,
+      read: i > 5,
+      createdAt: new Date(baseTime - i * 1_800_000).toISOString(),
+    });
+  }
+  return items;
+}
+
+/** Id forced to 500 on the mark-read endpoint (rollback tests). */
+const FAIL_READ_NOTIFICATION_ID = "n-fail";
+
+const FAIL_READ_NOTIFICATION_FIXTURE: NotificationMockItem = {
+  id: FAIL_READ_NOTIFICATION_ID,
+  kind: "like",
+  actorId: "u-1",
+  postId: "feed-p-1",
+  read: false,
+  createdAt: new Date(Date.parse("2026-09-09T10:00:00.000Z") - 26 * 1_800_000).toISOString(),
+};
+
+function notificationsPageResponse(cursor: string | null): Response {
+  let offset = 0;
+  if (cursor !== null) {
+    const parsed = Number.parseInt(cursor, 10);
+    if (Number.isInteger(parsed) && parsed >= 0) offset = parsed;
+  }
+  const items = notificationsFixtures.slice(offset, offset + NOTIFICATIONS_PAGE_SIZE);
+  const next = offset + NOTIFICATIONS_PAGE_SIZE;
+  return jsonResponse(
+    { items, nextCursor: next < notificationsFixtures.length ? String(next) : null },
+    200,
+  );
+}
+
+function mockMarkReadResponse(id: string): Response {
+  const item = notificationsFixtures.find((candidate) => candidate.id === id);
+  if (!item) return notFound("POST", `/notifications/${id}/read`);
+  if (id === FAIL_READ_NOTIFICATION_ID) {
+    return jsonResponse({ message: "[mock] forced mark-read failure" }, 500);
+  }
+  // Stateless echo with read:true (no persist — documented in the F5 plan).
+  return jsonResponse({ ...item, read: true }, 200);
+}
+
 function buildFeedPosts(): FeedMockPost[] {
   const posts: FeedMockPost[] = [];
   const baseTime = Date.parse("2026-09-09T10:00:00.000Z");
@@ -181,6 +253,12 @@ function buildFeedPosts(): FeedMockPost[] {
 
 /** 40 posts; `cursor` is an offset (`"0"`, `"10"`, ...). */
 const feedPosts: FeedMockPost[] = buildFeedPosts();
+
+/** 25 notifications + 1 forced-failure item; built after feed fixtures. */
+const notificationsFixtures: NotificationMockItem[] = [
+  ...buildNotifications(),
+  FAIL_READ_NOTIFICATION_FIXTURE,
+];
 
 function feedPageResponse(cursor: string | null): Response {
   let offset = 0;
@@ -408,6 +486,16 @@ function defaultEntityResponse(
     if (path === "/search") {
       return searchResponse(query["q"] ?? "", query["cursor"] ?? null);
     }
+    if (path === "/notifications") {
+      return notificationsPageResponse(query["cursor"] ?? null);
+    }
+    const notificationMatch = /^\/notifications\/([^/]+)$/.exec(path);
+    if (notificationMatch?.[1]) {
+      const item = notificationsFixtures.find(
+        (candidate) => candidate.id === decodeURIComponent(notificationMatch[1] ?? ""),
+      );
+      return item ? jsonResponse(item, 200) : notFound(method, path);
+    }
     const handleMatch = /^\/users\/handle\/([^/]+)$/.exec(path);
     if (handleMatch?.[1]) {
       const want = decodeURIComponent(handleMatch[1]).toLowerCase();
@@ -422,7 +510,8 @@ function defaultEntityResponse(
     }
     const { base, id } = splitIdPath(path);
     if (base === "/users" && id) {
-      const user = mockUsers.find((candidate) => candidate.id === id);
+      // Feed authors resolve too so notification actors hydrate (unknown ids still 404).
+      const user = [...mockUsers, ...feedAuthors].find((candidate) => candidate.id === id);
       return user ? jsonResponse(user, 200) : notFound(method, path);
     }
     if (base === "/posts" && id) {
@@ -449,6 +538,10 @@ function defaultEntityResponse(
     const likeMatch = /^\/posts\/([^/]+)\/like$/.exec(path);
     if (likeMatch?.[1]) {
       return mockLikeResponse(decodeURIComponent(likeMatch[1]), bodyText);
+    }
+    const readMatch = /^\/notifications\/([^/]+)\/read$/.exec(path);
+    if (readMatch?.[1]) {
+      return mockMarkReadResponse(decodeURIComponent(readMatch[1]));
     }
     return null;
   }

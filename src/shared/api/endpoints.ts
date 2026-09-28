@@ -42,6 +42,7 @@ export const endpoints = {
       : `/conversations/${encode(id)}/messages`,
   notifications: (cursor?: string | null) =>
     cursor ? `/notifications?cursor=${encode(cursor)}` : "/notifications",
+  markNotificationRead: (id: string) => `/notifications/${encode(id)}/read`,
 };
 
 /** Absolute URL for non-`client` callers (upload targets, link previews). */

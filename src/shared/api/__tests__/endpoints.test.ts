@@ -18,8 +18,14 @@ describe("endpoints", () => {
     expect(endpoints.homeFeed()).toBe("/feed/home");
     expect(endpoints.homeFeed(null)).toBe("/feed/home");
     expect(endpoints.homeFeed("a/b")).toBe("/feed/home?cursor=a%2Fb");
+    expect(endpoints.notifications()).toBe("/notifications");
     expect(endpoints.notifications("n2")).toBe("/notifications?cursor=n2");
     expect(endpoints.conversationMessages("c1")).toBe("/conversations/c1/messages");
+  });
+
+  it("builds the notification mark-read path with encoding", () => {
+    expect(endpoints.markNotificationRead("n-1")).toBe("/notifications/n-1/read");
+    expect(endpoints.markNotificationRead("n 2")).toBe("/notifications/n%202/read");
   });
 
   it("joins absolute URLs without double slashes", () => {
