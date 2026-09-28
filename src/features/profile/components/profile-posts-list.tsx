@@ -6,7 +6,7 @@
  * mirroring `features/feed/components/feed-list`.
  */
 
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { PostCard } from "@/entities/post";
@@ -41,7 +41,13 @@ function ProfilePostItem({
           prefetchPost(postId);
         }}
       >
-        <PostCard postId={postId} testID={`post-card-${postId}`} />
+        <PostCard
+          postId={postId}
+          testID={`post-card-${postId}`}
+          onSafetyPress={() => {
+            router.push(hrefs.report("post", postId));
+          }}
+        />
       </Pressable>
     </Link>
   );

@@ -12,4 +12,10 @@ export const hrefs = {
   home: (): Href => "/",
   post: (id: string): Href => ({ pathname: "/post/[id]", params: { id } }),
   user: (handle: string): Href => ({ pathname: "/user/[handle]", params: { handle } }),
+  /**
+   * Report sheet (F6). Cast until `.expo/types/router.d.ts` regenerates
+   * on the next `expo start` (typed routes are codegen'd, see Phase 5 notes).
+   */
+  report: (targetType: "post" | "user", targetId: string): Href =>
+    ({ pathname: "/report", params: { targetType, targetId } }) as unknown as Href,
 };

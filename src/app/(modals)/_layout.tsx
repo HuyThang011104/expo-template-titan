@@ -3,7 +3,7 @@ import { Stack } from "expo-router";
 /**
  * Modal group.
  * `presentation` is set per screen here; root only sets `headerShown: false`.
- * Composer = `formSheet`, media-viewer = `modal`.
+ * Composer = `formSheet`, media-viewer = `modal`, report = `formSheet`.
  */
 export default function ModalsLayout() {
   return (
@@ -15,6 +15,10 @@ export default function ModalsLayout() {
       <Stack.Screen
         name="media-viewer"
         options={{ presentation: "modal", title: "Media", headerShown: true }}
+      />
+      <Stack.Screen
+        name="report"
+        options={{ presentation: "formSheet", title: "Report", headerShown: true }}
       />
     </Stack>
   );

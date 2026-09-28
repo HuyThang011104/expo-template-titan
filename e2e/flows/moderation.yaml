@@ -1,0 +1,46 @@
+# Maestro E2E — report modal via post safety menu (F6).
+#
+# 1. Cold boot with cleared state lands on sign-in when logged out
+# 2. Sign in (mock — `sign-in-button` sets the dev session)
+# 3. Feed visible (`feed-list` + `post-card-feed-p-1`)
+# 4. Tap the post `...` menu (`safety-menu-feed-p-1`) → `report` sheet
+#    (`formSheet`) opens with `report-screen` + reason list
+# 5. Select `spam` → `report-submit-button` is visible/enabled
+#
+# Run locally (app installed on emulator/simulator):
+#   maestro test e2e/flows/moderation.yaml
+# On EAS: `.eas/workflows/e2e.yml` builds the `e2e-test` profile
+# (mock backend via EXPO_PUBLIC_API_MOCK) and runs this flow on it.
+#
+# Requires a build serving `POST /reports` (mock validates reason enum
+# and echoes `r-<ts>` 201). The flow stops at reason-select: submit →
+# dismiss is covered by unit tests (`safety-actions.test.tsx`), and the
+# nested-press bubble (safety tap also opens detail, same caveat as the
+# foundation like-button) would make a post-submit assert flaky.
+# Block/mute confirm + list filtering is verified by unit tests
+# (`relationship-cache.test.ts`) and by hand on the device checklist.
+
+appId: com.example.titan.dev
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "sign-in-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "safety-menu-feed-p-1"
+    timeout: 15000
+- tapOn:
+    id: "safety-menu-feed-p-1"
+- extendedWaitUntil:
+    visible:
+      id: "report-screen"
+    timeout: 15000
+- tapOn:
+    id: "report-reason-spam"
+- assertVisible:
+    id: "report-submit-button"

@@ -6,7 +6,7 @@
  * - Links go through shared `hrefs` so typed routes stay in one place.
  */
 
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
@@ -57,7 +57,13 @@ function SearchPostItem({
           prefetchPost(postId);
         }}
       >
-        <PostCard postId={postId} testID={`search-post-card-${postId}`} />
+        <PostCard
+          postId={postId}
+          testID={`search-post-card-${postId}`}
+          onSafetyPress={() => {
+            router.push(hrefs.report("post", postId));
+          }}
+        />
       </Pressable>
     </Link>
   );

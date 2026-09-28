@@ -6,7 +6,7 @@
  */
 
 import { Image } from "expo-image";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { formatRelative } from "@/shared/lib/date";
 import { Text } from "@/shared/ui/text";
@@ -18,6 +18,13 @@ import { PostActions } from "./post-actions";
 export type PostCardProps = {
   postId: string;
   testID?: string;
+  /**
+   * Safety entry point (F6). The card stays dumb: it only renders the
+   * `...` affordance and calls back — navigation to `/report` is wired
+   * by each feature screen, never by the entity.
+   */
+  onSafetyPress?: () => void;
+  safetyTestID?: string;
 };
 
 const AUTHOR_AVATAR_SIZE = 40;
@@ -90,7 +97,7 @@ function PostAuthorHeader({ authorId }: { authorId: string }) {
   );
 }
 
-export function PostCard({ postId, testID }: PostCardProps) {
+export function PostCard({ postId, testID, onSafetyPress, safetyTestID }: PostCardProps) {
   const theme = useTheme();
   const postQuery = usePost(postId);
 
@@ -114,7 +121,25 @@ export function PostCard({ postId, testID }: PostCardProps) {
   const firstMedia = post.media[0];
   return (
     <View testID={testID} style={[styles.card, { gap: theme.space.sm }]}>
-      <PostAuthorHeader authorId={post.authorId} />
+      <View style={styles.headerRow}>
+        <View style={styles.headerFlex}>
+          <PostAuthorHeader authorId={post.authorId} />
+        </View>
+        {onSafetyPress ? (
+          <Pressable
+            testID={safetyTestID ?? `safety-menu-${postId}`}
+            accessibilityRole="button"
+            accessibilityLabel="Post options"
+            hitSlop={8}
+            onPress={onSafetyPress}
+            style={styles.safetyTouch}
+          >
+            <Text variant="small" color="textSecondary" style={styles.safetyLabel}>
+              …
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
       <Text variant="body">{post.body}</Text>
       {firstMedia?.kind === "image" ? (
         <Image
@@ -149,6 +174,19 @@ export function PostCard({ postId, testID }: PostCardProps) {
 const styles = StyleSheet.create({
   card: {
     padding: 12,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  headerFlex: {
+    flex: 1,
+  },
+  safetyTouch: {
+    padding: 4,
+  },
+  safetyLabel: {
+    fontWeight: "700",
   },
   authorRow: {
     flexDirection: "row",

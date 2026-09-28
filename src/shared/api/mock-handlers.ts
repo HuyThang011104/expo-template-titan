@@ -226,6 +226,81 @@ function mockMarkReadResponse(id: string): Response {
   return jsonResponse({ ...item, read: true }, 200);
 }
 
+/**
+ * Moderation mock (F6): in-memory relationships + report validation.
+ * Unknown user ids 404 so safety-action rollback is testable.
+ */
+const REPORT_REASONS = [
+  "spam",
+  "harassment",
+  "nudity",
+  "violence",
+  "misinformation",
+  "other",
+] as const;
+
+const relationshipOverrides = new Map<string, { blockedByMe: boolean; mutedByMe: boolean }>();
+
+function knownUserId(id: string): boolean {
+  return [...mockUsers, ...feedAuthors].some((candidate) => candidate.id === id);
+}
+
+function relationshipFor(userId: string): Response {
+  if (!knownUserId(userId)) return notFound("GET", `/users/${userId}/relationship`);
+  const override = relationshipOverrides.get(userId) ?? {
+    blockedByMe: false,
+    mutedByMe: false,
+  };
+  return jsonResponse(
+    { userId, ...override, updatedAt: new Date().toISOString() },
+    200,
+  );
+}
+
+function mockSafetyResponse(
+  userId: string,
+  patch: { blockedByMe?: boolean; mutedByMe?: boolean },
+): Response {
+  if (!knownUserId(userId)) return notFound("POST", `/users/${userId}`);
+  const prev = relationshipOverrides.get(userId) ?? {
+    blockedByMe: false,
+    mutedByMe: false,
+  };
+  const next = { ...prev, ...patch };
+  relationshipOverrides.set(userId, next);
+  return jsonResponse({ userId, ...next, updatedAt: new Date().toISOString() }, 200);
+}
+
+function mockReportResponse(bodyText: string | null): Response {
+  let targetType: unknown = null;
+  let targetId: unknown = null;
+  let reason: unknown = null;
+  let details: unknown = undefined;
+  try {
+    const parsed: unknown = bodyText ? (JSON.parse(bodyText) as unknown) : null;
+    if (parsed !== null && typeof parsed === "object") {
+      const candidate = parsed as Record<string, unknown>;
+      targetType = candidate["targetType"];
+      targetId = candidate["targetId"];
+      reason = candidate["reason"];
+      details = candidate["details"];
+    }
+  } catch {
+    return jsonResponse({ message: "[mock] Invalid JSON" }, 400);
+  }
+  const validTarget = targetType === "post" || targetType === "user";
+  const validId = typeof targetId === "string" && targetId.trim().length > 0;
+  const validReason =
+    typeof reason === "string" && (REPORT_REASONS as readonly string[]).includes(reason);
+  const validDetails =
+    details === undefined ||
+    (typeof details === "string" && details.length <= 500);
+  if (!validTarget || !validId || !validReason || !validDetails) {
+    return jsonResponse({ message: "[mock] Invalid report input" }, 400);
+  }
+  return jsonResponse({ ok: true, reportId: `r-${Date.now().toString(36)}` }, 201);
+}
+
 function buildFeedPosts(): FeedMockPost[] {
   const posts: FeedMockPost[] = [];
   const baseTime = Date.parse("2026-09-09T10:00:00.000Z");
@@ -496,6 +571,10 @@ function defaultEntityResponse(
       );
       return item ? jsonResponse(item, 200) : notFound(method, path);
     }
+    const relationshipMatch = /^\/users\/([^/]+)\/relationship$/.exec(path);
+    if (relationshipMatch?.[1]) {
+      return relationshipFor(decodeURIComponent(relationshipMatch[1]));
+    }
     const handleMatch = /^\/users\/handle\/([^/]+)$/.exec(path);
     if (handleMatch?.[1]) {
       const want = decodeURIComponent(handleMatch[1]).toLowerCase();
@@ -542,6 +621,18 @@ function defaultEntityResponse(
     const readMatch = /^\/notifications\/([^/]+)\/read$/.exec(path);
     if (readMatch?.[1]) {
       return mockMarkReadResponse(decodeURIComponent(readMatch[1]));
+    }
+    if (path === "/reports") {
+      return mockReportResponse(bodyText);
+    }
+    const safetyMatch = /^\/users\/([^/]+)\/(block|unblock|mute|unmute)$/.exec(path);
+    if (safetyMatch?.[1] && safetyMatch?.[2]) {
+      const userId = decodeURIComponent(safetyMatch[1]);
+      const action = safetyMatch[2];
+      if (action === "block") return mockSafetyResponse(userId, { blockedByMe: true });
+      if (action === "unblock") return mockSafetyResponse(userId, { blockedByMe: false });
+      if (action === "mute") return mockSafetyResponse(userId, { mutedByMe: true });
+      return mockSafetyResponse(userId, { mutedByMe: false });
     }
     return null;
   }

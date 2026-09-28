@@ -28,6 +28,15 @@ describe("endpoints", () => {
     expect(endpoints.markNotificationRead("n 2")).toBe("/notifications/n%202/read");
   });
 
+  it("builds moderation paths with encoding", () => {
+    expect(endpoints.reports()).toBe("/reports");
+    expect(endpoints.userRelationship("u 1")).toBe("/users/u%201/relationship");
+    expect(endpoints.blockUser("u1")).toBe("/users/u1/block");
+    expect(endpoints.unblockUser("u1")).toBe("/users/u1/unblock");
+    expect(endpoints.muteUser("u1")).toBe("/users/u1/mute");
+    expect(endpoints.unmuteUser("u1")).toBe("/users/u1/unmute");
+  });
+
   it("joins absolute URLs without double slashes", () => {
     expect(absoluteUrl("/posts/1")).toBe(`${apiBaseUrl}/posts/1`);
     expect(absoluteUrl("posts/1")).toBe(`${apiBaseUrl}/posts/1`);

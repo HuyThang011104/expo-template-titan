@@ -5,11 +5,12 @@
  * - Tapping like also opens detail because nested presses bubble up.
  */
 
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { PostCard } from "@/entities/post";
+import { hrefs } from "@/shared/navigation/hrefs";
 import { Text, useTheme } from "@/shared/ui";
 
 import { logFeedOpenDetail } from "../analytics";
@@ -38,7 +39,13 @@ function FeedItem({
           prefetchPost(postId);
         }}
       >
-        <PostCard postId={postId} testID={`post-card-${postId}`} />
+        <PostCard
+          postId={postId}
+          testID={`post-card-${postId}`}
+          onSafetyPress={() => {
+            router.push(hrefs.report("post", postId));
+          }}
+        />
       </Pressable>
     </Link>
   );

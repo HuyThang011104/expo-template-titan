@@ -29,3 +29,28 @@ export {
 } from "./queries";
 export { Avatar, type AvatarProps, type AvatarSize } from "./ui/avatar";
 export { UserRow, type UserRowProps } from "./ui/user-row";
+// Safety relationship (F6 moderation); raw zod schema stays private.
+export type { Relationship } from "./relationship";
+export { parseRelationship } from "./relationship-schema";
+export {
+  blockUserRemote,
+  fetchRelationship,
+  muteUserRemote,
+  unblockUserRemote,
+  unmuteUserRemote,
+  type RelationshipFetchOptions,
+} from "./api-relationship";
+export {
+  blockUser,
+  defaultRelationship,
+  getRelationship,
+  invalidateVisibleLists,
+  isBlockedByMe,
+  isMutedByMe,
+  muteUser,
+  setRelationship,
+  unblockUser,
+  unmuteUser,
+  type SafetyActionOptions,
+  type SafetyRemoteFn,
+} from "./relationship-cache";
