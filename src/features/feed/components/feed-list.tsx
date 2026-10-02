@@ -2,18 +2,23 @@
  * Feed list — the single `FlashList` that renders the feed.
  *
  * - `data` is a flat `postIds` array read via canonical `PostCard`.
+ * - F7a: viewability drives a single `activeVideoId` (never autoplay many).
+ *   Blur/background clears it so video pauses off-screen.
  * - Tapping like also opens detail because nested presses bubble up.
  */
 
-import { Link, router } from "expo-router";
+import { Link, router, useFocusEffect } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, AppState, Pressable, StyleSheet, View } from "react-native";
 
-import { PostCard } from "@/entities/post";
+import { PostCard, getPostData } from "@/entities/post";
 import { hrefs } from "@/shared/navigation/hrefs";
 import { Text, useTheme } from "@/shared/ui";
 
 import { logFeedOpenDetail } from "../analytics";
+import { pickActiveVideoId, type FeedMediaKind } from "../hooks/use-active-video-id";
 
 export type FeedListProps = {
   postIds: string[];
@@ -27,9 +32,11 @@ export type FeedListProps = {
 function FeedItem({
   postId,
   prefetchPost,
+  isVideoActive,
 }: {
   postId: string;
   prefetchPost: (id: string) => void;
+  isVideoActive: boolean;
 }) {
   return (
     <Link href={{ pathname: "/post/[id]", params: { id: postId } }} asChild>
@@ -42,6 +49,7 @@ function FeedItem({
         <PostCard
           postId={postId}
           testID={`post-card-${postId}`}
+          isVideoActive={isVideoActive}
           onSafetyPress={() => {
             router.push(hrefs.report("post", postId));
           }}
@@ -59,6 +67,11 @@ function FeedEmpty() {
   );
 }
 
+const VIEWABILITY_CONFIG = {
+  itemVisiblePercentThreshold: 65,
+  minimumViewTime: 400,
+};
+
 export function FeedList({
   postIds,
   isFetchingNextPage,
@@ -68,17 +81,59 @@ export function FeedList({
   prefetchPost,
 }: FeedListProps) {
   const theme = useTheme();
+  const queryClient = useQueryClient();
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+
+  // Leaving the tab (e.g. opening detail) pauses the active video.
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setActiveVideoId(null);
+      };
+    }, []),
+  );
+
+  // Backgrounding the app pauses the active video.
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state !== "active") {
+        setActiveVideoId(null);
+      }
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  const handleViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: { item: string }[] }) => {
+      const kindById = new Map<string, FeedMediaKind>();
+      const viewableIds: string[] = [];
+      for (const entry of viewableItems) {
+        const id = entry.item;
+        viewableIds.push(id);
+        const mediaKind = getPostData(queryClient, id)?.media[0]?.kind;
+        kindById.set(id, mediaKind === "video" ? "video" : mediaKind === "image" ? "image" : "none");
+      }
+      setActiveVideoId(pickActiveVideoId(viewableIds, kindById));
+    },
+    [queryClient],
+  );
 
   return (
     <FlashList
       testID="feed-list"
       data={postIds}
-      renderItem={({ item }) => <FeedItem postId={item} prefetchPost={prefetchPost} />}
+      renderItem={({ item }) => (
+        <FeedItem postId={item} prefetchPost={prefetchPost} isVideoActive={item === activeVideoId} />
+      )}
       keyExtractor={(id) => id}
       onEndReached={onEndReached}
       onEndReachedThreshold={0.5}
       onRefresh={onRefresh}
       refreshing={isRefetching}
+      viewabilityConfig={VIEWABILITY_CONFIG}
+      onViewableItemsChanged={handleViewableItemsChanged}
       ListEmptyComponent={<FeedEmpty />}
       ListFooterComponent={
         isFetchingNextPage ? (

@@ -440,15 +440,21 @@ function buildFeedPosts(): FeedMockPost[] {
   for (let i = 1; i <= 39; i++) {
     const author = feedAuthors[i % feedAuthors.length] ?? feedAuthors[0];
     const hasMedia = i % 3 !== 0;
-    const isVideo = i === 5;
+    // F7a demo: 3 public mp4 spread across pages so only one is visible at a time.
+    const videoUrlByIndex: Record<number, string> = {
+      5: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+      14: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+      27: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+    };
+    const videoUrl = videoUrlByIndex[i];
     posts.push({
       id: `feed-p-${i}`,
       authorId: author.id,
       body: `Feed post #${i} — pagination and cross-cache like tests.`,
       media: !hasMedia
         ? []
-        : isVideo
-          ? [{ kind: "video", url: "https://picsum.photos/seed/feed-video-5/800/600" }]
+        : videoUrl
+          ? [{ kind: "video", url: videoUrl }]
           : [{ kind: "image", url: `https://picsum.photos/seed/feed-p-${i}/800/600` }],
       likeCount: (i * 37) % 500,
       likedByMe: i % 5 === 0,

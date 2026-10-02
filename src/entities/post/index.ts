@@ -39,3 +39,4 @@ export {
 } from "./queries";
 export { PostActions, type PostActionsProps } from "./ui/post-actions";
 export { PostCard, type PostCardProps } from "./ui/post-card";
+export { PostVideo, type PostVideoProps } from "./ui/post-video";

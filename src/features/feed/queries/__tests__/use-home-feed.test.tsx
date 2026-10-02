@@ -26,6 +26,7 @@ jest.mock("expo-splash-screen", () => ({
   preventAutoHideAsync: jest.fn(async () => {}),
 }));
 
+
 function setup() {
   const qc = createQueryClient();
   const fetchImpl = createMockFetch({ delayMs: 0 });

@@ -14,6 +14,7 @@ import { useTheme } from "@/shared/ui/theme/use-theme";
 
 import { usePost, usePostAuthor } from "../queries";
 import { PostActions } from "./post-actions";
+import { PostVideo } from "./post-video";
 
 export type PostCardProps = {
   postId: string;
@@ -25,6 +26,11 @@ export type PostCardProps = {
    */
   onSafetyPress?: () => void;
   safetyTestID?: string;
+  /**
+   * Video orchestration (F7a). The feed passes viewability-driven
+   * `isActive`; detail screens leave it `true` for single-video autoplay.
+   */
+  isVideoActive?: boolean;
 };
 
 const AUTHOR_AVATAR_SIZE = 40;
@@ -97,7 +103,7 @@ function PostAuthorHeader({ authorId }: { authorId: string }) {
   );
 }
 
-export function PostCard({ postId, testID, onSafetyPress, safetyTestID }: PostCardProps) {
+export function PostCard({ postId, testID, onSafetyPress, safetyTestID, isVideoActive }: PostCardProps) {
   const theme = useTheme();
   const postQuery = usePost(postId);
 
@@ -149,19 +155,7 @@ export function PostCard({ postId, testID, onSafetyPress, safetyTestID }: PostCa
           transition={200}
         />
       ) : firstMedia?.kind === "video" ? (
-        <View
-          style={[
-            styles.videoPlaceholder,
-            {
-              backgroundColor: theme.color.backgroundElement,
-              borderRadius: theme.radius.md,
-            },
-          ]}
-        >
-          <Text variant="small" color="textSecondary">
-            Video
-          </Text>
-        </View>
+        <PostVideo postId={postId} mediaUrl={firstMedia.url} isActive={isVideoActive ?? true} />
       ) : null}
       <PostActions postId={postId} testID={`like-button-${postId}`} />
       <Text variant="caption" color="textSecondary">
@@ -213,11 +207,5 @@ const styles = StyleSheet.create({
   postImage: {
     width: "100%",
     height: POST_IMAGE_HEIGHT,
-  },
-  videoPlaceholder: {
-    width: "100%",
-    height: POST_IMAGE_HEIGHT,
-    alignItems: "center",
-    justifyContent: "center",
   },
 });

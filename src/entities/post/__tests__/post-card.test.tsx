@@ -26,6 +26,8 @@ jest.mock("expo-splash-screen", () => ({
   preventAutoHideAsync: jest.fn(async () => {}),
 }));
 
+
+
 // Inlined to respect the entity-to-entity boundary, even in tests.
 const author = {
   id: "u-1",
