@@ -18,4 +18,6 @@ export const hrefs = {
    */
   report: (targetType: "post" | "user", targetId: string): Href =>
     ({ pathname: "/report", params: { targetType, targetId } }) as unknown as Href,
+  chat: (id: string): Href =>
+    ({ pathname: "/(app)/(inbox)/chats/[id]", params: { id } }) as unknown as Href,
 };

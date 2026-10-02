@@ -14,4 +14,7 @@ export const queryKeys = {
   search: (q: string) => ["search", q.trim().toLowerCase()] as const,
   notification: (id: string) => ["notifications", id] as const,
   notifications: () => ["notifications"] as const,
+  conversation: (id: string) => ["conversations", id] as const,
+  conversations: () => ["conversations"] as const,
+  conversationMessages: (id: string) => ["conversations", id, "messages"] as const,
 };

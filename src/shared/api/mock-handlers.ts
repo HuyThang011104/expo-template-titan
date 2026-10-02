@@ -216,6 +216,139 @@ function notificationsPageResponse(cursor: string | null): Response {
   );
 }
 
+/**
+ * Chat mock (F4): 12 conversations cycling feed authors, 30 messages
+ * in `c-1` for pagination. `cursor` is an offset. `c-fail` forces 500
+ * on send so optimistic rollback is testable.
+ */
+const CONVERSATIONS_PAGE_SIZE = 10;
+const MESSAGES_PAGE_SIZE = 15;
+
+type ConversationMockItem = {
+  id: string;
+  title: string;
+  participantIds: string[];
+  lastMessagePreview: string;
+  lastMessageAt: string;
+  unreadCount: number;
+};
+
+type ChatMessageMockItem = {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  body: string;
+  createdAt: string;
+};
+
+const FAIL_SEND_CONVERSATION_ID = "c-fail";
+
+function buildConversations(): ConversationMockItem[] {
+  const baseTime = Date.parse("2026-09-09T10:00:00.000Z");
+  const items: ConversationMockItem[] = [];
+  for (let i = 1; i <= 12; i++) {
+    const author = feedAuthors[i % feedAuthors.length] ?? feedAuthors[0];
+    items.push({
+      id: `c-${i}`,
+      title: author.displayName,
+      participantIds: [author.id],
+      lastMessagePreview: `Last message preview ${i}`,
+      lastMessageAt: new Date(baseTime - i * 3_600_000).toISOString(),
+      unreadCount: i <= 3 ? i : 0,
+    });
+  }
+  items.push({
+    id: FAIL_SEND_CONVERSATION_ID,
+    title: "Fail Chat",
+    participantIds: ["u-1"],
+    lastMessagePreview: "send always fails here",
+    lastMessageAt: new Date(baseTime - 13 * 3_600_000).toISOString(),
+    unreadCount: 0,
+  });
+  return items;
+}
+
+const conversationFixtures: ConversationMockItem[] = buildConversations();
+
+function buildChatMessages(): ChatMessageMockItem[] {
+  const baseTime = Date.parse("2026-09-09T10:00:00.000Z");
+  const items: ChatMessageMockItem[] = [];
+  for (let i = 1; i <= 30; i++) {
+    items.push({
+      id: `m-${i}`,
+      conversationId: "c-1",
+      senderId: i % 2 === 0 ? "me" : "u-1",
+      body: `Chat message #${i} in c-1`,
+      createdAt: new Date(baseTime - (30 - i) * 120_000).toISOString(),
+    });
+  }
+  return items;
+}
+
+const chatMessageFixtures: ChatMessageMockItem[] = buildChatMessages();
+
+function conversationsPageResponse(cursor: string | null): Response {
+  let offset = 0;
+  if (cursor !== null) {
+    const parsed = Number.parseInt(cursor, 10);
+    if (Number.isInteger(parsed) && parsed >= 0) offset = parsed;
+  }
+  const items = conversationFixtures.slice(offset, offset + CONVERSATIONS_PAGE_SIZE);
+  const next = offset + CONVERSATIONS_PAGE_SIZE;
+  return jsonResponse(
+    { items, nextCursor: next < conversationFixtures.length ? String(next) : null },
+    200,
+  );
+}
+
+function chatMessagesPageResponse(conversationId: string, cursor: string | null): Response {
+  let offset = 0;
+  if (cursor !== null) {
+    const parsed = Number.parseInt(cursor, 10);
+    if (Number.isInteger(parsed) && parsed >= 0) offset = parsed;
+  }
+  const mine = chatMessageFixtures.filter((m) => m.conversationId === conversationId);
+  // Empty thread is valid (new conversation) — 200 with no items.
+  const items = mine.slice(offset, offset + MESSAGES_PAGE_SIZE);
+  const next = offset + MESSAGES_PAGE_SIZE;
+  return jsonResponse(
+    { items, nextCursor: next < mine.length ? String(next) : null },
+    200,
+  );
+}
+
+function mockSendMessageResponse(conversationId: string, bodyText: string | null): Response {
+  if (conversationId === FAIL_SEND_CONVERSATION_ID) {
+    return jsonResponse({ message: "[mock] forced send failure" }, 500);
+  }
+  const known =
+    conversationFixtures.some((c) => c.id === conversationId) || conversationId === "c-1";
+  if (!known) return notFound("POST", `/conversations/${conversationId}/messages`);
+  let body = "";
+  try {
+    const parsed: unknown = bodyText ? (JSON.parse(bodyText) as unknown) : null;
+    if (parsed !== null && typeof parsed === "object" && "body" in parsed) {
+      const candidate = (parsed as { body?: unknown }).body;
+      if (typeof candidate === "string") body = candidate.trim();
+    }
+  } catch {
+    return jsonResponse({ message: "[mock] Invalid JSON" }, 400);
+  }
+  if (body.length < 1 || body.length > 2000) {
+    return jsonResponse({ message: "[mock] Invalid message input" }, 400);
+  }
+  return jsonResponse(
+    {
+      id: `m-new-${Date.now().toString(36)}`,
+      conversationId,
+      senderId: "me",
+      body,
+      createdAt: new Date().toISOString(),
+    },
+    201,
+  );
+}
+
 function mockMarkReadResponse(id: string): Response {
   const item = notificationsFixtures.find((candidate) => candidate.id === id);
   if (!item) return notFound("POST", `/notifications/${id}/read`);
@@ -564,6 +697,23 @@ function defaultEntityResponse(
     if (path === "/notifications") {
       return notificationsPageResponse(query["cursor"] ?? null);
     }
+    if (path === "/conversations") {
+      return conversationsPageResponse(query["cursor"] ?? null);
+    }
+    const conversationMessagesMatch = /^\/conversations\/([^/]+)\/messages$/.exec(path);
+    if (conversationMessagesMatch?.[1]) {
+      return chatMessagesPageResponse(
+        decodeURIComponent(conversationMessagesMatch[1]),
+        query["cursor"] ?? null,
+      );
+    }
+    const conversationMatch = /^\/conversations\/([^/]+)$/.exec(path);
+    if (conversationMatch?.[1]) {
+      const item = conversationFixtures.find(
+        (candidate) => candidate.id === decodeURIComponent(conversationMatch[1] ?? ""),
+      );
+      return item ? jsonResponse(item, 200) : notFound(method, path);
+    }
     const notificationMatch = /^\/notifications\/([^/]+)$/.exec(path);
     if (notificationMatch?.[1]) {
       const item = notificationsFixtures.find(
@@ -621,6 +771,10 @@ function defaultEntityResponse(
     const readMatch = /^\/notifications\/([^/]+)\/read$/.exec(path);
     if (readMatch?.[1]) {
       return mockMarkReadResponse(decodeURIComponent(readMatch[1]));
+    }
+    const sendMatch = /^\/conversations\/([^/]+)\/messages$/.exec(path);
+    if (sendMatch?.[1]) {
+      return mockSendMessageResponse(decodeURIComponent(sendMatch[1]), bodyText);
     }
     if (path === "/reports") {
       return mockReportResponse(bodyText);
