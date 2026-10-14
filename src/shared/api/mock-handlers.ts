@@ -81,6 +81,54 @@ const mockPosts = [
 const FAIL_LIKE_POST_ID = "post-fail";
 
 /**
+ * Deleted posts (G1.3): ids stay in the fixture arrays, every reader filters
+ * them out and single-item endpoints 404. New ids from `POST /posts` are
+ * client-cached only (existing F1 behavior).
+ */
+const deletedPostIds = new Set<string>();
+
+function isPostGone(id: string): boolean {
+  return deletedPostIds.has(id);
+}
+
+function mockUpdatePostResponse(id: string, bodyText: string | null): Response {
+  const base =
+    mockPosts.find((post) => post.id === id) ?? feedPosts.find((post) => post.id === id);
+  if (!base || isPostGone(id)) return notFound("PATCH", `/posts/${id}`);
+  if (base.authorId !== ME_ID) {
+    return jsonResponse({ message: "[mock] Not the post owner" }, 403);
+  }
+  let body = "";
+  try {
+    const parsed: unknown = bodyText ? (JSON.parse(bodyText) as unknown) : null;
+    if (parsed !== null && typeof parsed === "object" && "body" in parsed) {
+      const candidate = (parsed as { body?: unknown }).body;
+      if (typeof candidate === "string") body = candidate.trim();
+    }
+  } catch {
+    return jsonResponse({ message: "[mock] Invalid JSON" }, 400);
+  }
+  if (body.length < 1 || body.length > 280) {
+    return jsonResponse({ message: "[mock] Invalid edit input" }, 400);
+  }
+  base.body = body;
+  return jsonResponse({ ...base }, 200);
+}
+
+function mockDeletePostResponse(id: string): Response {
+  const base =
+    mockPosts.some((post) => post.id === id) || feedPosts.some((post) => post.id === id);
+  if (!base || isPostGone(id)) return notFound("DELETE", `/posts/${id}`);
+  const target =
+    mockPosts.find((post) => post.id === id) ?? feedPosts.find((post) => post.id === id);
+  if (target && target.authorId !== ME_ID) {
+    return jsonResponse({ message: "[mock] Not the post owner" }, 403);
+  }
+  deletedPostIds.add(id);
+  return jsonResponse({ ok: true }, 200);
+}
+
+/**
  * Deterministic feed mock (40 posts / 8 users, page 10).
  * `post-fail` sits at index 7 for first-page rollback tests.
  */
@@ -661,7 +709,8 @@ const commentStore: CommentMockItem[] = buildComments();
 
 function knownPostId(id: string): boolean {
   return (
-    mockPosts.some((post) => post.id === id) || feedPosts.some((post) => post.id === id)
+    !isPostGone(id) &&
+    (mockPosts.some((post) => post.id === id) || feedPosts.some((post) => post.id === id))
   );
 }
 
@@ -806,19 +855,20 @@ function feedPageResponse(cursor: string | null): Response {
     const parsed = Number.parseInt(cursor, 10);
     if (Number.isInteger(parsed) && parsed >= 0) offset = parsed;
   }
-  const items = feedPosts.slice(offset, offset + FEED_PAGE_SIZE).map((post) => ({
+  const live = feedPosts.filter((post) => !isPostGone(post.id));
+  const items = live.slice(offset, offset + FEED_PAGE_SIZE).map((post) => ({
     post,
     author: feedAuthors.find((author) => author.id === post.authorId) ?? feedAuthors[0],
   }));
   const next = offset + FEED_PAGE_SIZE;
   return jsonResponse(
-    { items, nextCursor: next < feedPosts.length ? String(next) : null },
+    { items, nextCursor: next < live.length ? String(next) : null },
     200,
   );
 }
 
 function userPostsPageResponse(userId: string, cursor: string | null): Response {
-  const mine = feedPosts.filter((post) => post.authorId === userId);
+  const mine = feedPosts.filter((post) => post.authorId === userId && !isPostGone(post.id));
   let offset = 0;
   if (cursor !== null) {
     const parsed = Number.parseInt(cursor, 10);
@@ -854,6 +904,7 @@ function searchResponse(rawQuery: string, cursor: string | null): Response {
   );
   const authorById = new Map(feedAuthors.map((author) => [author.id, author]));
   const matchedPosts = feedPosts.filter((post) => {
+    if (isPostGone(post.id)) return false;
     if (post.body.toLowerCase().includes(q)) return true;
     const author = authorById.get(post.authorId) ?? feedAuthors[0];
     return (
@@ -987,7 +1038,7 @@ function mockCreatePostResponse(bodyText: string | null): Response {
 
 function mockLikeResponse(id: string, bodyText: string | null): Response {
   const base = [...mockPosts, ...feedPosts].find((post) => post.id === id);
-  if (!base) return notFound("POST", `/posts/${id}/like`);
+  if (!base || isPostGone(id)) return notFound("POST", `/posts/${id}/like`);
   if (id === FAIL_LIKE_POST_ID) {
     return jsonResponse({ message: "[mock] forced like failure" }, 500);
   }
@@ -1098,6 +1149,7 @@ function defaultEntityResponse(
       return user ? jsonResponse(user, 200) : notFound(method, path);
     }
     if (base === "/posts" && id) {
+      if (isPostGone(id)) return notFound(method, path);
       const post =
         mockPosts.find((candidate) => candidate.id === id) ??
         feedPosts.find((candidate) => candidate.id === id);
@@ -1163,6 +1215,20 @@ function defaultEntityResponse(
       return requestMatch[2] === "approve"
         ? mockApproveResponse(followerId)
         : mockRejectResponse(followerId);
+    }
+    return null;
+  }
+  if (method === "PATCH") {
+    const { base, id } = splitIdPath(path);
+    if (base === "/posts" && id) {
+      return mockUpdatePostResponse(id, bodyText);
+    }
+    return null;
+  }
+  if (method === "DELETE") {
+    const { base, id } = splitIdPath(path);
+    if (base === "/posts" && id) {
+      return mockDeletePostResponse(id);
     }
     return null;
   }

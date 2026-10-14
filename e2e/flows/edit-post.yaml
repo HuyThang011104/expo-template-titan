@@ -1,0 +1,63 @@
+# Maestro E2E — edit own post (G1.3).
+#
+# 1. Cold boot with cleared state lands on sign-in when logged out
+# 2. Sign in (mock — `sign-in-button` sets the dev session, me = u-1)
+# 3. Open the Profile tab (`profile-screen`, mock u-1) with own posts
+#    (`profile-list`; `feed-p-8` belongs to u-1: index 8 % 8 authors)
+# 4. Tap the owner `...` menu (`post-menu-feed-p-8`) → sheet with
+#    `post-edit-button-feed-p-8` (no safety menu for the owner)
+# 5. Tap Sửa → `edit-post` sheet (`edit-post-screen`) with prefilled
+#    `edit-post-input` → append text → Save (`edit-post-save-button`)
+# 6. Sheet dismisses; the edited text shows on the profile list
+#    (canonical overwrite — feed/detail/profile share the entry)
+#
+# Run locally (app installed on emulator/simulator):
+#   maestro test e2e/flows/edit-post.yaml
+# On EAS: `.eas/workflows/e2e.yml` builds the `e2e-test` profile
+# (mock backend via EXPO_PUBLIC_API_MOCK) and runs this flow on it.
+#
+# Requires a build serving `PATCH /posts/:id` (mock 403s non-owners).
+# Delete + gone-detail copy are covered by unit tests
+# (`edit-delete.test.ts`: strip from feed/profile/search, 403/404 paths).
+
+appId: com.example.titan.dev
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "sign-in-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 30000
+- tapOn: "Profile"
+- extendedWaitUntil:
+    visible:
+      id: "profile-screen"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "post-menu-feed-p-8"
+    timeout: 15000
+- tapOn:
+    id: "post-menu-feed-p-8"
+- extendedWaitUntil:
+    visible:
+      id: "post-edit-button-feed-p-8"
+    timeout: 15000
+- tapOn:
+    id: "post-edit-button-feed-p-8"
+- extendedWaitUntil:
+    visible:
+      id: "edit-post-screen"
+    timeout: 15000
+- tapOn:
+    id: "edit-post-input"
+- inputText: " edited"
+- tapOn:
+    id: "edit-post-save-button"
+- extendedWaitUntil:
+    visible:
+      id: "profile-screen"
+    timeout: 15000
+- assertVisible: "edited"

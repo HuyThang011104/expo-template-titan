@@ -83,3 +83,17 @@ export function parseCreatePostInput(data: unknown): CreatePostInput | null {
   logger.warn("[entity] schema parse failed", { entity: "post-create-input" });
   return null;
 }
+
+export const updatePostInputSchema = z.object({
+  body: z.string().trim().min(1).max(280),
+});
+
+export type UpdatePostInput = z.infer<typeof updatePostInputSchema>;
+
+/** Parse edit input → trimmed `UpdatePostInput | null` (media stays untouched). */
+export function parseUpdatePostInput(data: unknown): UpdatePostInput | null {
+  const result = updatePostInputSchema.safeParse(data);
+  if (result.success) return result.data;
+  logger.warn("[entity] schema parse failed", { entity: "post-update-input" });
+  return null;
+}

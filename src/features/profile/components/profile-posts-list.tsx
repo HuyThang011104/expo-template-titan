@@ -47,6 +47,9 @@ function ProfilePostItem({
           onSafetyPress={() => {
             router.push(hrefs.report("post", postId));
           }}
+          onOwnerEditPress={() => {
+            router.push(hrefs.editPost(postId));
+          }}
         />
       </Pressable>
     </Link>

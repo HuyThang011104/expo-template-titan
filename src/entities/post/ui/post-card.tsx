@@ -12,8 +12,9 @@ import { formatRelative } from "@/shared/lib/date";
 import { Text } from "@/shared/ui/text";
 import { useTheme } from "@/shared/ui/theme/use-theme";
 
-import { usePost, usePostAuthor } from "../queries";
+import { usePost, usePostAuthor, useViewerId } from "../queries";
 import { PostActions } from "./post-actions";
+import { PostOwnerMenu } from "./post-owner-menu";
 import { PostVideo } from "./post-video";
 
 export type PostCardProps = {
@@ -26,6 +27,13 @@ export type PostCardProps = {
    */
   onSafetyPress?: () => void;
   safetyTestID?: string;
+  /**
+   * Owner entry point (G1.3). When the viewer owns the post and this is
+   * provided, the card renders the owner `...` menu (Sửa/Xóa) instead of
+   * the safety one. Non-owners never see it; unknown viewer hides it
+   * (fail-closed until `useMe` warms the `me` entry).
+   */
+  onOwnerEditPress?: () => void;
   /**
    * Video orchestration (F7a). The feed passes viewability-driven
    * `isActive`; detail screens leave it `true` for single-video autoplay.
@@ -103,9 +111,10 @@ function PostAuthorHeader({ authorId }: { authorId: string }) {
   );
 }
 
-export function PostCard({ postId, testID, onSafetyPress, safetyTestID, isVideoActive }: PostCardProps) {
+export function PostCard({ postId, testID, onSafetyPress, safetyTestID, onOwnerEditPress, isVideoActive }: PostCardProps) {
   const theme = useTheme();
   const postQuery = usePost(postId);
+  const viewerId = useViewerId();
 
   if (postQuery.isPending) {
     return (
@@ -125,13 +134,16 @@ export function PostCard({ postId, testID, onSafetyPress, safetyTestID, isVideoA
   }
 
   const firstMedia = post.media[0];
+  const isOwner = !!viewerId && viewerId === post.authorId;
   return (
     <View testID={testID} style={[styles.card, { gap: theme.space.sm }]}>
       <View style={styles.headerRow}>
         <View style={styles.headerFlex}>
           <PostAuthorHeader authorId={post.authorId} />
         </View>
-        {onSafetyPress ? (
+        {isOwner && onOwnerEditPress ? (
+          <PostOwnerMenu postId={postId} onEditPress={onOwnerEditPress} />
+        ) : onSafetyPress ? (
           <Pressable
             testID={safetyTestID ?? `safety-menu-${postId}`}
             accessibilityRole="button"

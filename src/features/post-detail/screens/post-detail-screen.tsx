@@ -1,10 +1,11 @@
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { PostCard, usePost } from "@/entities/post";
 import { getViewBlockReason, useMe, useRelationship } from "@/entities/user";
+import { hrefs } from "@/shared/navigation/hrefs";
 import { Button, Screen, Text } from "@/shared/ui";
 
 import { CommentComposer, type ReplyTarget } from "../components/comment-composer";
@@ -47,8 +48,13 @@ function PostDetailBody({ postId }: { postId: string }) {
 
   if (post.isError || !post.data) {
     return (
-      <Screen>
-        <Text variant="body">Post not found.</Text>
+      <Screen testID="post-detail-screen">
+        <View style={styles.center}>
+          <Text variant="title" testID="post-gone-title">
+            Bài viết không còn
+          </Text>
+          <Text variant="body">It may have been deleted.</Text>
+        </View>
       </Screen>
     );
   }
@@ -95,7 +101,17 @@ function PostDetailBody({ postId }: { postId: string }) {
       <View style={styles.listFlex}>
         <CommentsList
           postId={postId}
-          header={<PostCard postId={postId} />}
+          header={
+            <PostCard
+              postId={postId}
+              onSafetyPress={() => {
+                router.push(hrefs.report("post", postId));
+              }}
+              onOwnerEditPress={() => {
+                router.push(hrefs.editPost(postId));
+              }}
+            />
+          }
           onReplyPress={(target) => {
             setReplyTo(target);
           }}

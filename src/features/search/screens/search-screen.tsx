@@ -9,6 +9,7 @@
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
+import { useMe } from "@/entities/user";
 import { Button, Screen, Text } from "@/shared/ui";
 
 import { logSearchOpen, logSearchQuery } from "../analytics";
@@ -22,6 +23,8 @@ export function SearchScreen() {
   const [query, setQuery] = useState("");
   const debounced = useDebouncedValue(query, 300);
   const search = useSearch(debounced);
+  // Warms `me` so owner menus resolve (fail-closed when unknown).
+  useMe();
 
   useEffect(() => {
     logSearchOpen();

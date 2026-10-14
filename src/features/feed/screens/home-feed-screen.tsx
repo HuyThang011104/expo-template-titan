@@ -1,5 +1,6 @@
 import { StyleSheet } from "react-native";
 
+import { useMe } from "@/entities/user";
 import { Button, Screen, Text } from "@/shared/ui";
 
 import { logFeedRefresh } from "../analytics";
@@ -12,9 +13,12 @@ import { useHomeFeed } from "../queries/use-home-feed";
  *
  * - First-page pending shows a skeleton; errors show text plus retry.
  * - Likes go through `PostActions` without manual list patching.
+ * - `useMe` warms the `me` entry so owner menus (`PostOwnerMenu`) can
+ *   resolve without fetching (fail-closed when unknown).
  */
 export function HomeFeedScreen() {
   const feed = useHomeFeed();
+  useMe();
 
   if (feed.isPending) {
     return (

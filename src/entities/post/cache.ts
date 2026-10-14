@@ -13,8 +13,9 @@ import type { InfiniteData, QueryClient } from "@tanstack/react-query";
 import { logger } from "@/shared/observability/logger";
 import { queryKeys } from "@/shared/query";
 
-import { likePostRemote } from "./api";
+import { deletePostRemote, likePostRemote, updatePostRemote } from "./api";
 import type { FeedWireItem, Post } from "./model";
+import { parseUpdatePostInput } from "./schema";
 
 /** Overwrite the canonical post. */
 export function setPost(qc: QueryClient, post: Post): void {
@@ -50,9 +51,7 @@ export type LikeRemoteFn = typeof likePostRemote;
 
 export type LikePostOptions = {
   likeRemote?: LikeRemoteFn;
-};
-
-/**
+};/**
  * Like/unlike with cross-cache optimistic update; all callers must use this.
  */
 export async function likePost(
@@ -115,4 +114,107 @@ export function addCreatedPost(qc: QueryClient, post: Post): void {
       };
     },
   );
+}
+
+export type UpdatePostOptions = {
+  updateRemote?: typeof updatePostRemote;
+};
+
+export type DeletePostOptions = {
+  deleteRemote?: typeof deletePostRemote;
+};
+
+/**
+ * Edit own post (text-only): validate → PATCH → overwrite the single
+ * canonical entry, so feed + detail + profile update together with no list
+ * patching. Throws on invalid input or transport/HTTP errors (callers show
+ * the message inline); no auto-retry.
+ */
+export async function updatePost(
+  qc: QueryClient,
+  id: string,
+  body: string,
+  opts: UpdatePostOptions = {},
+): Promise<Post> {
+  const input = parseUpdatePostInput({ body });
+  if (!input) throw new Error("Post must be 1–280 characters.");
+  const remote = opts.updateRemote ?? updatePostRemote;
+  const server = await remote(id, input.body);
+  if (!server) {
+    logger.warn("[post] update failed, kept local copy", { postId: id });
+    throw new Error("Couldn't save your edit. Tap to retry.");
+  }
+  // Server wins on the single canonical entry: feed + detail + profile
+  // read this entry, so every surface updates together.
+  setPost(qc, server);
+  return server;
+}
+
+/**
+ * Delete own post: DELETE → drop the canonical entry and strip the id from
+ * every loaded id-list (home feed, profile lists, search pages) without a
+ * full refetch. Throws on failure so the confirm UI can show retry; nothing
+ * is removed until the server confirms (no optimistic delete).
+ */
+export async function deletePost(
+  qc: QueryClient,
+  id: string,
+  opts: DeletePostOptions = {},
+): Promise<void> {
+  const remote = opts.deleteRemote ?? deletePostRemote;
+  let ok = false;
+  try {
+    ok = await remote(id);
+  } catch {
+    ok = false;
+  }
+  if (!ok) {
+    logger.warn("[post] delete failed", { postId: id });
+    throw new Error("Couldn't delete your post. Tap to retry.");
+  }
+  removePostEverywhere(qc, id);
+}
+
+type IdListPage = {
+  postIds: string[];
+  nextCursor: string | null;
+};
+
+function hasPostIds(page: unknown): page is IdListPage {
+  return (
+    page !== null &&
+    typeof page === "object" &&
+    "postIds" in page &&
+    Array.isArray((page as { postIds: unknown }).postIds)
+  );
+}
+
+/**
+ * Strip one post id from the canonical entry and every loaded `{ postIds }`
+ * page (feed, profile, search share this shape). Detail screens reading the
+ * canonical entry fall back to "no longer available" via their query error.
+ */
+export function removePostEverywhere(qc: QueryClient, id: string): void {
+  qc.removeQueries({ queryKey: queryKeys.post(id) });
+  const cache = qc.getQueryCache().findAll();
+  for (const query of cache) {
+    const data = query.state.data as
+      | { pages?: unknown[]; pageParams?: unknown[] }
+      | undefined;
+    if (!data || !Array.isArray(data.pages)) continue;
+    if (!data.pages.some(hasPostIds)) continue;
+    qc.setQueryData(
+      query.queryKey,
+      (old: { pages: IdListPage[]; pageParams: unknown[] } | undefined) => {
+        if (!old) return old;
+        let touched = false;
+        const pages = old.pages.map((page) => {
+          if (!page.postIds.includes(id)) return page;
+          touched = true;
+          return { ...page, postIds: page.postIds.filter((postId) => postId !== id) };
+        });
+        return touched ? { ...old, pages } : old;
+      },
+    );
+  }
 }

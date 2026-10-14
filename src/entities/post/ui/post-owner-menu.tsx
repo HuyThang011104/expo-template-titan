@@ -1,0 +1,160 @@
+/**
+ * Owner menu for own posts (G1.3).
+ *
+ * The `...` affordance + `Sửa / Xóa` sheet + destructive delete confirm.
+ * Delete runs through `useDeletePost` (server confirms first, then the id is
+ * stripped from every list); failures show inline with retry. Edit
+ * navigation stays feature-owned via `onEditPress` (entity never imports
+ * a router or another feature).
+ */
+
+import { useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+
+import { Button, Sheet, Text } from "@/shared/ui";
+
+import { useDeletePost, usePost } from "../queries";
+
+export type PostOwnerMenuProps = {
+  postId: string;
+  onEditPress: () => void;
+  testID?: string;
+  /** Injected for tests; defaults to the app client. */
+  fetchImpl?: typeof fetch;
+};
+
+export function PostOwnerMenu({ postId, onEditPress, testID, fetchImpl }: PostOwnerMenuProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const remove = useDeletePost(postId, { fetchImpl });
+  const post = usePost(postId).data;
+
+  const closeAll = (): void => {
+    setConfirming(false);
+    setMenuOpen(false);
+    remove.reset();
+  };
+
+  return (
+    <>
+      <Pressable
+        testID={testID ?? `post-menu-${postId}`}
+        accessibilityRole="button"
+        accessibilityLabel="Post options"
+        hitSlop={8}
+        onPress={() => {
+          remove.reset();
+          setMenuOpen(true);
+        }}
+        style={styles.touch}
+      >
+        <Text variant="small" color="textSecondary" style={styles.label}>
+          …
+        </Text>
+      </Pressable>
+      <Sheet
+        visible={menuOpen}
+        onClose={closeAll}
+        title="Your post"
+        testID={`post-menu-sheet-${postId}`}
+      >
+        {confirming ? (
+          <View style={styles.confirm} testID={`post-delete-confirm-${postId}`}>
+            <Text variant="title">Delete this post?</Text>
+            <Text variant="body" color="textSecondary">
+              It will disappear from feed, profile, and search. This can&apos;t be undone.
+            </Text>
+            {remove.isError ? (
+              <Text variant="caption" color="textSecondary" testID={`post-delete-error-${postId}`}>
+                Couldn&apos;t delete. Try again.
+              </Text>
+            ) : null}
+            <View style={styles.buttons}>
+              <Button
+                title="Cancel"
+                variant="secondary"
+                size="sm"
+                testID={`post-delete-cancel-${postId}`}
+                disabled={remove.isPending}
+                onPress={() => {
+                  setConfirming(false);
+                  remove.reset();
+                }}
+              />
+              <Button
+                title={remove.isPending ? "Deleting…" : "Delete"}
+                variant="primary"
+                size="sm"
+                testID={`post-delete-button-${postId}`}
+                disabled={remove.isPending}
+                loading={remove.isPending}
+                onPress={() => {
+                  remove.mutate(undefined, {
+                    onSuccess: () => {
+                      closeAll();
+                    },
+                  });
+                }}
+              />
+            </View>
+          </View>
+        ) : (
+          <View style={styles.rows}>
+            <Pressable
+              testID={`post-edit-button-${postId}`}
+              accessibilityRole="button"
+              onPress={() => {
+                setMenuOpen(false);
+                onEditPress();
+              }}
+              style={styles.row}
+            >
+              <Text variant="body">Sửa bài viết</Text>
+            </Pressable>
+            <Pressable
+              testID={`post-delete-open-${postId}`}
+              accessibilityRole="button"
+              onPress={() => {
+                remove.reset();
+                setConfirming(true);
+              }}
+              style={styles.row}
+            >
+              <Text variant="body">Xóa bài viết</Text>
+            </Pressable>
+            {post ? (
+              <Text variant="caption" color="textSecondary" numberOfLines={1}>
+                {post.body.slice(0, 60)}
+              </Text>
+            ) : null}
+          </View>
+        )}
+      </Sheet>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  touch: {
+    padding: 4,
+  },
+  label: {
+    fontWeight: "700",
+  },
+  rows: {
+    gap: 4,
+    paddingBottom: 8,
+  },
+  row: {
+    paddingVertical: 12,
+  },
+  confirm: {
+    gap: 12,
+    paddingBottom: 8,
+  },
+  buttons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+});
