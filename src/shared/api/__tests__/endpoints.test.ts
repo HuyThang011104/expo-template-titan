@@ -37,6 +37,19 @@ describe("endpoints", () => {
     expect(endpoints.unmuteUser("u1")).toBe("/users/u1/unmute");
   });
 
+  it("builds follow paths with encoding and optional cursors", () => {
+    expect(endpoints.followUser("u1")).toBe("/users/u1/follow");
+    expect(endpoints.unfollowUser("u 1")).toBe("/users/u%201/unfollow");
+    expect(endpoints.userFollowers("u1")).toBe("/users/u1/followers");
+    expect(endpoints.userFollowers("u1", "10")).toBe("/users/u1/followers?cursor=10");
+    expect(endpoints.userFollowing("u1")).toBe("/users/u1/following");
+    expect(endpoints.userFollowing("u1", null)).toBe("/users/u1/following");
+    expect(endpoints.followRequests()).toBe("/follow-requests");
+    expect(endpoints.followRequests("10")).toBe("/follow-requests?cursor=10");
+    expect(endpoints.approveFollowRequest("u 1")).toBe("/follow-requests/u%201/approve");
+    expect(endpoints.rejectFollowRequest("u1")).toBe("/follow-requests/u1/reject");
+  });
+
   it("joins absolute URLs without double slashes", () => {
     expect(absoluteUrl("/posts/1")).toBe(`${apiBaseUrl}/posts/1`);
     expect(absoluteUrl("posts/1")).toBe(`${apiBaseUrl}/posts/1`);

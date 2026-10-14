@@ -1,0 +1,66 @@
+# Maestro E2E — follow/unfollow + followers list (G1.1).
+#
+# 1. Cold boot with cleared state lands on sign-in when logged out
+# 2. Sign in (mock — `sign-in-button` sets the dev session)
+# 3. Open the Search tab, type "liam" → `search-user-u-2` appears
+# 4. Tap the user → `/user/liam` detail (`user-detail-screen`) with
+#    `follow-button-u-2` + `profile-followers-count-liam`
+# 5. Tap Follow → optimistic `Following` + count +1
+# 6. Tap the followers count → `followers-screen-list` shows `follow-row-u-1`
+# 7. Back → tap again (Unfollow) → `Follow` returns (rollback-safe toggle)
+#
+# Run locally (app installed on emulator/simulator):
+#   maestro test e2e/flows/follow.yaml
+# On EAS: `.eas/workflows/e2e.yml` builds the `e2e-test` profile
+# (mock backend via EXPO_PUBLIC_API_MOCK) and runs this flow on it.
+#
+# Requires a build serving follow endpoints (mock covers follow/unfollow,
+# followers/following, requests, approve/reject). Private-request approve
+# and reverse-block gating are covered by unit tests (`follow.test.ts`)
+# plus the device checklist (two mock sessions can't run in one flow).
+
+appId: com.example.titan.dev
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "sign-in-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 30000
+- tapOn: "Search"
+- extendedWaitUntil:
+    visible:
+      id: "search-input"
+    timeout: 15000
+- tapOn:
+    id: "search-input"
+- inputText: "liam"
+- extendedWaitUntil:
+    visible:
+      id: "search-user-u-2"
+    timeout: 15000
+- tapOn:
+    id: "search-user-u-2"
+- extendedWaitUntil:
+    visible:
+      id: "user-detail-screen"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "follow-button-u-2"
+    timeout: 15000
+- tapOn:
+    id: "follow-button-u-2"
+- extendedWaitUntil:
+    visible: "Following"
+    timeout: 15000
+- tapOn:
+    id: "profile-followers-count-liam"
+- extendedWaitUntil:
+    visible:
+      id: "followers-screen-list"
+    timeout: 15000
+- assertVisible:
+    id: "follow-row-u-1"

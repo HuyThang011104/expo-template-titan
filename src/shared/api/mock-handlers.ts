@@ -378,6 +378,84 @@ function knownUserId(id: string): boolean {
   return [...mockUsers, ...feedAuthors].some((candidate) => candidate.id === id);
 }
 
+function allMockUsers(): FeedMockAuthor[] {
+  const byId = new Map<string, FeedMockAuthor>();
+  for (const user of [...mockUsers, ...feedAuthors]) byId.set(user.id, user);
+  return [...byId.values()];
+}
+
+function findMockUser(id: string): FeedMockAuthor | undefined {
+  return allMockUsers().find((candidate) => candidate.id === id);
+}
+
+/**
+ * Follow mock (G1.1): pair-aware relationships for the single mock viewer
+ * (`u-1`, same identity as `GET /users/me`). `followPairs` holds
+ * `"follower>target"` → status. Seeds:
+ * - `u-2` is followed by Mia/Noah (device shows a non-empty followers list);
+ * - `u-2` follows the viewer (viewer has one follower);
+ * - Mia requested the viewer (approve/reject demo on the requests screen);
+ * - Ella (`u-feed-5`) is private → follow returns `requested`, posts gated;
+ * - Lucas (`u-feed-6`) blocked the viewer → reverse-block gating fixture.
+ */
+const ME_ID = "u-1";
+
+type FollowPairState = "following" | "requested";
+
+const followPairs = new Map<string, FollowPairState>([
+  ["u-feed-3>u-2", "following"],
+  ["u-feed-4>u-2", "following"],
+  ["u-2>u-1", "following"],
+  ["u-feed-3>u-1", "requested"],
+]);
+
+const blockPairs = new Set<string>(["u-feed-6>u-1"]);
+
+const privateIds = new Set<string>(["u-feed-5"]);
+
+const followersBaseCount: Record<string, number> = { "u-1": 12, "u-2": 30 };
+const followingBaseCount: Record<string, number> = { "u-1": 9, "u-2": 14 };
+const DEFAULT_BASE_FOLLOWERS = 6;
+const DEFAULT_BASE_FOLLOWING = 5;
+
+function pairStatesTo(targetId: string, state: FollowPairState): string[] {
+  const ids: string[] = [];
+  followPairs.forEach((value, key) => {
+    const separator = key.indexOf(">");
+    const follower = key.slice(0, separator);
+    const target = key.slice(separator + 1);
+    if (target === targetId && value === state) ids.push(follower);
+  });
+  return ids.sort();
+}
+
+function followersOf(targetId: string): string[] {
+  return pairStatesTo(targetId, "following");
+}
+
+function followingOf(userId: string): string[] {
+  const ids: string[] = [];
+  followPairs.forEach((value, key) => {
+    const separator = key.indexOf(">");
+    const follower = key.slice(0, separator);
+    const target = key.slice(separator + 1);
+    if (follower === userId && value === "following") ids.push(target);
+  });
+  return ids.sort();
+}
+
+function followersCountOf(userId: string): number {
+  return (followersBaseCount[userId] ?? DEFAULT_BASE_FOLLOWERS) + followersOf(userId).length;
+}
+
+function followingCountOf(userId: string): number {
+  return (followingBaseCount[userId] ?? DEFAULT_BASE_FOLLOWING) + followingOf(userId).length;
+}
+
+function followStatusOf(targetId: string): FollowPairState | "none" {
+  return followPairs.get(`${ME_ID}>${targetId}`) ?? "none";
+}
+
 function relationshipFor(userId: string): Response {
   if (!knownUserId(userId)) return notFound("GET", `/users/${userId}/relationship`);
   const override = relationshipOverrides.get(userId) ?? {
@@ -385,7 +463,17 @@ function relationshipFor(userId: string): Response {
     mutedByMe: false,
   };
   return jsonResponse(
-    { userId, ...override, updatedAt: new Date().toISOString() },
+    {
+      userId,
+      blockedByMe: override.blockedByMe || blockPairs.has(`${ME_ID}>${userId}`),
+      mutedByMe: override.mutedByMe,
+      followStatus: followStatusOf(userId),
+      followersCount: followersCountOf(userId),
+      followingCount: followingCountOf(userId),
+      isPrivate: privateIds.has(userId),
+      blockedByTarget: blockPairs.has(`${userId}>${ME_ID}`),
+      updatedAt: new Date().toISOString(),
+    },
     200,
   );
 }
@@ -401,7 +489,10 @@ function mockSafetyResponse(
   };
   const next = { ...prev, ...patch };
   relationshipOverrides.set(userId, next);
-  return jsonResponse({ userId, ...next, updatedAt: new Date().toISOString() }, 200);
+  if (patch.blockedByMe === true) blockPairs.add(`${ME_ID}>${userId}`);
+  if (patch.blockedByMe === false) blockPairs.delete(`${ME_ID}>${userId}`);
+  // Full relationship shape (follow fields included) so entity parse keeps passing.
+  return relationshipFor(userId);
 }
 
 function mockReportResponse(bodyText: string | null): Response {
@@ -432,6 +523,49 @@ function mockReportResponse(bodyText: string | null): Response {
     return jsonResponse({ message: "[mock] Invalid report input" }, 400);
   }
   return jsonResponse({ ok: true, reportId: `r-${Date.now().toString(36)}` }, 201);
+}
+
+function mockFollowResponse(userId: string): Response {
+  if (!knownUserId(userId)) return notFound("POST", `/users/${userId}/follow`);
+  followPairs.set(`${ME_ID}>${userId}`, privateIds.has(userId) ? "requested" : "following");
+  return relationshipFor(userId);
+}
+
+function mockUnfollowResponse(userId: string): Response {
+  if (!knownUserId(userId)) return notFound("POST", `/users/${userId}/unfollow`);
+  followPairs.delete(`${ME_ID}>${userId}`);
+  return relationshipFor(userId);
+}
+
+const FOLLOW_LIST_PAGE_SIZE = 10;
+
+function followListResponse(ids: string[], cursor: string | null): Response {
+  let offset = 0;
+  if (cursor !== null) {
+    const parsed = Number.parseInt(cursor, 10);
+    if (Number.isInteger(parsed) && parsed >= 0) offset = parsed;
+  }
+  const items = ids
+    .slice(offset, offset + FOLLOW_LIST_PAGE_SIZE)
+    .map((id) => findMockUser(id))
+    .filter((user) => user !== undefined);
+  const next = offset + FOLLOW_LIST_PAGE_SIZE;
+  return jsonResponse(
+    { items, nextCursor: next < ids.length ? String(next) : null },
+    200,
+  );
+}
+
+function mockApproveResponse(followerId: string): Response {
+  if (!knownUserId(followerId)) return notFound("POST", `/follow-requests/${followerId}/approve`);
+  followPairs.set(`${followerId}>${ME_ID}`, "following");
+  return jsonResponse({ ok: true }, 200);
+}
+
+function mockRejectResponse(followerId: string): Response {
+  if (!knownUserId(followerId)) return notFound("POST", `/follow-requests/${followerId}/reject`);
+  followPairs.delete(`${followerId}>${ME_ID}`);
+  return jsonResponse({ ok: true }, 200);
 }
 
 function buildFeedPosts(): FeedMockPost[] {
@@ -731,6 +865,21 @@ function defaultEntityResponse(
     if (relationshipMatch?.[1]) {
       return relationshipFor(decodeURIComponent(relationshipMatch[1]));
     }
+    const followersMatch = /^\/users\/([^/]+)\/followers$/.exec(path);
+    if (followersMatch?.[1]) {
+      const id = decodeURIComponent(followersMatch[1]);
+      if (!knownUserId(id)) return notFound(method, path);
+      return followListResponse(followersOf(id), query["cursor"] ?? null);
+    }
+    const followingMatch = /^\/users\/([^/]+)\/following$/.exec(path);
+    if (followingMatch?.[1]) {
+      const id = decodeURIComponent(followingMatch[1]);
+      if (!knownUserId(id)) return notFound(method, path);
+      return followListResponse(followingOf(id), query["cursor"] ?? null);
+    }
+    if (path === "/follow-requests") {
+      return followListResponse(pairStatesTo(ME_ID, "requested"), query["cursor"] ?? null);
+    }
     const handleMatch = /^\/users\/handle\/([^/]+)$/.exec(path);
     if (handleMatch?.[1]) {
       const want = decodeURIComponent(handleMatch[1]).toLowerCase();
@@ -793,6 +942,20 @@ function defaultEntityResponse(
       if (action === "unblock") return mockSafetyResponse(userId, { blockedByMe: false });
       if (action === "mute") return mockSafetyResponse(userId, { mutedByMe: true });
       return mockSafetyResponse(userId, { mutedByMe: false });
+    }
+    const followMatch = /^\/users\/([^/]+)\/(follow|unfollow)$/.exec(path);
+    if (followMatch?.[1] && followMatch?.[2]) {
+      const userId = decodeURIComponent(followMatch[1]);
+      return followMatch[2] === "follow"
+        ? mockFollowResponse(userId)
+        : mockUnfollowResponse(userId);
+    }
+    const requestMatch = /^\/follow-requests\/([^/]+)\/(approve|reject)$/.exec(path);
+    if (requestMatch?.[1] && requestMatch?.[2]) {
+      const followerId = decodeURIComponent(requestMatch[1]);
+      return requestMatch[2] === "approve"
+        ? mockApproveResponse(followerId)
+        : mockRejectResponse(followerId);
     }
     return null;
   }

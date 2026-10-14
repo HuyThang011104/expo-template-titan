@@ -12,6 +12,11 @@ export const hrefs = {
   home: (): Href => "/",
   post: (id: string): Href => ({ pathname: "/post/[id]", params: { id } }),
   user: (handle: string): Href => ({ pathname: "/user/[handle]", params: { handle } }),
+  userFollowers: (handle: string): Href =>
+    ({ pathname: "/user/[handle]/followers", params: { handle } }) as unknown as Href,
+  userFollowing: (handle: string): Href =>
+    ({ pathname: "/user/[handle]/following", params: { handle } }) as unknown as Href,
+  followRequests: (): Href => ({ pathname: "/follow-requests" }) as unknown as Href,
   /**
    * Report sheet (F6). Cast until `.expo/types/router.d.ts` regenerates
    * on the next `expo start` (typed routes are codegen'd, see Phase 5 notes).

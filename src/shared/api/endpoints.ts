@@ -23,6 +23,22 @@ export const endpoints = {
   userPosts: (id: string, cursor?: string | null) =>
     cursor ? `/users/${encode(id)}/posts?cursor=${encode(cursor)}` : `/users/${encode(id)}/posts`,
   followers: (id: string) => `/users/${encode(id)}/followers`,
+  userFollowers: (id: string, cursor?: string | null) =>
+    cursor
+      ? `/users/${encode(id)}/followers?cursor=${encode(cursor)}`
+      : `/users/${encode(id)}/followers`,
+  userFollowing: (id: string, cursor?: string | null) =>
+    cursor
+      ? `/users/${encode(id)}/following?cursor=${encode(cursor)}`
+      : `/users/${encode(id)}/following`,
+  followUser: (id: string) => `/users/${encode(id)}/follow`,
+  unfollowUser: (id: string) => `/users/${encode(id)}/unfollow`,
+  followRequests: (cursor?: string | null) =>
+    cursor ? `/follow-requests?cursor=${encode(cursor)}` : "/follow-requests",
+  approveFollowRequest: (followerId: string) =>
+    `/follow-requests/${encode(followerId)}/approve`,
+  rejectFollowRequest: (followerId: string) =>
+    `/follow-requests/${encode(followerId)}/reject`,
   userRelationship: (id: string) => `/users/${encode(id)}/relationship`,
   blockUser: (id: string) => `/users/${encode(id)}/block`,
   unblockUser: (id: string) => `/users/${encode(id)}/unblock`,

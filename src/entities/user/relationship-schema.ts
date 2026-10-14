@@ -15,6 +15,11 @@ export const relationshipSchema = z.object({
   userId: z.string().min(1),
   blockedByMe: z.boolean(),
   mutedByMe: z.boolean(),
+  followStatus: z.enum(["none", "following", "requested"]),
+  followersCount: z.number().int().min(0),
+  followingCount: z.number().int().min(0),
+  isPrivate: z.boolean(),
+  blockedByTarget: z.boolean(),
   updatedAt: z.string().datetime({ offset: true }),
 });
 
