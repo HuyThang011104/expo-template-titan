@@ -568,6 +568,198 @@ function mockRejectResponse(followerId: string): Response {
   return jsonResponse({ ok: true }, 200);
 }
 
+/**
+ * Comments mock (G1.2): module-level store so created comments persist for
+ * the session (kill-app is a JS reload — documented as session persist).
+ * Seeds: `feed-p-1` has 12 top-level + 4 replies (2 pages of 10 tops),
+ * `c-fail` forces 500 on like (rollback tests), `p-1` has 2 top-level.
+ */
+const COMMENTS_PAGE_SIZE = 10;
+const COMMENT_MAX_BODY = 500;
+
+type CommentMockItem = {
+  id: string;
+  postId: string;
+  authorId: string;
+  body: string;
+  parentId: string | null;
+  likeCount: number;
+  likedByMe: boolean;
+  createdAt: string;
+};
+
+const FAIL_LIKE_COMMENT_ID = "c-fail";
+
+function buildComments(): CommentMockItem[] {
+  const baseTime = Date.parse("2026-09-09T10:00:00.000Z");
+  const at = (minutesAgo: number): string => new Date(baseTime - minutesAgo * 60_000).toISOString();
+  // Newest-first top-level ids for feed-p-1 (c-fail sits on page 1).
+  const topIds = [
+    "c-p1-01",
+    "c-p1-02",
+    FAIL_LIKE_COMMENT_ID,
+    "c-p1-04",
+    "c-p1-05",
+    "c-p1-06",
+    "c-p1-07",
+    "c-p1-08",
+    "c-p1-09",
+    "c-p1-10",
+    "c-p1-11",
+    "c-p1-12",
+  ];
+  const items: CommentMockItem[] = topIds.map((id, index) => {
+    const author = feedAuthors[(index + 1) % feedAuthors.length] ?? feedAuthors[0];
+    return {
+      id,
+      postId: "feed-p-1",
+      authorId: author.id,
+      body: id === FAIL_LIKE_COMMENT_ID ? "Like always fails here." : `Top-level comment ${index + 1} on feed-p-1.`,
+      parentId: null,
+      likeCount: (index * 13) % 40,
+      likedByMe: index % 4 === 1,
+      createdAt: at(10 + index * 7),
+    };
+  });
+  const replies: [string, string, string, number][] = [
+    // [id, parentId, body, minutesAgo]
+    ["c-p1-r1", "c-p1-01", "First reply to c-p1-01.", 55],
+    ["c-p1-r2", "c-p1-01", "Second reply to c-p1-01.", 48],
+    ["c-p1-r3", "c-p1-01", "Third reply to c-p1-01.", 41],
+    ["c-p1-r4", "c-p1-02", "Only reply to c-p1-02.", 52],
+  ];
+  replies.forEach(([id, parentId, body, minutesAgo], index) => {
+    const author = feedAuthors[(index + 3) % feedAuthors.length] ?? feedAuthors[0];
+    items.push({
+      id,
+      postId: "feed-p-1",
+      authorId: author.id,
+      body,
+      parentId,
+      likeCount: index + 1,
+      likedByMe: false,
+      createdAt: at(minutesAgo),
+    });
+  });
+  ["First comment on p-1.", "Second comment on p-1."].forEach((body, index) => {
+    const author = feedAuthors[index % feedAuthors.length] ?? feedAuthors[0];
+    items.push({
+      id: `c-p1x-0${index + 1}`,
+      postId: "p-1",
+      authorId: author.id,
+      body,
+      parentId: null,
+      likeCount: index,
+      likedByMe: false,
+      createdAt: at(120 + index * 11),
+    });
+  });
+  return items;
+}
+
+const commentStore: CommentMockItem[] = buildComments();
+
+function knownPostId(id: string): boolean {
+  return (
+    mockPosts.some((post) => post.id === id) || feedPosts.some((post) => post.id === id)
+  );
+}
+
+function postCommentsPageResponse(postId: string, cursor: string | null): Response {
+  if (!knownPostId(postId)) return notFound("GET", `/posts/${postId}/comments`);
+  let offset = 0;
+  if (cursor !== null) {
+    const parsed = Number.parseInt(cursor, 10);
+    if (Number.isInteger(parsed) && parsed >= 0) offset = parsed;
+  }
+  const tops = commentStore
+    .filter((item) => item.postId === postId && item.parentId === null)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const page = tops.slice(offset, offset + COMMENTS_PAGE_SIZE);
+  const items: { comment: CommentMockItem; author: FeedMockAuthor }[] = [];
+  for (const top of page) {
+    const author = findMockUser(top.authorId) ?? feedAuthors[0];
+    items.push({ comment: top, author });
+    const replies = commentStore
+      .filter((item) => item.postId === postId && item.parentId === top.id)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    for (const reply of replies) {
+      const replyAuthor = findMockUser(reply.authorId) ?? feedAuthors[0];
+      items.push({ comment: reply, author: replyAuthor });
+    }
+  }
+  const next = offset + COMMENTS_PAGE_SIZE;
+  return jsonResponse(
+    { items, nextCursor: next < tops.length ? String(next) : null },
+    200,
+  );
+}
+
+function mockCreateCommentResponse(postId: string, bodyText: string | null): Response {
+  if (!knownPostId(postId)) return notFound("POST", `/posts/${postId}/comments`);
+  let body = "";
+  let parentId: unknown = null;
+  try {
+    const parsed: unknown = bodyText ? (JSON.parse(bodyText) as unknown) : null;
+    if (parsed !== null && typeof parsed === "object") {
+      const candidate = parsed as { body?: unknown; parentId?: unknown };
+      if (typeof candidate.body === "string") body = candidate.body.trim();
+      parentId = candidate.parentId ?? null;
+    }
+  } catch {
+    return jsonResponse({ message: "[mock] Invalid JSON" }, 400);
+  }
+  if (body.length < 1 || body.length > COMMENT_MAX_BODY) {
+    return jsonResponse({ message: "[mock] Invalid comment input" }, 400);
+  }
+  if (parentId !== null) {
+    const parent =
+      typeof parentId === "string"
+        ? commentStore.find((item) => item.id === parentId && item.postId === postId)
+        : undefined;
+    if (!parent) return jsonResponse({ message: "[mock] Unknown parent comment" }, 400);
+  }
+  const created: CommentMockItem = {
+    id: `c-new-${Date.now().toString(36)}`,
+    postId,
+    authorId: ME_ID,
+    body,
+    parentId: typeof parentId === "string" ? parentId : null,
+    likeCount: 0,
+    likedByMe: false,
+    createdAt: new Date().toISOString(),
+  };
+  commentStore.push(created);
+  return jsonResponse(created, 201);
+}
+
+function mockCommentLikeResponse(id: string, bodyText: string | null): Response {
+  const base = commentStore.find((item) => item.id === id);
+  if (!base) return notFound("POST", `/comments/${id}/like`);
+  if (id === FAIL_LIKE_COMMENT_ID) {
+    return jsonResponse({ message: "[mock] forced comment-like failure" }, 500);
+  }
+  let liked = !base.likedByMe;
+  try {
+    const parsed: unknown = bodyText ? (JSON.parse(bodyText) as unknown) : null;
+    if (
+      parsed !== null &&
+      typeof parsed === "object" &&
+      "liked" in parsed &&
+      typeof (parsed as { liked: unknown }).liked === "boolean"
+    ) {
+      liked = (parsed as { liked: boolean }).liked;
+    }
+  } catch {
+    // Unknown body — keep the default toggle.
+  }
+  const likeCount = Math.max(0, base.likeCount + (liked === base.likedByMe ? 0 : liked ? 1 : -1));
+  const next = { ...base, likedByMe: liked, likeCount };
+  const index = commentStore.indexOf(base);
+  commentStore[index] = next;
+  return jsonResponse(next, 200);
+}
+
 function buildFeedPosts(): FeedMockPost[] {
   const posts: FeedMockPost[] = [];
   const baseTime = Date.parse("2026-09-09T10:00:00.000Z");
@@ -854,6 +1046,13 @@ function defaultEntityResponse(
       );
       return item ? jsonResponse(item, 200) : notFound(method, path);
     }
+    const postCommentsMatch = /^\/posts\/([^/]+)\/comments$/.exec(path);
+    if (postCommentsMatch?.[1]) {
+      return postCommentsPageResponse(
+        decodeURIComponent(postCommentsMatch[1]),
+        query["cursor"] ?? null,
+      );
+    }
     const notificationMatch = /^\/notifications\/([^/]+)$/.exec(path);
     if (notificationMatch?.[1]) {
       const item = notificationsFixtures.find(
@@ -922,6 +1121,14 @@ function defaultEntityResponse(
     const likeMatch = /^\/posts\/([^/]+)\/like$/.exec(path);
     if (likeMatch?.[1]) {
       return mockLikeResponse(decodeURIComponent(likeMatch[1]), bodyText);
+    }
+    const commentLikeMatch = /^\/comments\/([^/]+)\/like$/.exec(path);
+    if (commentLikeMatch?.[1]) {
+      return mockCommentLikeResponse(decodeURIComponent(commentLikeMatch[1]), bodyText);
+    }
+    const createCommentMatch = /^\/posts\/([^/]+)\/comments$/.exec(path);
+    if (createCommentMatch?.[1]) {
+      return mockCreateCommentResponse(decodeURIComponent(createCommentMatch[1]), bodyText);
     }
     const readMatch = /^\/notifications\/([^/]+)\/read$/.exec(path);
     if (readMatch?.[1]) {

@@ -1,10 +1,14 @@
 import { useLocalSearchParams } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { PostCard, usePost } from "@/entities/post";
 import { getViewBlockReason, useMe, useRelationship } from "@/entities/user";
 import { Button, Screen, Text } from "@/shared/ui";
+
+import { CommentComposer, type ReplyTarget } from "../components/comment-composer";
+import { CommentsList } from "../components/comments-list";
 
 /**
  * Post detail screen (`/post/[id]`) — renders `PostCard(postId)` from the canonical cache.
@@ -31,6 +35,7 @@ function PostDetailBody({ postId }: { postId: string }) {
   const authorId = post.data?.authorId ?? "";
   const me = useMe();
   const rel = useRelationship(authorId);
+  const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
 
   if (post.isPending || rel.isPending) {
     return (
@@ -86,8 +91,23 @@ function PostDetailBody({ postId }: { postId: string }) {
   }
 
   return (
-    <Screen>
-      <PostCard postId={postId} />
+    <Screen testID="post-detail-screen">
+      <View style={styles.listFlex}>
+        <CommentsList
+          postId={postId}
+          header={<PostCard postId={postId} />}
+          onReplyPress={(target) => {
+            setReplyTo(target);
+          }}
+        />
+      </View>
+      <CommentComposer
+        postId={postId}
+        replyTo={replyTo}
+        onClearReply={() => {
+          setReplyTo(null);
+        }}
+      />
     </Screen>
   );
 }
@@ -97,5 +117,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+  },
+  listFlex: {
+    flex: 1,
   },
 });

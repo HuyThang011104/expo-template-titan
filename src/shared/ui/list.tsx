@@ -19,6 +19,8 @@ export type AppListProps<T> = {
   refreshing?: boolean;
   onRefresh?: () => void;
   ListEmptyComponent?: ComponentType | ReactElement | null;
+  ListHeaderComponent?: ComponentType | ReactElement | null;
+  ListFooterComponent?: ComponentType | ReactElement | null;
   contentContainerStyle?: StyleProp<ViewStyle>;
   testID?: string;
 };
@@ -33,6 +35,8 @@ export function AppList<T>({
   refreshing,
   onRefresh,
   ListEmptyComponent,
+  ListHeaderComponent,
+  ListFooterComponent,
   contentContainerStyle,
   testID,
 }: AppListProps<T>) {
@@ -47,6 +51,8 @@ export function AppList<T>({
       refreshing={refreshing}
       onRefresh={onRefresh}
       ListEmptyComponent={ListEmptyComponent}
+      ListHeaderComponent={ListHeaderComponent}
+      ListFooterComponent={ListFooterComponent}
       contentContainerStyle={[styles.content, contentContainerStyle]}
       testID={testID}
     />

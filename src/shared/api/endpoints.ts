@@ -54,6 +54,12 @@ export const endpoints = {
     return cursor ? `${base}&cursor=${encode(cursor)}` : base;
   },
   likePost: (id: string) => `/posts/${encode(id)}/like`,
+  postComments: (postId: string, cursor?: string | null) =>
+    cursor
+      ? `/posts/${encode(postId)}/comments?cursor=${encode(cursor)}`
+      : `/posts/${encode(postId)}/comments`,
+  createComment: (postId: string) => `/posts/${encode(postId)}/comments`,
+  likeComment: (id: string) => `/comments/${encode(id)}/like`,
   repost: (id: string) => `/posts/${encode(id)}/repost`,
   uploadSessions: () => "/uploads",
   devices: () => "/devices",
