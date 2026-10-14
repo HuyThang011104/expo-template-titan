@@ -8,11 +8,12 @@
  */
 
 import { Link } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { useFollowRequests, useMe, useRelationship } from "@/entities/user";
 import { useUserPosts } from "@/entities/post";
+import { useSavedPosts } from "@/entities/saved";
 import { useSession } from "@/shared/auth";
 import { hrefs } from "@/shared/navigation/hrefs";
 import { Button, Screen, Text } from "@/shared/ui";
@@ -28,6 +29,8 @@ export function ProfileScreen() {
   const rel = useRelationship(userId);
   const requests = useFollowRequests();
   const posts = useUserPosts(userId);
+  const saved = useSavedPosts();
+  const [tab, setTab] = useState<"posts" | "saved">("posts");
 
   useEffect(() => {
     if (me.data) logProfileOpen(me.data.id);
@@ -89,7 +92,37 @@ export function ProfileScreen() {
           </Pressable>
         </Link>
       ) : null}
-      {posts.isPending ? (
+      <View style={styles.tabs}>
+        <Pressable
+          testID="profile-tab-posts"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: tab === "posts" }}
+          onPress={() => {
+            setTab("posts");
+          }}
+          style={styles.tab}
+        >
+          <Text variant="small" style={tab === "posts" ? styles.tabActive : undefined}>
+            Posts
+          </Text>
+        </Pressable>
+        <Pressable
+          testID="profile-tab-saved"
+          accessibilityRole="tab"
+          accessibilityState={{ selected: tab === "saved" }}
+          onPress={() => {
+            setTab("saved");
+          }}
+          style={styles.tab}
+        >
+          <Text variant="small" style={tab === "saved" ? styles.tabActive : undefined}>
+            Saved
+          </Text>
+        </Pressable>
+      </View>
+      {tab === "saved" ? (
+        <SavedTab saved={saved} />
+      ) : posts.isPending ? (
         <View style={styles.center}>
           <Text variant="body">Loading posts…</Text>
         </View>
@@ -145,7 +178,62 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     fontWeight: "700",
   },
+  tabs: {
+    flexDirection: "row",
+    gap: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  tab: {
+    paddingVertical: 4,
+  },
+  tabActive: {
+    fontWeight: "700",
+  },
   listFlex: {
     flex: 1,
   },
 });
+
+function SavedTab({ saved }: { saved: ReturnType<typeof useSavedPosts> }) {
+  if (saved.isPending) {
+    return (
+      <View style={styles.center}>
+        <Text variant="body">Loading saved…</Text>
+      </View>
+    );
+  }
+  if (saved.isError) {
+    return (
+      <View style={styles.center}>
+        <Text variant="body">Couldn&apos;t load saved posts.</Text>
+        <Button
+          title="Retry"
+          testID="saved-retry-button"
+          onPress={() => {
+            void saved.refetch();
+          }}
+        />
+      </View>
+    );
+  }
+  return (
+    <View style={styles.listFlex}>
+      <ProfilePostsList
+        postIds={saved.postIds}
+        isFetchingNextPage={saved.isFetchingNextPage}
+        isRefetching={saved.isRefetching}
+        hasNextPage={saved.hasNextPage}
+        onEndReached={() => {
+          void saved.fetchNextPage();
+        }}
+        onRefresh={() => {
+          void saved.refetch();
+        }}
+        prefetchPost={() => {}}
+        testID="saved-list"
+      />
+      <ProfilePostsFooter visible={saved.isFetchingNextPage} />
+    </View>
+  );
+}

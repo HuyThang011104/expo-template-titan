@@ -4,6 +4,7 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { PostCard, usePost } from "@/entities/post";
+import { SaveButton } from "@/entities/saved";
 import { getViewBlockReason, useMe, useRelationship } from "@/entities/user";
 import { hrefs } from "@/shared/navigation/hrefs";
 import { Button, Screen, Text } from "@/shared/ui";
@@ -110,6 +111,7 @@ function PostDetailBody({ postId }: { postId: string }) {
               onOwnerEditPress={() => {
                 router.push(hrefs.editPost(postId));
               }}
+              saveAffordance={<SaveButton postId={postId} />}
             />
           }
           onReplyPress={(target) => {

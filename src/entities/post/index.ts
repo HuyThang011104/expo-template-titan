@@ -56,4 +56,5 @@ export {
 export { PostActions, type PostActionsProps } from "./ui/post-actions";
 export { PostCard, type PostCardProps } from "./ui/post-card";
 export { PostOwnerMenu, type PostOwnerMenuProps } from "./ui/post-owner-menu";
+export { PostShareButton, type PostShareButtonProps, type ShareFn } from "./ui/post-share-button";
 export { PostVideo, type PostVideoProps } from "./ui/post-video";

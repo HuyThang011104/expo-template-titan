@@ -60,6 +60,10 @@ export const endpoints = {
       : `/posts/${encode(postId)}/comments`,
   createComment: (postId: string) => `/posts/${encode(postId)}/comments`,
   likeComment: (id: string) => `/comments/${encode(id)}/like`,
+  savedPosts: (cursor?: string | null) =>
+    cursor ? `/saved?cursor=${encode(cursor)}` : "/saved",
+  savePost: (id: string) => `/saved/${encode(id)}`,
+  unsavePost: (id: string) => `/saved/${encode(id)}`,
   repost: (id: string) => `/posts/${encode(id)}/repost`,
   uploadSessions: () => "/uploads",
   devices: () => "/devices",

@@ -129,6 +129,87 @@ function mockDeletePostResponse(id: string): Response {
 }
 
 /**
+ * Saved posts mock (G1.4): per-viewer set of post ids (single mock viewer).
+ * `feed-p-2` starts saved so the Saved tab is non-empty on first open.
+ */
+const SAVED_PAGE_SIZE = 10;
+
+type SavedWirePost = {
+  id: string;
+  authorId: string;
+  body: string;
+  media: { kind: "image" | "video"; url: string }[];
+  likeCount: number;
+  likedByMe: boolean;
+  createdAt: string;
+};
+
+function toSavedWirePost(post: {
+  id: string;
+  authorId: string;
+  body: string;
+  media: { kind: string; url: string }[];
+  likeCount: number;
+  likedByMe: boolean;
+  createdAt: string;
+}): SavedWirePost | null {
+  if (!post.media.every((m) => m.kind === "image" || m.kind === "video")) return null;
+  return {
+    ...post,
+    media: post.media.map((m) => ({ kind: m.kind as "image" | "video", url: m.url })),
+  };
+}
+
+const savedPostIds = new Set<string>(["feed-p-2"]);
+
+function savedWireItems(): { post: SavedWirePost; author: FeedMockAuthor }[] {
+  const ids = [...savedPostIds].reverse();
+  const items: { post: SavedWirePost; author: FeedMockAuthor }[] = [];
+  for (const id of ids) {
+    const post =
+      mockPosts.find((candidate) => candidate.id === id) ??
+      feedPosts.find((candidate) => candidate.id === id);
+    if (!post || isPostGone(id)) continue;
+    const wire = toSavedWirePost(post);
+    if (!wire) continue;
+    const author = findMockUser(post.authorId) ?? feedAuthors[0];
+    items.push({ post: wire, author });
+  }
+  return items;
+}
+
+function savedPageResponse(cursor: string | null): Response {
+  let offset = 0;
+  if (cursor !== null) {
+    const parsed = Number.parseInt(cursor, 10);
+    if (Number.isInteger(parsed) && parsed >= 0) offset = parsed;
+  }
+  const items = savedWireItems().slice(offset, offset + SAVED_PAGE_SIZE);
+  const total = savedWireItems().length;
+  const next = offset + SAVED_PAGE_SIZE;
+  return jsonResponse(
+    { items, nextCursor: next < total ? String(next) : null },
+    200,
+  );
+}
+
+function mockSavePostResponse(id: string): Response {
+  const known =
+    mockPosts.some((post) => post.id === id) || feedPosts.some((post) => post.id === id);
+  if (!known || isPostGone(id)) return notFound("POST", `/saved/${id}`);
+  savedPostIds.add(id);
+  return jsonResponse({ ok: true }, 200);
+}
+
+function mockUnsavePostResponse(id: string): Response {
+  const known =
+    mockPosts.some((post) => post.id === id) || feedPosts.some((post) => post.id === id);
+  if (!known) return notFound("DELETE", `/saved/${id}`);
+  savedPostIds.delete(id);
+  return jsonResponse({ ok: true }, 200);
+}
+
+/**
  * Deterministic feed mock (40 posts / 8 users, page 10).
  * `post-fail` sits at index 7 for first-page rollback tests.
  */
@@ -1130,6 +1211,9 @@ function defaultEntityResponse(
     if (path === "/follow-requests") {
       return followListResponse(pairStatesTo(ME_ID, "requested"), query["cursor"] ?? null);
     }
+    if (path === "/saved") {
+      return savedPageResponse(query["cursor"] ?? null);
+    }
     const handleMatch = /^\/users\/handle\/([^/]+)$/.exec(path);
     if (handleMatch?.[1]) {
       const want = decodeURIComponent(handleMatch[1]).toLowerCase();
@@ -1216,6 +1300,10 @@ function defaultEntityResponse(
         ? mockApproveResponse(followerId)
         : mockRejectResponse(followerId);
     }
+    const savedMatch = /^\/saved\/([^/]+)$/.exec(path);
+    if (savedMatch?.[1]) {
+      return mockSavePostResponse(decodeURIComponent(savedMatch[1]));
+    }
     return null;
   }
   if (method === "PATCH") {
@@ -1226,6 +1314,10 @@ function defaultEntityResponse(
     return null;
   }
   if (method === "DELETE") {
+    const savedMatch = /^\/saved\/([^/]+)$/.exec(path);
+    if (savedMatch?.[1]) {
+      return mockUnsavePostResponse(decodeURIComponent(savedMatch[1]));
+    }
     const { base, id } = splitIdPath(path);
     if (base === "/posts" && id) {
       return mockDeletePostResponse(id);

@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, AppState, Pressable, StyleSheet, View } from "react-native";
 
 import { PostCard, getPostData } from "@/entities/post";
+import { SaveButton } from "@/entities/saved";
 import { hrefs } from "@/shared/navigation/hrefs";
 import { Text, useTheme } from "@/shared/ui";
 
@@ -56,6 +57,7 @@ function FeedItem({
           onOwnerEditPress={() => {
             router.push(hrefs.editPost(postId));
           }}
+          saveAffordance={<SaveButton postId={postId} />}
         />
       </Pressable>
     </Link>

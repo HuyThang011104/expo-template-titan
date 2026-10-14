@@ -10,6 +10,7 @@ import { Link, router } from "expo-router";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { PostCard } from "@/entities/post";
+import { SaveButton } from "@/entities/saved";
 import { hrefs } from "@/shared/navigation/hrefs";
 import { AppList, Text, useTheme } from "@/shared/ui";
 
@@ -50,6 +51,7 @@ function ProfilePostItem({
           onOwnerEditPress={() => {
             router.push(hrefs.editPost(postId));
           }}
+          saveAffordance={<SaveButton postId={postId} />}
         />
       </Pressable>
     </Link>

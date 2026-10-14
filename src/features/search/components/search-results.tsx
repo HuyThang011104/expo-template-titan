@@ -11,6 +11,7 @@ import { FlashList } from "@shopify/flash-list";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { PostCard } from "@/entities/post";
+import { SaveButton } from "@/entities/saved";
 import { UserRow, useUser } from "@/entities/user";
 import { hrefs } from "@/shared/navigation/hrefs";
 import { Text, useTheme } from "@/shared/ui";
@@ -66,6 +67,7 @@ function SearchPostItem({
           onOwnerEditPress={() => {
             router.push(hrefs.editPost(postId));
           }}
+          saveAffordance={<SaveButton postId={postId} />}
         />
       </Pressable>
     </Link>

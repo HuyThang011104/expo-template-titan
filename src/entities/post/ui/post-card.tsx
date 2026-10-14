@@ -6,6 +6,7 @@
  */
 
 import { Image } from "expo-image";
+import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { formatRelative } from "@/shared/lib/date";
@@ -15,6 +16,7 @@ import { useTheme } from "@/shared/ui/theme/use-theme";
 import { usePost, usePostAuthor, useViewerId } from "../queries";
 import { PostActions } from "./post-actions";
 import { PostOwnerMenu } from "./post-owner-menu";
+import { PostShareButton } from "./post-share-button";
 import { PostVideo } from "./post-video";
 
 export type PostCardProps = {
@@ -33,7 +35,13 @@ export type PostCardProps = {
    * the safety one. Non-owners never see it; unknown viewer hides it
    * (fail-closed until `useMe` warms the `me` entry).
    */
+  /**
+   * Save affordance (G1.4). Cross-entity by design (`entities/saved` owns
+   * the state), so features inject `<SaveButton postId />` — same pattern
+   * as `onSafetyPress`/`onOwnerEditPress`. Share renders inline (post-owned).
+   */
   onOwnerEditPress?: () => void;
+  saveAffordance?: ReactNode;
   /**
    * Video orchestration (F7a). The feed passes viewability-driven
    * `isActive`; detail screens leave it `true` for single-video autoplay.
@@ -111,7 +119,7 @@ function PostAuthorHeader({ authorId }: { authorId: string }) {
   );
 }
 
-export function PostCard({ postId, testID, onSafetyPress, safetyTestID, onOwnerEditPress, isVideoActive }: PostCardProps) {
+export function PostCard({ postId, testID, onSafetyPress, safetyTestID, onOwnerEditPress, saveAffordance, isVideoActive }: PostCardProps) {
   const theme = useTheme();
   const postQuery = usePost(postId);
   const viewerId = useViewerId();
@@ -170,6 +178,10 @@ export function PostCard({ postId, testID, onSafetyPress, safetyTestID, onOwnerE
         <PostVideo postId={postId} mediaUrl={firstMedia.url} isActive={isVideoActive ?? true} />
       ) : null}
       <PostActions postId={postId} testID={`like-button-${postId}`} />
+      <View style={styles.actionsRow}>
+        {saveAffordance}
+        <PostShareButton postId={postId} />
+      </View>
       <Text variant="caption" color="textSecondary">
         {formatRelative(post.createdAt)}
       </Text>
@@ -187,6 +199,11 @@ const styles = StyleSheet.create({
   },
   headerFlex: {
     flex: 1,
+  },
+  actionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
   },
   safetyTouch: {
     padding: 4,

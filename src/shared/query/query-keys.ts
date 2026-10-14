@@ -19,6 +19,7 @@ export const queryKeys = {
   notifications: () => ["notifications"] as const,
   comment: (id: string) => ["comments", id] as const,
   postComments: (postId: string) => ["posts", postId, "comments"] as const,
+  savedPosts: () => ["saved", "posts"] as const,
   conversation: (id: string) => ["conversations", id] as const,
   conversations: () => ["conversations"] as const,
   conversationMessages: (id: string) => ["conversations", id, "messages"] as const,
