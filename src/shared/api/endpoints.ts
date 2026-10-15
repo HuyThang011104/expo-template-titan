@@ -64,6 +64,10 @@ export const endpoints = {
     cursor ? `/saved?cursor=${encode(cursor)}` : "/saved",
   savePost: (id: string) => `/saved/${encode(id)}`,
   unsavePost: (id: string) => `/saved/${encode(id)}`,
+  hashtag: (tag: string, cursor?: string | null) => {
+    const base = `/hashtag/${encode(tag.trim().toLowerCase())}`;
+    return cursor ? `${base}?cursor=${encode(cursor)}` : base;
+  },
   repost: (id: string) => `/posts/${encode(id)}/repost`,
   uploadSessions: () => "/uploads",
   devices: () => "/devices",

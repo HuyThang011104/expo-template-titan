@@ -17,7 +17,7 @@ export {
   type FetchOptions as PostFetchOptions,
   type UserPostsPage as UserPostsRemotePage,
 } from "./api";
-// Parses wire feed items + composer/edit input; raw zod schemas stay private.
+// Parses wire feed items + composer/edit input + rich text; raw zod schemas stay private.
 export {
   parseCreatePostInput,
   parseFeedWireItem,
@@ -25,6 +25,7 @@ export {
   type CreatePostInput,
   type UpdatePostInput,
 } from "./schema";
+export { parseRichText, type RichSegment } from "./rich-text";
 export {
   addCreatedPost,
   deletePost,
@@ -54,6 +55,7 @@ export {
   type UserPostsPage,
 } from "./queries";
 export { PostActions, type PostActionsProps } from "./ui/post-actions";
+export { PostBody, type PostBodyProps } from "./ui/post-body";
 export { PostCard, type PostCardProps } from "./ui/post-card";
 export { PostOwnerMenu, type PostOwnerMenuProps } from "./ui/post-owner-menu";
 export { PostShareButton, type PostShareButtonProps, type ShareFn } from "./ui/post-share-button";

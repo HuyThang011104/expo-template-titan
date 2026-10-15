@@ -16,6 +16,8 @@ export const hrefs = {
     ({ pathname: "/user/[handle]/followers", params: { handle } }) as unknown as Href,
   userFollowing: (handle: string): Href =>
     ({ pathname: "/user/[handle]/following", params: { handle } }) as unknown as Href,
+  hashtag: (tag: string): Href =>
+    ({ pathname: "/hashtag/[tag]", params: { tag } }) as unknown as Href,
   followRequests: (): Href => ({ pathname: "/follow-requests" }) as unknown as Href,
   /**
    * Report sheet (F6). Cast until `.expo/types/router.d.ts` regenerates

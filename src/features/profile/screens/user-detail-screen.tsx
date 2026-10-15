@@ -68,7 +68,9 @@ function UserDetailBody({ handle }: { handle: string }) {
     return (
       <Screen style={styles.center} testID="user-detail-screen">
         <Text variant="title">@{handle}</Text>
-        <Text variant="body">User not found.</Text>
+        <Text variant="body" testID="user-not-found">
+          User không tồn tại.
+        </Text>
         <Button
           title="Retry"
           testID="user-detail-retry-button"

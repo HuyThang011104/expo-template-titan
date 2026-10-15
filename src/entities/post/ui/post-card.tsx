@@ -15,6 +15,7 @@ import { useTheme } from "@/shared/ui/theme/use-theme";
 
 import { usePost, usePostAuthor, useViewerId } from "../queries";
 import { PostActions } from "./post-actions";
+import { PostBody } from "./post-body";
 import { PostOwnerMenu } from "./post-owner-menu";
 import { PostShareButton } from "./post-share-button";
 import { PostVideo } from "./post-video";
@@ -42,6 +43,13 @@ export type PostCardProps = {
    */
   onOwnerEditPress?: () => void;
   saveAffordance?: ReactNode;
+  /**
+   * Rich-text navigation (G1.5). Mention/hashtag taps are feature-owned
+   * (same pattern as `onSafetyPress`); links confirm in-sheet before the
+   * browser opens. Omitted callbacks render spans without a press handler.
+   */
+  onMentionPress?: (handle: string) => void;
+  onHashtagPress?: (tag: string) => void;
   /**
    * Video orchestration (F7a). The feed passes viewability-driven
    * `isActive`; detail screens leave it `true` for single-video autoplay.
@@ -119,7 +127,7 @@ function PostAuthorHeader({ authorId }: { authorId: string }) {
   );
 }
 
-export function PostCard({ postId, testID, onSafetyPress, safetyTestID, onOwnerEditPress, saveAffordance, isVideoActive }: PostCardProps) {
+export function PostCard({ postId, testID, onSafetyPress, safetyTestID, onOwnerEditPress, saveAffordance, onMentionPress, onHashtagPress, isVideoActive }: PostCardProps) {
   const theme = useTheme();
   const postQuery = usePost(postId);
   const viewerId = useViewerId();
@@ -166,7 +174,12 @@ export function PostCard({ postId, testID, onSafetyPress, safetyTestID, onOwnerE
           </Pressable>
         ) : null}
       </View>
-      <Text variant="body">{post.body}</Text>
+      <PostBody
+        postId={postId}
+        body={post.body}
+        onMentionPress={onMentionPress}
+        onHashtagPress={onHashtagPress}
+      />
       {firstMedia?.kind === "image" ? (
         <Image
           source={{ uri: firstMedia.url }}

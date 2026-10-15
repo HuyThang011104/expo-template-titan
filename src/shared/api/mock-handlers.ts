@@ -210,6 +210,41 @@ function mockUnsavePostResponse(id: string): Response {
 }
 
 /**
+ * Hashtag mock (G1.5): posts whose body contains `#tag` (case-insensitive,
+ * tag-boundary aware). Empty result is 200 (a valid empty tag page).
+ */
+const HASHTAG_PAGE_SIZE = 10;
+
+function hashtagPageResponse(tag: string, cursor: string | null): Response {
+  let offset = 0;
+  if (cursor !== null) {
+    const parsed = Number.parseInt(cursor, 10);
+    if (Number.isInteger(parsed) && parsed >= 0) offset = parsed;
+  }
+  const needle = `#${tag.trim().toLowerCase()}`;
+  const matched = feedPosts.filter((post) => {
+    if (isPostGone(post.id)) return false;
+    const lower = post.body.toLowerCase();
+    let at = lower.indexOf(needle);
+    while (at !== -1) {
+      const after = lower[at + needle.length];
+      if (after === undefined || !/[a-z0-9_]/.test(after)) return true;
+      at = lower.indexOf(needle, at + 1);
+    }
+    return false;
+  });
+  const items = matched.slice(offset, offset + HASHTAG_PAGE_SIZE).map((post) => ({
+    post,
+    author: feedAuthors.find((author) => author.id === post.authorId) ?? feedAuthors[0],
+  }));
+  const next = offset + HASHTAG_PAGE_SIZE;
+  return jsonResponse(
+    { items, nextCursor: next < matched.length ? String(next) : null },
+    200,
+  );
+}
+
+/**
  * Deterministic feed mock (40 posts / 8 users, page 10).
  * `post-fail` sits at index 7 for first-page rollback tests.
  */
@@ -903,10 +938,18 @@ function buildFeedPosts(): FeedMockPost[] {
       27: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
     };
     const videoUrl = videoUrlByIndex[i];
+    // G1.5 seeds: one hashtag post, one mention post, one link post
+    // (deterministic ids for deep taps + e2e).
+    const richSuffixByIndex: Record<number, string> = {
+      3: " Loving #travel lately!",
+      5: " Thanks @ava for the tips!",
+      7: " Details: https://titan.example/p/feed-p-1.",
+    };
+    const richSuffix = richSuffixByIndex[i] ?? "";
     posts.push({
       id: `feed-p-${i}`,
       authorId: author.id,
-      body: `Feed post #${i} — pagination and cross-cache like tests.`,
+      body: `Feed post #${i} — pagination and cross-cache like tests.${richSuffix}`,
       media: !hasMedia
         ? []
         : videoUrl
@@ -1213,6 +1256,10 @@ function defaultEntityResponse(
     }
     if (path === "/saved") {
       return savedPageResponse(query["cursor"] ?? null);
+    }
+    const hashtagMatch = /^\/hashtag\/([^/]+)$/.exec(path);
+    if (hashtagMatch?.[1]) {
+      return hashtagPageResponse(decodeURIComponent(hashtagMatch[1]), query["cursor"] ?? null);
     }
     const handleMatch = /^\/users\/handle\/([^/]+)$/.exec(path);
     if (handleMatch?.[1]) {

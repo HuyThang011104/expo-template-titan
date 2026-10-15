@@ -15,6 +15,7 @@ export const queryKeys = {
   post: (id: string) => ["posts", id] as const,
   homeFeed: (cursor?: string) => ["feed", "home", cursor ?? ""] as const,
   search: (q: string) => ["search", q.trim().toLowerCase()] as const,
+  hashtag: (tag: string) => ["search", "hashtag", tag.trim().toLowerCase()] as const,
   notification: (id: string) => ["notifications", id] as const,
   notifications: () => ["notifications"] as const,
   comment: (id: string) => ["comments", id] as const,

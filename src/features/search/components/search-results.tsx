@@ -67,6 +67,12 @@ function SearchPostItem({
           onOwnerEditPress={() => {
             router.push(hrefs.editPost(postId));
           }}
+          onMentionPress={(handle) => {
+            router.push(hrefs.user(handle));
+          }}
+          onHashtagPress={(tag) => {
+            router.push(hrefs.hashtag(tag));
+          }}
           saveAffordance={<SaveButton postId={postId} />}
         />
       </Pressable>
