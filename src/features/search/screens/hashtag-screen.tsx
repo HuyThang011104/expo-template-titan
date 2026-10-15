@@ -1,9 +1,10 @@
 /**
- * Hashtag screen (G1.5, `/hashtag/[tag]`).
+ * Hashtag screen (G1.5 posts + G2.2 header count).
  *
- * G1 scope: a plain header + the matching post list (same canonical
- * `SearchResults` rows as search, so likes/saves stay in sync). Trending,
- * counts, and the pretty header are G2.
+ * Header shows `#tag` + đếm bài (server total, loaded-ids fallback).
+ * Posts reuse the canonical `SearchResults` rows so likes/saves stay in
+ * sync and taps open the right post. Unknown/empty tags show an empty
+ * page with 0 count, never a crash.
  */
 
 import { useLocalSearchParams } from "expo-router";
@@ -11,13 +12,16 @@ import { StyleSheet, View } from "react-native";
 
 import { Button, Screen, Text } from "@/shared/ui";
 
+import { HashtagHeader } from "../components/hashtag-header";
 import { SearchResults } from "../components/search-results";
 import { useHashtag } from "../queries/use-hashtag";
+import { normalizeHashtag } from "../schema";
 
 export function HashtagScreen() {
   const { tag } = useLocalSearchParams<{ tag?: string }>();
+  const normalized = normalizeHashtag(typeof tag === "string" ? tag : "");
 
-  if (!tag || tag.trim().length === 0) {
+  if (!tag || normalized.length === 0) {
     return (
       <Screen style={styles.center} testID="hashtag-screen">
         <Text variant="body">Missing hashtag.</Text>
@@ -30,11 +34,12 @@ export function HashtagScreen() {
 
 function HashtagBody({ tag }: { tag: string }) {
   const feed = useHashtag(tag);
+  const normalized = feed.normalizedTag || normalizeHashtag(tag);
 
   if (feed.isPending) {
     return (
       <Screen style={styles.center} testID="hashtag-screen">
-        <Text variant="body">Loading #{tag}…</Text>
+        <Text variant="body">Loading #{normalized}…</Text>
       </Screen>
     );
   }
@@ -42,7 +47,7 @@ function HashtagBody({ tag }: { tag: string }) {
   if (feed.isError) {
     return (
       <Screen style={styles.center} testID="hashtag-screen">
-        <Text variant="title">#{tag}</Text>
+        <Text variant="title">#{normalized}</Text>
         <Text variant="body">Couldn&apos;t load posts for this tag.</Text>
         <Button
           title="Retry"
@@ -57,11 +62,7 @@ function HashtagBody({ tag }: { tag: string }) {
 
   return (
     <Screen testID="hashtag-screen">
-      <View style={styles.header}>
-        <Text variant="title" testID="hashtag-title">
-          #{tag}
-        </Text>
-      </View>
+      <HashtagHeader tag={normalized} postCount={feed.postCount} />
       <View style={styles.listFlex}>
         <SearchResults
           userIds={[]}
@@ -86,10 +87,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-  },
-  header: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
   },
   listFlex: {
     flex: 1,

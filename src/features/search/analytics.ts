@@ -13,3 +13,11 @@ export function logSearchOpen(): void {
 export function logSearchQuery(query: string): void {
   logger.debug("[search] query", { query });
 }
+
+export function logSearchHistorySelect(query: string): void {
+  logger.debug("[search] history select", { query });
+}
+
+export function logTrendingOpen(): void {
+  logger.debug("[search] trending open");
+}

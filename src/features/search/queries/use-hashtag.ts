@@ -1,18 +1,21 @@
 /**
- * Hashtag query (G1.5).
+ * Hashtag query (G1.5 posts + G2.2 header count).
  *
  * - Single `GET /hashtag/:tag?cursor=` returning paginated post wire items
- *   (no users — the tag page is posts-only in G1; the pretty page is G2).
+ *   plus `tag`/`postCount` for the G2.2 header (`#tag` + đếm bài).
  * - Hydrates through entity caches only; never `setQueryData` here.
+ * - Unknown tags are 200-empty (never a crash); weird tags normalize first.
  */
 
 import { useInfiniteQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 
-import { fetchPost, hydrateFeedItem, parseFeedWireItem } from "@/entities/post";
+import { fetchPost, hydrateFeedItem } from "@/entities/post";
 import { client } from "@/shared/api";
 import { endpoints } from "@/shared/api/endpoints";
 import { logger } from "@/shared/observability/logger";
 import { queryKeys } from "@/shared/query";
+
+import { normalizeHashtag, parseHashtagPage } from "../schema";
 
 export type HashtagFetchOptions = {
   fetchImpl?: typeof fetch;
@@ -21,11 +24,11 @@ export type HashtagFetchOptions = {
 export type HashtagPage = {
   postIds: string[];
   nextCursor: string | null;
+  tag: string | null;
+  postCount: number | null;
 };
 
-export function normalizeHashtag(tag: string): string {
-  return tag.trim().toLowerCase().replace(/^#+/, "");
-}
+export { normalizeHashtag };
 
 export async function fetchHashtagPage(
   qc: QueryClient,
@@ -37,25 +40,20 @@ export async function fetchHashtagPage(
   const data: unknown = await client.get<unknown>(endpoints.hashtag(normalized, cursor), {
     fetchImpl: opts.fetchImpl,
   });
-  if (
-    data === null ||
-    typeof data !== "object" ||
-    !("items" in data) ||
-    !Array.isArray((data as { items: unknown }).items)
-  ) {
+  const parsed = parseHashtagPage(data);
+  if (!parsed) {
     logger.warn("[search] invalid hashtag page shape", { tag: normalized });
     throw new Error("[search] Invalid hashtag page");
   }
-  const raw = data as { items: unknown[]; nextCursor?: unknown };
   const postIds: string[] = [];
-  for (const item of raw.items) {
-    const parsed = parseFeedWireItem(item);
-    if (!parsed) continue;
-    postIds.push(hydrateFeedItem(qc, parsed).postId);
+  for (const item of parsed.items) {
+    postIds.push(hydrateFeedItem(qc, item).postId);
   }
   return {
     postIds,
-    nextCursor: typeof raw.nextCursor === "string" ? raw.nextCursor : null,
+    nextCursor: parsed.nextCursor,
+    tag: parsed.tag ?? normalized,
+    postCount: parsed.postCount,
   };
 }
 
@@ -73,6 +71,9 @@ export function useHashtag(tag: string, opts: HashtagFetchOptions = {}) {
   });
 
   const postIds = (infinite.data?.pages ?? []).flatMap((page) => page.postIds);
+  // Header count: prefer the server total, fall back to loaded ids.
+  const postCount =
+    infinite.data?.pages[0]?.postCount ?? (infinite.isSuccess ? postIds.length : null);
 
   /** Warm the canonical post so detail opens without loading. */
   const prefetchPost = (id: string): void => {
@@ -87,5 +88,5 @@ export function useHashtag(tag: string, opts: HashtagFetchOptions = {}) {
     });
   };
 
-  return { ...infinite, postIds, prefetchPost };
+  return { ...infinite, postIds, postCount, normalizedTag: normalized, prefetchPost };
 }

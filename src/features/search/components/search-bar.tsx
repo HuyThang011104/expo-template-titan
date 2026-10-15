@@ -12,9 +12,11 @@ export type SearchBarProps = {
   value: string;
   onChangeText: (text: string) => void;
   onClear: () => void;
+  /** G2.2: fired on keyboard submit so the query is saved to history. */
+  onSubmit?: () => void;
 };
 
-export function SearchBar({ value, onChangeText, onClear }: SearchBarProps) {
+export function SearchBar({ value, onChangeText, onClear, onSubmit }: SearchBarProps) {
   return (
     <View style={styles.root}>
       <View style={styles.inputFlex}>
@@ -26,6 +28,7 @@ export function SearchBar({ value, onChangeText, onClear }: SearchBarProps) {
           returnKeyType="search"
           testID="search-input"
           accessibilityLabel="Search posts and people"
+          onSubmitEditing={onSubmit}
         />
       </View>
       {value.length > 0 ? (
