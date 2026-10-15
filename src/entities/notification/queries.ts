@@ -23,6 +23,8 @@ import {
   fetchNotificationsPageWire,
   markNotificationReadRemote,
 } from "./api";
+import { fetchNotifPrefs, updateNotifPrefsRemote } from "./api-prefs";
+import { getNotifPrefs, setNotifPrefs, updateNotifPref } from "./prefs-cache";
 import {
   countUnread,
   hydrateNotification,
@@ -91,6 +93,43 @@ export function useNotifications(opts: QueryFetchOptions = {}) {
 export function useUnreadCount(opts: QueryFetchOptions = {}): number {
   const { unreadCount } = useNotifications(opts);
   return unreadCount;
+}
+
+/** Canonical notif prefs (G2.3); seeds the cache so toggles render instantly. */
+export function useNotifPrefs(opts: QueryFetchOptions = {}) {
+  const qc = useQueryClient();
+  return useQuery({
+    queryKey: queryKeys.notifPrefs(),
+    queryFn: async () => {
+      const prefs = await fetchNotifPrefs(opts);
+      if (!prefs) throw new Error("[notification] Invalid notif-prefs response");
+      setNotifPrefs(qc, prefs);
+      return prefs;
+    },
+    staleTime: 60_000,
+  });
+}
+
+/** Read cached prefs without fetching (falls back to all-on). */
+export function useCachedNotifPrefs(): ReturnType<typeof getNotifPrefs> {
+  const qc = useQueryClient();
+  const query = useQuery({
+    queryKey: queryKeys.notifPrefs(),
+    queryFn: async () => getNotifPrefs(qc),
+    staleTime: 60_000,
+  });
+  return query.data ?? getNotifPrefs(qc);
+}
+
+/** Flip one notif pref (optimistic + rollback + inbox invalidate). */
+export function useUpdateNotifPref(opts: QueryFetchOptions = {}) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, enabled }: { key: Parameters<typeof updateNotifPref>[1]; enabled: boolean }) =>
+      updateNotifPref(qc, key, enabled, {
+        updateRemote: (patch) => updateNotifPrefsRemote(patch, opts),
+      }),
+  });
 }
 
 export function useMarkNotificationRead(id: string, opts: QueryFetchOptions = {}) {
