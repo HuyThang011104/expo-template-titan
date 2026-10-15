@@ -39,7 +39,7 @@ const throwRemote: LikeRemoteFn = async () => {
 const nullRemote: LikeRemoteFn = async () => null;
 
 describe("hydrateFeedItem", () => {
-  it("writes post + author canonical", () => {
+  it("writes post + author canonical (G2.1/G2.3: minimal snapshot gains nulls + default privacy)", () => {
     const qc = createQueryClient();
     const author = {
       id: "u-1",
@@ -52,7 +52,42 @@ describe("hydrateFeedItem", () => {
 
     expect(result).toEqual({ postId: "p-1" });
     expect(getPostData(qc, "p-1")).toEqual(mockPost1);
-    expect(qc.getQueryData(queryKeys.user("u-1"))).toEqual(author);
+    expect(qc.getQueryData(queryKeys.user("u-1"))).toEqual({
+      ...author,
+      bio: null,
+      coverUrl: null,
+      link: null,
+      privacySettings: {
+        messageAudience: "everyone",
+        postVisibility: "public",
+        tagAudience: "everyone",
+      },
+    });
+  });
+
+  it("preserves bio/cover/link when the canonical user is already full (G2.1)", () => {
+    const qc = createQueryClient();
+    const full = {
+      id: "u-1",
+      handle: "ava",
+      displayName: "Ava Stone",
+      avatarUrl: "https://picsum.photos/seed/u1/200",
+      bio: "Coffee + trail runs.",
+      coverUrl: "https://picsum.photos/seed/u1cover/800/300",
+      link: "https://titan.example/ava",
+    };
+    qc.setQueryData(queryKeys.user("u-1"), full);
+    const minimal = {
+      id: "u-1",
+      handle: "ava",
+      displayName: "Ava Stone Updated",
+      avatarUrl: "https://picsum.photos/seed/u1/200",
+    };
+    hydrateFeedItem(qc, { post: mockPost1, author: minimal });
+    expect(qc.getQueryData(queryKeys.user("u-1"))).toEqual({
+      ...full,
+      displayName: "Ava Stone Updated",
+    });
   });
 });
 

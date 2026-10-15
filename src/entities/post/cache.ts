@@ -40,10 +40,29 @@ export function patchPost(qc: QueryClient, id: string, patch: Partial<Post>): Po
 
 /**
  * Hydrate one `{ post, author }` wire item; returns `{ postId }`.
+ * Author snapshots merge into the canonical user so G2.1 extended fields
+ * (bio/cover/link) survive feed hydration — no "chỗ cũ chỗ mới".
+ * (Local merge: entity-to-entity imports are banned.)
  */
 export function hydrateFeedItem(qc: QueryClient, item: FeedWireItem): { postId: string } {
   setPost(qc, item.post);
-  qc.setQueryData(queryKeys.user(item.author.id), item.author);
+  const prev = qc.getQueryData<Record<string, unknown>>(queryKeys.user(item.author.id));
+  if (prev && typeof prev === "object" && ("bio" in prev || "coverUrl" in prev || "link" in prev)) {
+    qc.setQueryData(queryKeys.user(item.author.id), { ...prev, ...item.author });
+  } else {
+    qc.setQueryData(queryKeys.user(item.author.id), {
+      ...item.author,
+      bio: null,
+      coverUrl: null,
+      link: null,
+      // Duplicated defaults (entity-to-entity imports are banned).
+      privacySettings: {
+        messageAudience: "everyone",
+        postVisibility: "public",
+        tagAudience: "everyone",
+      },
+    });
+  }
   return { postId: item.post.id };
 }
 

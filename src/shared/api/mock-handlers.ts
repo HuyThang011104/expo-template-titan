@@ -37,12 +37,28 @@ const mockUsers = [
     handle: "ava",
     displayName: "Ava Stone",
     avatarUrl: "https://picsum.photos/seed/u1/200",
+    bio: "Coffee + trail runs.",
+    coverUrl: "https://picsum.photos/seed/u1cover/800/300",
+    link: "https://titan.example/ava",
+    privacySettings: {
+      messageAudience: "everyone",
+      postVisibility: "public",
+      tagAudience: "everyone",
+    },
   },
   {
     id: "u-2",
     handle: "liam",
     displayName: "Liam Carter",
     avatarUrl: null,
+    bio: null,
+    coverUrl: null,
+    link: null,
+    privacySettings: {
+      messageAudience: "everyone",
+      postVisibility: "public",
+      tagAudience: "everyone",
+    },
   },
 ];
 
@@ -126,6 +142,72 @@ function mockDeletePostResponse(id: string): Response {
   }
   deletedPostIds.add(id);
   return jsonResponse({ ok: true }, 200);
+}
+
+/**
+ * Edit-profile mock (G2.1): PATCH `/users/me` validates displayName/bio/
+ * avatar/cover/link, persists in-memory for the session, and echoes the full
+ * user. Invalid input → 400 so the entity throws with local state untouched.
+ */
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "http:" ||
+      url.protocol === "https:" ||
+      url.protocol === "file:" ||
+      url.protocol === "data:" ||
+      url.protocol === "blob:"
+    );
+  } catch {
+    return false;
+  }
+}
+
+function mockUpdateProfileResponse(bodyText: string | null): Response {
+  const me = mockUsers[0];
+  if (!me) return notFound("PATCH", "/users/me");
+  let displayName: unknown = undefined;
+  let bio: unknown = undefined;
+  let avatarUrl: unknown = undefined;
+  let coverUrl: unknown = undefined;
+  let link: unknown = undefined;
+  try {
+    const parsed: unknown = bodyText ? (JSON.parse(bodyText) as unknown) : null;
+    if (parsed !== null && typeof parsed === "object") {
+      const candidate = parsed as Record<string, unknown>;
+      displayName = candidate["displayName"];
+      bio = candidate["bio"];
+      avatarUrl = candidate["avatarUrl"];
+      coverUrl = candidate["coverUrl"];
+      link = candidate["link"];
+    } else {
+      return jsonResponse({ message: "[mock] Invalid JSON" }, 400);
+    }
+  } catch {
+    return jsonResponse({ message: "[mock] Invalid JSON" }, 400);
+  }
+  if (typeof displayName !== "string" || displayName.trim().length < 1 || displayName.trim().length > 50) {
+    return jsonResponse({ message: "[mock] Invalid displayName" }, 400);
+  }
+  if (bio !== null && (typeof bio !== "string" || bio.length > 160)) {
+    return jsonResponse({ message: "[mock] Invalid bio" }, 400);
+  }
+  if (avatarUrl !== null && (typeof avatarUrl !== "string" || !isValidHttpUrl(avatarUrl))) {
+    return jsonResponse({ message: "[mock] Invalid avatarUrl" }, 400);
+  }
+  if (coverUrl !== null && (typeof coverUrl !== "string" || !isValidHttpUrl(coverUrl))) {
+    return jsonResponse({ message: "[mock] Invalid coverUrl" }, 400);
+  }
+  if (link !== null && (typeof link !== "string" || (link.length > 0 && !isValidHttpUrl(link)))) {
+    return jsonResponse({ message: "[mock] Invalid link" }, 400);
+  }
+  me.displayName = displayName.trim();
+  me.bio = typeof bio === "string" && bio.trim().length > 0 ? bio.trim() : null;
+  me.avatarUrl = typeof avatarUrl === "string" ? avatarUrl : null;
+  me.coverUrl = typeof coverUrl === "string" ? coverUrl : null;
+  me.link = typeof link === "string" && link.trim().length > 0 ? link.trim() : null;
+  return jsonResponse({ ...me }, 200);
 }
 
 /**
@@ -221,9 +303,12 @@ function hashtagPageResponse(tag: string, cursor: string | null): Response {
     const parsed = Number.parseInt(cursor, 10);
     if (Number.isInteger(parsed) && parsed >= 0) offset = parsed;
   }
-  const needle = `#${tag.trim().toLowerCase()}`;
+  const normalized = tag.trim().toLowerCase().replace(/^#+/, "");
+  const needle = `#${normalized}`;
   const matched = feedPosts.filter((post) => {
     if (isPostGone(post.id)) return false;
+    // G2.3: hidden/gated authors vanish from tag pages too.
+    if (isPostHiddenFromViewerMock(post.authorId)) return false;
     const lower = post.body.toLowerCase();
     let at = lower.indexOf(needle);
     while (at !== -1) {
@@ -238,10 +323,52 @@ function hashtagPageResponse(tag: string, cursor: string | null): Response {
     author: feedAuthors.find((author) => author.id === post.authorId) ?? feedAuthors[0],
   }));
   const next = offset + HASHTAG_PAGE_SIZE;
+  // G2.2: header needs the total count; keep `items/nextCursor` for G1 compat.
   return jsonResponse(
-    { items, nextCursor: next < matched.length ? String(next) : null },
+    {
+      items,
+      nextCursor: next < matched.length ? String(next) : null,
+      tag: normalized,
+      postCount: matched.length,
+    },
     200,
   );
+}
+
+/**
+ * Trending mock (G2.2): tag hot (counted from live feed bodies, desc) +
+ * user gợi ý (5 authors excluding the viewer). `GET /trending` → 200.
+ */
+function trendingResponse(): Response {
+  const counts = new Map<string, { count: number; latest: string }>();
+  for (const post of feedPosts) {
+    if (isPostGone(post.id)) continue;
+    if (isPostHiddenFromViewerMock(post.authorId)) continue;
+    const tags = post.body.match(/#[A-Za-z0-9_]+/g) ?? [];
+    for (const raw of tags) {
+      const tag = raw.slice(1).toLowerCase();
+      // Skip numeric-only tags from "Feed post #N" bodies.
+      if (/^\d+$/.test(tag)) continue;
+      const prev = counts.get(tag);
+      if (!prev) {
+        counts.set(tag, { count: 1, latest: post.createdAt });
+      } else {
+        counts.set(tag, {
+          count: prev.count + 1,
+          latest: post.createdAt > prev.latest ? post.createdAt : prev.latest,
+        });
+      }
+    }
+  }
+  const tags = [...counts.entries()]
+    .map(([tag, info]) => ({ tag, postCount: info.count, updatedAt: info.latest }))
+    .sort((a, b) => b.postCount - a.postCount || a.tag.localeCompare(b.tag))
+    .slice(0, 10);
+  // G2.3: safety-hidden authors vanish from suggestions too.
+  const users = feedAuthors
+    .filter((author) => author.id !== ME_ID && !isSafetyHiddenMock(author.id))
+    .slice(0, 5);
+  return jsonResponse({ tags, users }, 200);
 }
 
 /**
@@ -255,6 +382,9 @@ type FeedMockAuthor = {
   handle: string;
   displayName: string;
   avatarUrl: string | null;
+  bio?: string | null;
+  coverUrl?: string | null;
+  link?: string | null;
 };
 
 type FeedMockPost = {
@@ -274,36 +404,54 @@ const feedAuthors: FeedMockAuthor[] = [
     handle: "mia",
     displayName: "Mia Chen",
     avatarUrl: "https://picsum.photos/seed/ufeed3/200",
+    bio: null,
+    coverUrl: null,
+    link: null,
   },
   {
     id: "u-feed-4",
     handle: "noah",
     displayName: "Noah Kim",
     avatarUrl: "https://picsum.photos/seed/ufeed4/200",
+    bio: null,
+    coverUrl: null,
+    link: null,
   },
   {
     id: "u-feed-5",
     handle: "ella",
     displayName: "Ella Brooks",
     avatarUrl: null,
+    bio: null,
+    coverUrl: null,
+    link: null,
   },
   {
     id: "u-feed-6",
     handle: "lucas",
     displayName: "Lucas Gray",
     avatarUrl: "https://picsum.photos/seed/ufeed6/200",
+    bio: null,
+    coverUrl: null,
+    link: null,
   },
   {
     id: "u-feed-7",
     handle: "sofia",
     displayName: "Sofia Reed",
     avatarUrl: "https://picsum.photos/seed/ufeed7/200",
+    bio: null,
+    coverUrl: null,
+    link: null,
   },
   {
     id: "u-feed-8",
     handle: "ethan",
     displayName: "Ethan Cole",
     avatarUrl: "https://picsum.photos/seed/ufeed8/200",
+    bio: null,
+    coverUrl: null,
+    link: null,
   },
 ];
 
@@ -337,10 +485,13 @@ const NOTIFICATION_KINDS = ["like", "follow", "post", "mention"] as const;
 
 function buildNotifications(): NotificationMockItem[] {
   const baseTime = Date.parse("2026-09-09T10:00:00.000Z");
+  // G2.3: actors skip safety-hidden lucas so default counts stay stable
+  // under actor filtering (inbox filters blocked/muted actors).
+  const actorPool = feedAuthors.filter((author) => author.id !== "u-feed-6");
   const items: NotificationMockItem[] = [];
   for (let i = 1; i <= 25; i++) {
     const kind = NOTIFICATION_KINDS[(i - 1) % NOTIFICATION_KINDS.length] ?? "like";
-    const author = feedAuthors[i % feedAuthors.length] ?? feedAuthors[0];
+    const author = actorPool[i % actorPool.length] ?? feedAuthors[0];
     const post = feedPosts[(i - 1) % feedPosts.length] ?? feedPosts[0];
     items.push({
       id: `n-${i}`,
@@ -372,10 +523,17 @@ function notificationsPageResponse(cursor: string | null): Response {
     const parsed = Number.parseInt(cursor, 10);
     if (Number.isInteger(parsed) && parsed >= 0) offset = parsed;
   }
-  const items = notificationsFixtures.slice(offset, offset + NOTIFICATIONS_PAGE_SIZE);
+  // G2.3: muted kinds vanish but other kinds stay (like off → follow stays);
+  // safety-hidden actors vanish too. Filter before paginating.
+  const visible = notificationsFixtures.filter((item) => {
+    if (notifPrefsMock[prefKeyForNotifKind(item.kind)] === false) return false;
+    if (isSafetyHiddenMock(item.actorId)) return false;
+    return true;
+  });
+  const items = visible.slice(offset, offset + NOTIFICATIONS_PAGE_SIZE);
   const next = offset + NOTIFICATIONS_PAGE_SIZE;
   return jsonResponse(
-    { items, nextCursor: next < notificationsFixtures.length ? String(next) : null },
+    { items, nextCursor: next < visible.length ? String(next) : null },
     200,
   );
 }
@@ -620,6 +778,274 @@ function followStatusOf(targetId: string): FollowPairState | "none" {
   return followPairs.get(`${ME_ID}>${targetId}`) ?? "none";
 }
 
+/**
+ * Privacy mock (G2.3): per-user settings for the single mock viewer flow.
+ * `privacyOverrides` holds PATCHed values; seeds mirror the entity defaults
+ * (`everyone/public/everyone`). `privateIds` (G1.1 Ella fixture) stays as an
+ * additional followers-only source so G1 tests keep passing.
+ */
+type PrivacyMock = {
+  messageAudience: "everyone" | "following" | "none";
+  postVisibility: "public" | "followers";
+  tagAudience: "everyone" | "following" | "none";
+};
+
+const DEFAULT_PRIVACY_MOCK: PrivacyMock = {
+  messageAudience: "everyone",
+  postVisibility: "public",
+  tagAudience: "everyone",
+};
+
+const privacyOverrides = new Map<string, PrivacyMock>();
+
+function privacyOf(userId: string): PrivacyMock {
+  const stored = privacyOverrides.get(userId);
+  if (stored) return stored;
+  const user = mockUsers.find((candidate) => candidate.id === userId);
+  const raw = (user as { privacySettings?: unknown } | undefined)?.privacySettings;
+  if (raw !== null && typeof raw === "object") {
+    const candidate = raw as Record<string, unknown>;
+    const messageAudience =
+      candidate["messageAudience"] === "following" || candidate["messageAudience"] === "none"
+        ? candidate["messageAudience"]
+        : "everyone";
+    const postVisibility =
+      candidate["postVisibility"] === "followers" ? "followers" : "public";
+    const tagAudience =
+      candidate["tagAudience"] === "following" || candidate["tagAudience"] === "none"
+        ? candidate["tagAudience"]
+        : "everyone";
+    return { messageAudience, postVisibility, tagAudience } as PrivacyMock;
+  }
+  return { ...DEFAULT_PRIVACY_MOCK };
+}
+
+function isFollowersOnlyMock(userId: string): boolean {
+  return privateIds.has(userId) || privacyOf(userId).postVisibility === "followers";
+}
+
+/** G2.3: safety hides in either direction (block/mute/reverse-block). */
+function isSafetyHiddenMock(authorId: string): boolean {
+  if (authorId === ME_ID) return false;
+  const override = relationshipOverrides.get(authorId);
+  if (override?.blockedByMe || override?.mutedByMe) return true;
+  if (blockPairs.has(`${ME_ID}>${authorId}`)) return true;
+  if (blockPairs.has(`${authorId}>${ME_ID}`)) return true;
+  return false;
+}
+
+/**
+ * G2.3: followers-only hides from non-followers (self always sees self).
+ * Mirrors the client's `canViewPosts` gating so refetched lists agree with
+ * the profile/post-detail gates.
+ */
+function isFollowersOnlyHiddenMock(authorId: string): boolean {
+  if (authorId === ME_ID) return false;
+  if (!isFollowersOnlyMock(authorId)) return false;
+  return followPairs.get(`${ME_ID}>${authorId}`) !== "following";
+}
+
+/** G2.3: posts by hidden or gated authors vanish from every list. */
+function isPostHiddenFromViewerMock(authorId: string): boolean {
+  return isSafetyHiddenMock(authorId) || isFollowersOnlyHiddenMock(authorId);
+}
+
+/**
+ * Notif prefs mock (G2.3): single-viewer toggles, all on by default.
+ * `like` off hides `like` notices but `follow` notices stay (acceptance).
+ */
+const notifPrefsMock: Record<string, boolean> = {
+  like: true,
+  follow: true,
+  comment: true,
+  mention: true,
+  message: true,
+};
+
+function prefKeyForNotifKind(kind: string): string {
+  // `post` (someone shared) follows the `follow` toggle — those notices only
+  // exist for followed authors. Mirrors the entity's `prefKeyForKind`.
+  if (kind === "post") return "follow";
+  return kind;
+}
+
+function mockNotifPrefsResponse(bodyText: string | null): Response {
+  let patch: Record<string, unknown>;
+  try {
+    const parsed: unknown = bodyText ? (JSON.parse(bodyText) as unknown) : null;
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return jsonResponse({ message: "[mock] Invalid JSON" }, 400);
+    }
+    patch = parsed as Record<string, unknown>;
+  } catch {
+    return jsonResponse({ message: "[mock] Invalid JSON" }, 400);
+  }
+  const keys = ["like", "follow", "comment", "mention", "message"];
+  const next = { ...notifPrefsMock };
+  let touched = false;
+  for (const key of keys) {
+    if (!(key in patch)) continue;
+    if (typeof patch[key] !== "boolean") {
+      return jsonResponse({ message: `[mock] Invalid notif pref ${key}` }, 400);
+    }
+    next[key] = patch[key] as boolean;
+    touched = true;
+  }
+  if (!touched) return jsonResponse({ message: "[mock] Empty prefs patch" }, 400);
+  Object.assign(notifPrefsMock, next);
+  return jsonResponse({ ...notifPrefsMock }, 200);
+}
+
+function mockUpdatePrivacyResponse(bodyText: string | null): Response {
+  const me = mockUsers[0];
+  if (!me) return notFound("PATCH", "/users/me/privacy");
+  let patch: Record<string, unknown>;
+  try {
+    const parsed: unknown = bodyText ? (JSON.parse(bodyText) as unknown) : null;
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return jsonResponse({ message: "[mock] Invalid JSON" }, 400);
+    }
+    patch = parsed as Record<string, unknown>;
+  } catch {
+    return jsonResponse({ message: "[mock] Invalid JSON" }, 400);
+  }
+  const allowedAudiences = ["everyone", "following", "none"];
+  const next = { ...privacyOf(ME_ID) };
+  let touched = false;
+  if ("messageAudience" in patch) {
+    if (!allowedAudiences.includes(patch["messageAudience"] as string)) {
+      return jsonResponse({ message: "[mock] Invalid messageAudience" }, 400);
+    }
+    next.messageAudience = patch["messageAudience"] as PrivacyMock["messageAudience"];
+    touched = true;
+  }
+  if ("postVisibility" in patch) {
+    if (patch["postVisibility"] !== "public" && patch["postVisibility"] !== "followers") {
+      return jsonResponse({ message: "[mock] Invalid postVisibility" }, 400);
+    }
+    next.postVisibility = patch["postVisibility"];
+    touched = true;
+  }
+  if ("tagAudience" in patch) {
+    if (!allowedAudiences.includes(patch["tagAudience"] as string)) {
+      return jsonResponse({ message: "[mock] Invalid tagAudience" }, 400);
+    }
+    next.tagAudience = patch["tagAudience"] as PrivacyMock["tagAudience"];
+    touched = true;
+  }
+  if (!touched) return jsonResponse({ message: "[mock] Empty privacy patch" }, 400);
+  privacyOverrides.set(ME_ID, next);
+  (me as { privacySettings: PrivacyMock }).privacySettings = { ...next };
+  return jsonResponse({ ...me }, 200);
+}
+
+/**
+ * Account mock (G2.4): sessions list, password change, deactivate/delete,
+ * data export. Module-level session store so revokes persist for the
+ * session (same discipline as the comments store).
+ */
+type SessionMockItem = {
+  id: string;
+  deviceName: string;
+  ipAddress: string;
+  current: boolean;
+  lastActiveAt: string;
+};
+
+const CURRENT_SESSION_ID = "sess-current";
+
+function buildSessions(): SessionMockItem[] {
+  const baseTime = Date.parse("2026-09-09T10:00:00.000Z");
+  const at = (hoursAgo: number): string =>
+    new Date(baseTime - hoursAgo * 3_600_000).toISOString();
+  return [
+    {
+      id: CURRENT_SESSION_ID,
+      deviceName: "This device",
+      ipAddress: "192.168.1.10",
+      current: true,
+      lastActiveAt: new Date(baseTime).toISOString(),
+    },
+    {
+      id: "sess-web",
+      deviceName: "Chrome on Windows",
+      ipAddress: "203.0.113.42",
+      current: false,
+      lastActiveAt: at(5),
+    },
+    {
+      id: "sess-android",
+      deviceName: "Pixel 8",
+      ipAddress: "198.51.100.23",
+      current: false,
+      lastActiveAt: at(26),
+    },
+  ];
+}
+
+const sessionStore: SessionMockItem[] = buildSessions();
+
+function mockChangePasswordResponse(bodyText: string | null): Response {
+  let currentPassword: unknown = null;
+  let newPassword: unknown = null;
+  try {
+    const parsed: unknown = bodyText ? (JSON.parse(bodyText) as unknown) : null;
+    if (parsed !== null && typeof parsed === "object") {
+      const candidate = parsed as Record<string, unknown>;
+      currentPassword = candidate["currentPassword"];
+      newPassword = candidate["newPassword"];
+    }
+  } catch {
+    return jsonResponse({ message: "[mock] Invalid JSON" }, 400);
+  }
+  if (typeof currentPassword !== "string" || currentPassword.length < 1) {
+    return jsonResponse({ message: "[mock] Current password required" }, 400);
+  }
+  if (typeof newPassword !== "string" || newPassword.length < 6) {
+    return jsonResponse({ message: "[mock] New password too short" }, 400);
+  }
+  if (newPassword === currentPassword) {
+    return jsonResponse({ message: "[mock] New password must differ" }, 400);
+  }
+  return jsonResponse({ ok: true }, 200);
+}
+
+function mockRevokeSessionResponse(id: string): Response {
+  const index = sessionStore.findIndex((item) => item.id === id);
+  if (index === -1) return notFound("DELETE", `/sessions/${id}`);
+  const [removed] = sessionStore.splice(index, 1);
+  return jsonResponse({ ok: true, revokedCurrent: removed?.current === true }, 200);
+}
+
+function mockExportResponse(): Response {
+  const me = mockUsers[0];
+  if (!me) return notFound("GET", "/users/me/export");
+  const mine = [...mockPosts, ...feedPosts]
+    .filter((post) => post.authorId === ME_ID && !isPostGone(post.id))
+    .map((post) => ({
+      id: post.id,
+      body: post.body,
+      likeCount: post.likeCount,
+      createdAt: post.createdAt,
+    }));
+  return jsonResponse(
+    {
+      profile: {
+        id: me.id,
+        handle: me.handle,
+        displayName: me.displayName,
+        bio: me.bio,
+        avatarUrl: me.avatarUrl,
+        coverUrl: me.coverUrl,
+        link: me.link,
+      },
+      posts: mine,
+      exportedAt: new Date().toISOString(),
+    },
+    200,
+  );
+}
+
 function relationshipFor(userId: string): Response {
   if (!knownUserId(userId)) return notFound("GET", `/users/${userId}/relationship`);
   const override = relationshipOverrides.get(userId) ?? {
@@ -634,7 +1060,7 @@ function relationshipFor(userId: string): Response {
       followStatus: followStatusOf(userId),
       followersCount: followersCountOf(userId),
       followingCount: followingCountOf(userId),
-      isPrivate: privateIds.has(userId),
+      isPrivate: isFollowersOnlyMock(userId),
       blockedByTarget: blockPairs.has(`${userId}>${ME_ID}`),
       updatedAt: new Date().toISOString(),
     },
@@ -691,7 +1117,7 @@ function mockReportResponse(bodyText: string | null): Response {
 
 function mockFollowResponse(userId: string): Response {
   if (!knownUserId(userId)) return notFound("POST", `/users/${userId}/follow`);
-  followPairs.set(`${ME_ID}>${userId}`, privateIds.has(userId) ? "requested" : "following");
+  followPairs.set(`${ME_ID}>${userId}`, isFollowersOnlyMock(userId) ? "requested" : "following");
   return relationshipFor(userId);
 }
 
@@ -772,8 +1198,11 @@ function buildComments(): CommentMockItem[] {
     "c-p1-11",
     "c-p1-12",
   ];
+  // G2.3: comment authors skip safety-hidden lucas so default counts stay
+  // stable under safety filtering (comment lists filter blocked/muted only).
+  const commentAuthorPool = feedAuthors.filter((author) => author.id !== "u-feed-6");
   const items: CommentMockItem[] = topIds.map((id, index) => {
-    const author = feedAuthors[(index + 1) % feedAuthors.length] ?? feedAuthors[0];
+    const author = commentAuthorPool[(index + 1) % commentAuthorPool.length] ?? feedAuthors[0];
     return {
       id,
       postId: "feed-p-1",
@@ -793,7 +1222,7 @@ function buildComments(): CommentMockItem[] {
     ["c-p1-r4", "c-p1-02", "Only reply to c-p1-02.", 52],
   ];
   replies.forEach(([id, parentId, body, minutesAgo], index) => {
-    const author = feedAuthors[(index + 3) % feedAuthors.length] ?? feedAuthors[0];
+    const author = commentAuthorPool[(index + 3) % commentAuthorPool.length] ?? feedAuthors[0];
     items.push({
       id,
       postId: "feed-p-1",
@@ -806,7 +1235,7 @@ function buildComments(): CommentMockItem[] {
     });
   });
   ["First comment on p-1.", "Second comment on p-1."].forEach((body, index) => {
-    const author = feedAuthors[index % feedAuthors.length] ?? feedAuthors[0];
+    const author = commentAuthorPool[index % commentAuthorPool.length] ?? feedAuthors[0];
     items.push({
       id: `c-p1x-0${index + 1}`,
       postId: "p-1",
@@ -838,7 +1267,12 @@ function postCommentsPageResponse(postId: string, cursor: string | null): Respon
     if (Number.isInteger(parsed) && parsed >= 0) offset = parsed;
   }
   const tops = commentStore
-    .filter((item) => item.postId === postId && item.parentId === null)
+    .filter(
+      (item) =>
+        item.postId === postId &&
+        item.parentId === null &&
+        !isSafetyHiddenMock(item.authorId),
+    )
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const page = tops.slice(offset, offset + COMMENTS_PAGE_SIZE);
   const items: { comment: CommentMockItem; author: FeedMockAuthor }[] = [];
@@ -846,7 +1280,12 @@ function postCommentsPageResponse(postId: string, cursor: string | null): Respon
     const author = findMockUser(top.authorId) ?? feedAuthors[0];
     items.push({ comment: top, author });
     const replies = commentStore
-      .filter((item) => item.postId === postId && item.parentId === top.id)
+      .filter(
+        (item) =>
+          item.postId === postId &&
+          item.parentId === top.id &&
+          !isSafetyHiddenMock(item.authorId),
+      )
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     for (const reply of replies) {
       const replyAuthor = findMockUser(reply.authorId) ?? feedAuthors[0];
@@ -940,10 +1379,23 @@ function buildFeedPosts(): FeedMockPost[] {
     const videoUrl = videoUrlByIndex[i];
     // G1.5 seeds: one hashtag post, one mention post, one link post
     // (deterministic ids for deep taps + e2e).
+    // G2.2: extra hashtag seeds so trending has deterministic counts
+    // (tech 4 > travel 3 > food 2 > photo 1).
+    // G2.3: seeds avoid safety-hidden (lucas, i%8==5) and followers-only
+    // (ella, i%8==4) authors so default counts stay stable under filtering.
     const richSuffixByIndex: Record<number, string> = {
       3: " Loving #travel lately!",
       5: " Thanks @ava for the tips!",
+      6: " Homemade #food diary!",
       7: " Details: https://titan.example/p/feed-p-1.",
+      9: " Shipping #tech updates!",
+      10: " Golden hour #photo walk!",
+      11: " #travel diaries, part 2!",
+      16: " Weekend #food market run!",
+      19: " #tech deep dive thread!",
+      22: " #travel throwback!",
+      30: " #tech side project!",
+      33: " Late-night #tech notes!",
     };
     const richSuffix = richSuffixByIndex[i] ?? "";
     posts.push({
@@ -979,7 +1431,10 @@ function feedPageResponse(cursor: string | null): Response {
     const parsed = Number.parseInt(cursor, 10);
     if (Number.isInteger(parsed) && parsed >= 0) offset = parsed;
   }
-  const live = feedPosts.filter((post) => !isPostGone(post.id));
+  // G2.3: safety-hidden + followers-only authors vanish from the feed.
+  const live = feedPosts.filter(
+    (post) => !isPostGone(post.id) && !isPostHiddenFromViewerMock(post.authorId),
+  );
   const items = live.slice(offset, offset + FEED_PAGE_SIZE).map((post) => ({
     post,
     author: feedAuthors.find((author) => author.id === post.authorId) ?? feedAuthors[0],
@@ -992,6 +1447,10 @@ function feedPageResponse(cursor: string | null): Response {
 }
 
 function userPostsPageResponse(userId: string, cursor: string | null): Response {
+  // G2.3: a safety-hidden or gated author reads as empty (profile gates too).
+  if (userId !== ME_ID && isPostHiddenFromViewerMock(userId)) {
+    return jsonResponse({ items: [], nextCursor: null }, 200);
+  }
   const mine = feedPosts.filter((post) => post.authorId === userId && !isPostGone(post.id));
   let offset = 0;
   if (cursor !== null) {
@@ -1021,14 +1480,17 @@ function searchResponse(rawQuery: string, cursor: string | null): Response {
   if (q.length === 0) {
     return jsonResponse({ users: [], items: [], nextCursor: null }, 200);
   }
+  // G2.3: safety-hidden authors vanish from people + posts (gated posts too).
   const matchedAuthors = feedAuthors.filter(
     (author) =>
-      author.handle.toLowerCase().includes(q) ||
-      author.displayName.toLowerCase().includes(q),
+      !isSafetyHiddenMock(author.id) &&
+      (author.handle.toLowerCase().includes(q) ||
+        author.displayName.toLowerCase().includes(q)),
   );
   const authorById = new Map(feedAuthors.map((author) => [author.id, author]));
   const matchedPosts = feedPosts.filter((post) => {
     if (isPostGone(post.id)) return false;
+    if (isPostHiddenFromViewerMock(post.authorId)) return false;
     if (post.body.toLowerCase().includes(q)) return true;
     const author = authorById.get(post.authorId) ?? feedAuthors[0];
     return (
@@ -1201,8 +1663,20 @@ function defaultEntityResponse(
     if (path === "/search") {
       return searchResponse(query["q"] ?? "", query["cursor"] ?? null);
     }
+    if (path === "/trending") {
+      return trendingResponse();
+    }
     if (path === "/notifications") {
       return notificationsPageResponse(query["cursor"] ?? null);
+    }
+    if (path === "/notif-prefs") {
+      return jsonResponse({ ...notifPrefsMock }, 200);
+    }
+    if (path === "/sessions") {
+      return jsonResponse({ items: [...sessionStore] }, 200);
+    }
+    if (path === "/users/me/export") {
+      return mockExportResponse();
     }
     if (path === "/conversations") {
       return conversationsPageResponse(query["cursor"] ?? null);
@@ -1293,6 +1767,12 @@ function defaultEntityResponse(
     if (path === "/devices") {
       return jsonResponse({ ok: true }, 200);
     }
+    if (path === "/auth/change-password") {
+      return mockChangePasswordResponse(bodyText);
+    }
+    if (path === "/users/me/deactivate") {
+      return jsonResponse({ ok: true, deactivatedAt: new Date().toISOString() }, 200);
+    }
     if (path === "/posts") {
       return mockCreatePostResponse(bodyText);
     }
@@ -1354,6 +1834,15 @@ function defaultEntityResponse(
     return null;
   }
   if (method === "PATCH") {
+    if (path === "/users/me" || path === "/me") {
+      return mockUpdateProfileResponse(bodyText);
+    }
+    if (path === "/users/me/privacy") {
+      return mockUpdatePrivacyResponse(bodyText);
+    }
+    if (path === "/notif-prefs") {
+      return mockNotifPrefsResponse(bodyText);
+    }
     const { base, id } = splitIdPath(path);
     if (base === "/posts" && id) {
       return mockUpdatePostResponse(id, bodyText);
@@ -1361,6 +1850,13 @@ function defaultEntityResponse(
     return null;
   }
   if (method === "DELETE") {
+    const sessionMatch = /^\/sessions\/([^/]+)$/.exec(path);
+    if (sessionMatch?.[1]) {
+      return mockRevokeSessionResponse(decodeURIComponent(sessionMatch[1]));
+    }
+    if (path === "/users/me") {
+      return jsonResponse({ ok: true }, 200);
+    }
     const savedMatch = /^\/saved\/([^/]+)$/.exec(path);
     if (savedMatch?.[1]) {
       return mockUnsavePostResponse(decodeURIComponent(savedMatch[1]));

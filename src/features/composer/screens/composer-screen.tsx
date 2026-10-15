@@ -1,4 +1,5 @@
 import { router } from "expo-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -13,6 +14,9 @@ import {
   COMPOSER_MAX_MEDIA,
   validateComposerBody,
 } from "../validation";
+import { parseRichText } from "@/entities/post";
+import { canTagUser, getUserByHandleData, useMe } from "@/entities/user";
+import { findBlockedMentionHandles } from "@/shared/lib/mention-gate";
 import { Button, Input, Screen, Text } from "@/shared/ui";
 import { useTheme } from "@/shared/ui/theme/use-theme";
 
@@ -49,6 +53,8 @@ function ComposerKeyboardAvoidingView({ children }: { children: ReactNode }) {
  */
 export function ComposerScreen() {
   const theme = useTheme();
+  const qc = useQueryClient();
+  const me = useMe();
   const { body, setBody, localUris, setLocalUris, loaded, clear } = useComposerDraft();
   const media = useComposerMedia();
   const { submitWithMedia, isPending, isUploading } = useComposerCreatePost();
@@ -87,6 +93,20 @@ export function ComposerScreen() {
     const textCheck = validateComposerBody(body);
     if (!textCheck.ok) {
       setError(textCheck.error);
+      return;
+    }
+    // G2.3: respect mentioned users' tagAudience before sending.
+    const viewerId = me.data?.id ?? "";
+    const handles = parseRichText(textCheck.value.body)
+      .filter((segment) => segment.kind === "mention")
+      .map((segment) => (segment.kind === "mention" ? segment.handle : ""));
+    const blocked = findBlockedMentionHandles(
+      handles,
+      (handle) => getUserByHandleData(qc, handle)?.id,
+      (targetId) => canTagUser(qc, targetId, viewerId),
+    );
+    if (blocked.length > 0) {
+      setError(`@${blocked[0]} không cho phép tag.`);
       return;
     }
     logComposerPost();

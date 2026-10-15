@@ -8,7 +8,7 @@
  */
 
 import { Pressable, StyleSheet, View } from "react-native";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { formatRelative } from "@/shared/lib/date";
 import { queryKeys } from "@/shared/query";
@@ -32,7 +32,21 @@ type AuthorPreview = {
 
 function useCommentAuthorSnapshot(authorId: string): { displayName: string; handle: string } {
   const qc = useQueryClient();
-  const data = qc.getQueryData<AuthorPreview>(queryKeys.user(authorId));
+  // Reactive read of the canonical user entry (G2.1): subscribes to
+  // `queryKeys.user(authorId)` so profile edits propagate to comments.
+  // Local structural type — never an `entities/user` import.
+  const authorQuery = useQuery({
+    queryKey: queryKeys.user(authorId),
+    queryFn: async (): Promise<AuthorPreview> => {
+      const cached = qc.getQueryData<AuthorPreview>(queryKeys.user(authorId));
+      if (cached) return cached;
+      throw new Error(`Unknown user ${authorId}`);
+    },
+    staleTime: 30_000,
+    retry: false,
+    enabled: authorId.length > 0,
+  });
+  const data = authorQuery.data;
   const displayName =
     typeof data?.displayName === "string" && data.displayName.length > 0
       ? data.displayName

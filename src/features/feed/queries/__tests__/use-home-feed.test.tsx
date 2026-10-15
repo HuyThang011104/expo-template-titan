@@ -55,7 +55,9 @@ describe("useHomeFeed", () => {
     expect(qc.getQueryData(queryKeys.user(post?.authorId ?? ""))).toBeDefined();
   });
 
-  it("paginates cursor pages to 40 unique items then ends", async () => {
+  // G2.3: safety-hidden (lucas ×5, reverse-block) + followers-only (ella ×5)
+  // authors vanish from the feed, so 40 fixtures read as 30 visible.
+  it("paginates cursor pages to 30 visible items then ends", async () => {
     const { fetchImpl, wrapper } = setup();
     const { result } = await renderHook(() => useHomeFeed({ fetchImpl }), { wrapper });
 
@@ -69,8 +71,8 @@ describe("useHomeFeed", () => {
       });
     }
 
-    expect(result.current.postIds).toHaveLength(40);
-    expect(new Set(result.current.postIds).size).toBe(40);
+    expect(result.current.postIds).toHaveLength(30);
+    expect(new Set(result.current.postIds).size).toBe(30);
     expect(result.current.hasNextPage).toBe(false);
   });
 

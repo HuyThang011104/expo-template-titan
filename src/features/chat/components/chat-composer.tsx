@@ -12,10 +12,12 @@ export type ChatComposerProps = {
   onChange: (next: string) => void;
   onSend: () => void;
   isSending: boolean;
+  /** G2.3: locks the composer when the peer's messageAudience blocks us. */
+  sendDisabled?: boolean;
 };
 
-export function ChatComposer({ value, onChange, onSend, isSending }: ChatComposerProps) {
-  const canSend = value.trim().length > 0 && !isSending;
+export function ChatComposer({ value, onChange, onSend, isSending, sendDisabled = false }: ChatComposerProps) {
+  const canSend = value.trim().length > 0 && !isSending && !sendDisabled;
   return (
     <View style={styles.row}>
       <View style={styles.flex}>

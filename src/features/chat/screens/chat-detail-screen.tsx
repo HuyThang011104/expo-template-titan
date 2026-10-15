@@ -11,6 +11,7 @@ import { useLocalSearchParams } from "expo-router";
 import { KeyboardAvoidingView, StyleSheet, View } from "react-native";
 
 import { markConversationRead } from "@/entities/conversation";
+import { canMessageTarget, useMe, useUser } from "@/entities/user";
 import { Button, Screen, Text } from "@/shared/ui";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -36,6 +37,15 @@ export function ChatDetailScreen() {
     }
   }, [qc, conversationId, thread.conversation.data]);
 
+  // G2.3: respect the peer's messageAudience (everyone/following/none).
+  // Privacy warms through `useUser`; unknown entries fail open.
+  // Hooks stay above all early returns.
+  const me = useMe();
+  const participantId = thread.conversation.data?.participantIds[0] ?? "";
+  useUser(participantId);
+  const messageAllowed =
+    !participantId || !conversationId || canMessageTarget(qc, participantId, me.data?.id ?? "");
+
   if (!conversationId) {
     return (
       <Screen style={styles.center}>
@@ -46,7 +56,7 @@ export function ChatDetailScreen() {
 
   const handleSend = () => {
     const body = draft.body.trim();
-    if (!body || thread.isSending) return;
+    if (!body || thread.isSending || !messageAllowed) return;
     logChatSend(conversationId);
     thread.send(body);
     void draft.clear();
@@ -98,11 +108,22 @@ export function ChatDetailScreen() {
             }}
           />
         </View>
+        {!messageAllowed ? (
+          <Text
+            variant="caption"
+            color="textSecondary"
+            testID="chat-blocked-notice"
+            style={styles.blockedNotice}
+          >
+            Bạn không thể nhắn tin cho người này.
+          </Text>
+        ) : null}
         <ChatComposer
           value={draft.body}
           onChange={draft.setBody}
           onSend={handleSend}
           isSending={thread.isSending}
+          sendDisabled={!messageAllowed}
         />
       </KeyboardAvoidingView>
     </Screen>
@@ -117,5 +138,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+  },
+  blockedNotice: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    textAlign: "center",
   },
 });

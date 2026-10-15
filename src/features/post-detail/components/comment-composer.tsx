@@ -11,9 +11,13 @@
 import { useState } from "react";
 import { Platform, Pressable, StyleSheet, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { useCreateComment } from "@/entities/comment";
+import { parseRichText } from "@/entities/post";
+import { canTagUser, getUserByHandleData, useMe } from "@/entities/user";
 import { useSession } from "@/shared/auth";
+import { findBlockedMentionHandles } from "@/shared/lib/mention-gate";
 import { Button, Input, Text } from "@/shared/ui";
 
 export type ReplyTarget = {
@@ -30,6 +34,8 @@ export type CommentComposerProps = {
 
 export function CommentComposer({ postId, replyTo, onClearReply, fetchImpl }: CommentComposerProps) {
   const { session } = useSession();
+  const qc = useQueryClient();
+  const me = useMe();
   const [body, setBody] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
   const create = useCreateComment(postId, { fetchImpl });
@@ -43,6 +49,20 @@ export function CommentComposer({ postId, replyTo, onClearReply, fetchImpl }: Co
       return;
     }
     if (trimmed.length === 0) return;
+    // G2.3: respect mentioned users' tagAudience before sending.
+    const viewerId = me.data?.id ?? "";
+    const handles = parseRichText(trimmed)
+      .filter((segment) => segment.kind === "mention")
+      .map((segment) => (segment.kind === "mention" ? segment.handle : ""));
+    const blocked = findBlockedMentionHandles(
+      handles,
+      (handle) => getUserByHandleData(qc, handle)?.id,
+      (targetId) => canTagUser(qc, targetId, viewerId),
+    );
+    if (blocked.length > 0) {
+      setLocalError(`@${blocked[0]} không cho phép tag.`);
+      return;
+    }
     setLocalError(null);
     create.mutate(
       { body: trimmed, parentId: replyTo?.id ?? null },
