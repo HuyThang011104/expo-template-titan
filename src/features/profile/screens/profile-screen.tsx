@@ -1,13 +1,15 @@
 /**
- * "Me" profile screen (`/(profile)` tab).
+ * "Me" profile screen (`/(profile)` tab, G2.1).
  *
  * - `useMe` for the header (`GET /users/me`, mock `u-1`).
  * - `useUserPosts(me.id)` for the infinite posts list (own FlashList,
  *   canonical `PostCard`, like works cross-cache with no extra patching).
+ * - Own profile only, so the Edit button always shows here;
+ *   `UserDetailScreen` never shows it to other viewers.
  * - Keeps the sign-out button so logout stays testable.
  */
 
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
@@ -75,13 +77,33 @@ export function ProfileScreen() {
             followingCount={rel.data?.followingCount}
           />
         </View>
-        <Button
-          title="Sign out"
-          variant="secondary"
-          size="sm"
-          testID="profile-sign-out-button"
-          onPress={signOut}
-        />
+        <View style={styles.headerActions}>
+          <Button
+            title="Edit"
+            variant="secondary"
+            size="sm"
+            testID="profile-edit-button"
+            onPress={() => {
+              router.push(hrefs.editProfile());
+            }}
+          />
+          <Button
+            title="Settings"
+            variant="secondary"
+            size="sm"
+            testID="profile-settings-button"
+            onPress={() => {
+              router.push(hrefs.settings());
+            }}
+          />
+          <Button
+            title="Sign out"
+            variant="secondary"
+            size="sm"
+            testID="profile-sign-out-button"
+            onPress={signOut}
+          />
+        </View>
       </View>
       {requests.isSuccess && requests.userIds.length > 0 ? (
         <Link href={hrefs.followRequests()} asChild>
@@ -172,6 +194,9 @@ const styles = StyleSheet.create({
   },
   headerFlex: {
     flex: 1,
+  },
+  headerActions: {
+    gap: 8,
   },
   requestsLink: {
     paddingHorizontal: 16,

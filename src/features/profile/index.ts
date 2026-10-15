@@ -3,6 +3,10 @@
 export { ProfileScreen } from "./screens/profile-screen";
 export { UserDetailScreen } from "./screens/user-detail-screen";
 export {
+  EditProfileScreen,
+  handleEditProfileDismiss,
+} from "./screens/edit-profile-screen";
+export {
   FollowersScreen,
   FollowingScreen,
   FollowRequestsScreen,

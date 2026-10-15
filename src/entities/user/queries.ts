@@ -9,7 +9,9 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 
 import { queryKeys } from "@/shared/query";
 
-import { fetchMe, fetchUser, fetchUserByHandle } from "./api";
+import { fetchMe, fetchUser, fetchUserByHandle, updateProfileRemote } from "./api";
+import { updatePrivacyRemote, type UpdatePrivacyPayload } from "./api-privacy";
+import { updatePrivacy } from "./privacy-cache";
 import {
   approveFollowRequestRemote,
   fetchRelationship,
@@ -18,7 +20,7 @@ import {
   unfollowUserRemote,
 } from "./api-relationship";
 import { fetchFollowersRemote, fetchFollowingRemote, fetchFollowRequestsRemote, type FollowListPage } from "./api-follow";
-import { setUser, setUserByHandle } from "./cache";
+import { setUser, setUserByHandle, updateProfile } from "./cache";
 import {
   approveFollowRequest,
   followUser,
@@ -159,6 +161,42 @@ export function useFollowRequests(opts: QueryFetchOptions = {}) {
   });
   const userIds = (infinite.data?.pages ?? []).flatMap((page) => page.userIds);
   return { ...infinite, userIds };
+}
+
+/** Edit own profile (G2.1); server wins on every canonical copy. */
+export function useUpdateProfile(
+  opts: QueryFetchOptions & { updateRemote?: typeof updateProfileRemote } = {},
+) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      displayName: string;
+      bio: string;
+      avatarUrl: string | null;
+      coverUrl: string | null;
+      link: string;
+    }) =>
+      updateProfile(qc, input, {
+        updateRemote: opts.updateRemote
+          ? (payload) => opts.updateRemote!(payload, opts)
+          : (payload) => updateProfileRemote(payload, opts),
+      }),
+  });
+}
+
+/** Edit own privacy settings (G2.3); server wins on every canonical copy. */
+export function useUpdatePrivacy(
+  opts: QueryFetchOptions & { updateRemote?: typeof updatePrivacyRemote } = {},
+) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdatePrivacyPayload) =>
+      updatePrivacy(qc, input, {
+        updateRemote: opts.updateRemote
+          ? (payload) => opts.updateRemote!(payload, opts)
+          : (payload) => updatePrivacyRemote(payload, opts),
+      }),
+  });
 }
 
 /** Follow mutation (optimistic in cache, no auto-retry — callers roll back). */

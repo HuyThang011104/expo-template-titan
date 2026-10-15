@@ -12,6 +12,14 @@ export const mockUser1: User = {
   handle: "ava",
   displayName: "Ava Stone",
   avatarUrl: "https://picsum.photos/seed/u1/200",
+  bio: "Coffee + trail runs.",
+  coverUrl: "https://picsum.photos/seed/u1cover/800/300",
+  link: "https://titan.example/ava",
+  privacySettings: {
+    messageAudience: "everyone",
+    postVisibility: "public",
+    tagAudience: "everyone",
+  },
 };
 
 export const mockUser2: User = {
@@ -19,6 +27,14 @@ export const mockUser2: User = {
   handle: "liam",
   displayName: "Liam Carter",
   avatarUrl: null,
+  bio: null,
+  coverUrl: null,
+  link: null,
+  privacySettings: {
+    messageAudience: "everyone",
+    postVisibility: "public",
+    tagAudience: "everyone",
+  },
 };
 
 export const mockUsers: User[] = [mockUser1, mockUser2];

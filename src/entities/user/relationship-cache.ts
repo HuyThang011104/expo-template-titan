@@ -61,9 +61,12 @@ export function isMutedByMe(qc: QueryClient, userId: string): boolean {
 }
 
 /**
- * Invalidate visible id-lists once so safety actions take effect everywhere.
+ * Invalidate visible id-lists once so safety actions take effect everywhere
+ * (G2.3: feed/search/profile/comment/inbox — "không sót mặt").
  * `["users"]` is NOT used as a prefix (it would drop canonical users);
- * user-post lists match by predicate instead.
+ * user-post lists match by predicate instead. Comment threads (`["posts",
+ * id, "comments"]`) and the inbox (`["notifications"]`) refetch against the
+ * filtered mock, so hidden actors vanish without a manual refresh.
  */
 export function invalidateVisibleLists(qc: QueryClient): void {
   void qc.invalidateQueries({ queryKey: ["feed"] });
@@ -76,6 +79,18 @@ export function invalidateVisibleLists(qc: QueryClient): void {
       );
     },
   });
+  void qc.invalidateQueries({
+    predicate: (query) => {
+      const key = query.queryKey;
+      return (
+        Array.isArray(key) &&
+        key.length === 3 &&
+        key[0] === "posts" &&
+        key[2] === "comments"
+      );
+    },
+  });
+  void qc.invalidateQueries({ queryKey: ["notifications"] });
 }
 
 export type SafetyRemoteFn =

@@ -1,15 +1,16 @@
 /**
- * User detail screen (`/user/[handle]`).
+ * User detail screen (`/user/[handle]`, G2.1).
  *
  * Resolves `handle → user` via `useUserByHandle`, reads the canonical
  * `useRelationship` for follow state + counts, then reads that user's
  * infinite posts via `useUserPosts(user.id)`. Unknown handles show a
  * fallback, never a crash. Private/blocked targets show a gated empty
  * state instead of posts (G1.1 fail-closed: posts wait for the
- * relationship to resolve).
+ * relationship to resolve). Edit affordance shows only for self;
+ * other viewers see Follow (never Edit).
  */
 
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,6 +23,7 @@ import {
   useRelationship,
   useUserByHandle,
 } from "@/entities/user";
+import { hrefs } from "@/shared/navigation/hrefs";
 import { Button, Screen, Text } from "@/shared/ui";
 
 import { logUserOpen } from "../analytics";
@@ -96,7 +98,21 @@ function UserDetailBody({ handle }: { handle: string }) {
         countsVisible={rel.isSuccess}
         followersCount={rel.data?.followersCount}
         followingCount={rel.data?.followingCount}
-        action={isSelf ? undefined : <FollowButton userId={user.id} />}
+        action={
+          isSelf ? (
+            <Button
+              title="Edit"
+              variant="secondary"
+              size="sm"
+              testID="user-detail-edit-button"
+              onPress={() => {
+                router.push(hrefs.editProfile());
+              }}
+            />
+          ) : (
+            <FollowButton userId={user.id} />
+          )
+        }
       />
       {rel.isPending ? (
         <View style={styles.center}>

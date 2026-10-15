@@ -1,17 +1,19 @@
 /**
- * Profile header.
+ * Profile header (G2.1).
  *
- * Presentational: avatar + names + follower counts. The follow action and
- * list navigation are injected from the screen so this stays dumb.
+ * Presentational: cover + avatar + names + bio/link + follower counts.
+ * The follow/edit action and list navigation are injected from the screen
+ * so this stays dumb. Reads the canonical `User` so edits propagate.
  */
 
+import { Image } from "expo-image";
 import { Link } from "expo-router";
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { Avatar, type User } from "@/entities/user";
 import { hrefs } from "@/shared/navigation/hrefs";
-import { Text } from "@/shared/ui";
+import { Text, useTheme } from "@/shared/ui";
 
 export type ProfileHeaderProps = {
   user: User;
@@ -56,37 +58,68 @@ export function ProfileHeader({
   action,
   testID,
 }: ProfileHeaderProps) {
+  const theme = useTheme();
   return (
-    <View style={styles.root} testID={testID}>
-      <Avatar displayName={user.displayName} avatarUrl={user.avatarUrl} size={48} />
-      <View style={styles.names}>
-        <Text variant="title">{user.displayName}</Text>
-        <Text variant="body" color="textSecondary">
-          @{user.handle}
-        </Text>
-        {countsVisible && followersCount !== undefined && followingCount !== undefined ? (
-          <View style={styles.counts}>
-            <CountLink
-              handle={user.handle}
-              kind="followers"
-              count={followersCount}
-              testID={`profile-followers-count-${user.handle}`}
-            />
-            <CountLink
-              handle={user.handle}
-              kind="following"
-              count={followingCount}
-              testID={`profile-following-count-${user.handle}`}
-            />
-          </View>
-        ) : null}
+    <View testID={testID}>
+      {user.coverUrl ? (
+        <Image
+          source={{ uri: user.coverUrl }}
+          style={[styles.cover, { backgroundColor: theme.color.backgroundElement }]}
+          contentFit="cover"
+          transition={200}
+          accessibilityLabel={`${user.displayName} cover`}
+          testID={testID ? `${testID}-cover` : undefined}
+        />
+      ) : null}
+      <View style={styles.root}>
+        <Avatar displayName={user.displayName} avatarUrl={user.avatarUrl} size={48} />
+        <View style={styles.names}>
+          <Text variant="title">{user.displayName}</Text>
+          <Text variant="body" color="textSecondary">
+            @{user.handle}
+          </Text>
+          {user.bio ? (
+            <Text variant="body" testID={testID ? `${testID}-bio` : undefined}>
+              {user.bio}
+            </Text>
+          ) : null}
+          {user.link ? (
+            <Text
+              variant="small"
+              color="textSecondary"
+              testID={testID ? `${testID}-link` : undefined}
+            >
+              {user.link}
+            </Text>
+          ) : null}
+          {countsVisible && followersCount !== undefined && followingCount !== undefined ? (
+            <View style={styles.counts}>
+              <CountLink
+                handle={user.handle}
+                kind="followers"
+                count={followersCount}
+                testID={`profile-followers-count-${user.handle}`}
+              />
+              <CountLink
+                handle={user.handle}
+                kind="following"
+                count={followingCount}
+                testID={`profile-following-count-${user.handle}`}
+              />
+            </View>
+          ) : null}
+        </View>
+        {action ? <View style={styles.action}>{action}</View> : null}
       </View>
-      {action ? <View style={styles.action}>{action}</View> : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  cover: {
+    width: "100%",
+    height: 140,
+  },
   root: {
     flexDirection: "row",
     alignItems: "center",

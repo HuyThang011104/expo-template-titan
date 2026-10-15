@@ -5,22 +5,51 @@
  * Does not export: raw schema, `__fixtures__`.
  */
 
-export type { User, UserId } from "./model";
+export type {
+  MessageAudience,
+  PostVisibility,
+  PrivacySettings,
+  TagAudience,
+  User,
+  UserAuthorSnapshot,
+  UserId,
+} from "./model";
+export { DEFAULT_PRIVACY_SETTINGS } from "./model";
 // Parses wire users; raw zod schema stays private (mirrors entities/post).
-export { parseUser } from "./schema";
+export { parsePrivacySettings, parseUpdatePrivacyInput, parseUpdateProfileInput, parseUser } from "./schema";
 export {
   fetchMe,
   fetchUser,
   fetchUserByHandle,
+  updateProfileRemote,
   type FetchOptions as UserFetchOptions,
+  type UpdateProfilePayload,
 } from "./api";
 export {
   getUserByHandleData,
   getUserData,
   hydrateUser,
+  mergeAuthorSnapshot,
   setUser,
   setUserByHandle,
+  setUserEverywhere,
+  updateProfile,
 } from "./cache";
+export {
+  updatePrivacyRemote,
+  type UpdatePrivacyPayload,
+} from "./api-privacy";
+export {
+  canMessageTarget,
+  canTagUser,
+  filterVisibleCommentIds,
+  filterVisibleNotificationIds,
+  filterVisiblePostIds,
+  filterVisibleUserIds,
+  isHiddenBySafety,
+  isPostVisibleToViewer,
+  updatePrivacy,
+} from "./privacy-cache";
 export {
   useApproveFollowRequest,
   useFollowers,
@@ -31,6 +60,8 @@ export {
   useRejectFollowRequest,
   useRelationship,
   useUnfollowUser,
+  useUpdatePrivacy,
+  useUpdateProfile,
   useUser,
   useUserByHandle,
   type FollowListPageShape,

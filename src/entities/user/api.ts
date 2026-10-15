@@ -10,7 +10,7 @@ import { client } from "@/shared/api";
 import { endpoints } from "@/shared/api/endpoints";
 
 import type { User } from "./model";
-import { parseUser } from "./schema";
+import { parseUser, type UpdateProfileInput } from "./schema";
 
 export type FetchOptions = {
   fetchImpl?: typeof fetch;
@@ -40,3 +40,36 @@ export async function fetchUserByHandle(
   });
   return parseUser(data);
 }
+
+export type UpdateProfilePayload = {
+  displayName: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  coverUrl: string | null;
+  link: string | null;
+};
+
+/**
+ * PATCH `/users/me` with G2.1 profile fields → `User | null`.
+ * Throws on transport/HTTP errors; `null` only means schema validation failed.
+ * No caching here; only `cache.ts` writes the cache.
+ */
+export async function updateProfileRemote(
+  payload: UpdateProfilePayload,
+  opts: FetchOptions = {},
+): Promise<User | null> {
+  const data = await client.patch<unknown>(
+    endpoints.updateMe(),
+    {
+      displayName: payload.displayName,
+      bio: payload.bio,
+      avatarUrl: payload.avatarUrl,
+      coverUrl: payload.coverUrl,
+      link: payload.link,
+    },
+    { fetchImpl: opts.fetchImpl },
+  );
+  return parseUser(data);
+}
+
+export type { UpdateProfileInput };
