@@ -1,11 +1,13 @@
 import { createContext, useMemo, type ReactNode } from "react";
 
+import { clearDeactivated } from "../account/deactivation";
 import { useStorageState } from "./use-storage-state";
 import { SplashScreenController } from "./splash-screen-controller";
 
 /**
  * Mock session, persisted via `useStorageState(SESSION_KEY)`.
- * `signIn` sets a fake `'dev-token'`.
+ * `signIn` sets a fake `'dev-token'` and re-opens a deactivated account
+ * (G2.4: "login lại mở").
  * TODO: replace with a real API + refresh tokens.
  */
 
@@ -30,6 +32,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       session,
       isLoading,
       signIn: () => {
+        clearDeactivated();
         setSession(MOCK_DEV_TOKEN);
       },
       signOut: () => {

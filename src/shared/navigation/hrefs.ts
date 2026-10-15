@@ -27,6 +27,11 @@ export const hrefs = {
     ({ pathname: "/report", params: { targetType, targetId } }) as unknown as Href,
   editPost: (postId: string): Href =>
     ({ pathname: "/edit-post", params: { postId } }) as unknown as Href,
+  editProfile: (): Href => ({ pathname: "/edit-profile" }) as unknown as Href,
+  settings: (): Href => ({ pathname: "/settings" }) as unknown as Href,
+  notifSettings: (): Href => ({ pathname: "/notif-settings" }) as unknown as Href,
+  privacySettings: (): Href => ({ pathname: "/privacy-settings" }) as unknown as Href,
+  accountSettings: (): Href => ({ pathname: "/account-settings" }) as unknown as Href,
   chat: (id: string): Href =>
     ({ pathname: "/(app)/(inbox)/chats/[id]", params: { id } }) as unknown as Href,
 };

@@ -18,6 +18,8 @@ export const endpoints = {
   session: () => "/auth/session",
   refresh: () => "/auth/refresh",
   me: () => "/users/me",
+  updateMe: () => "/users/me",
+  updatePrivacy: () => "/users/me/privacy",
   user: (id: string) => `/users/${encode(id)}`,
   userByHandle: (handle: string) => `/users/handle/${encode(handle)}`,
   userPosts: (id: string, cursor?: string | null) =>
@@ -53,6 +55,7 @@ export const endpoints = {
     const base = `/search?q=${encode(q.trim())}`;
     return cursor ? `${base}&cursor=${encode(cursor)}` : base;
   },
+  trending: () => "/trending",
   likePost: (id: string) => `/posts/${encode(id)}/like`,
   postComments: (postId: string, cursor?: string | null) =>
     cursor
@@ -79,6 +82,13 @@ export const endpoints = {
   notifications: (cursor?: string | null) =>
     cursor ? `/notifications?cursor=${encode(cursor)}` : "/notifications",
   markNotificationRead: (id: string) => `/notifications/${encode(id)}/read`,
+  notifPrefs: () => "/notif-prefs",
+  sessions: () => "/sessions",
+  revokeSession: (id: string) => `/sessions/${encode(id)}`,
+  changePassword: () => "/auth/change-password",
+  deactivate: () => "/users/me/deactivate",
+  deleteMe: () => "/users/me",
+  exportMe: () => "/users/me/export",
 };
 
 /** Absolute URL for non-`client` callers (upload targets, link previews). */

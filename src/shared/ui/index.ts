@@ -5,6 +5,11 @@ export { ThemedText, type ThemedTextProps } from "./themed-text";
 export { ThemedView, type ThemedViewProps } from "./themed-view";
 
 export { ThemeProvider, useThemeName } from "./theme/theme-provider";
+export {
+  ThemePreferenceProvider,
+  useThemePreference,
+  type ThemePreference,
+} from "./theme/theme-preference";
 export { useTheme } from "./theme/use-theme";
 export {
   colors,

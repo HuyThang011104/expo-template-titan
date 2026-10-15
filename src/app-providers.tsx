@@ -2,18 +2,18 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { DarkTheme, DefaultTheme, ThemeProvider as RouterThemeProvider } from "expo-router";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
-import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { dispatchComposerOutboxJob } from "@/features/composer";
 import { SessionProvider } from "@/shared/auth";
+import { LocaleProvider } from "@/shared/i18n/locale-provider";
 import { NotificationsBootstrap } from "@/shared/notifications";
 import { ObservabilityBootstrap, initObservability } from "@/shared/observability";
 import { queryClient, setupOnlineManager, startQueryPersistence } from "@/shared/query";
 import { RealtimeProvider } from "@/shared/realtime";
 import { startOutboxSync } from "@/shared/storage/db/outbox-worker";
-import { ThemeProvider } from "@/shared/ui";
+import { ThemePreferenceProvider, ThemeProvider, useThemeName } from "@/shared/ui";
 
 type AppProvidersProps = {
   children: ReactNode;
@@ -34,9 +34,10 @@ function KeyboardScope({ children }: { children: ReactNode }) {
 
 /**
  * Single provider tree.
- * Outer `ThemeProvider` (design tokens), then the router ThemeProvider,
- * then `QueryClientProvider` (server state),
- * innermost `SessionProvider` (auth gate + splash controller).
+ * Outer `LocaleProvider` (G2.4 vi/en override) + `ThemePreferenceProvider`
+ * (G2.4 sáng/tối), then `ThemeProvider` (design tokens), then the router
+ * ThemeProvider (follows the app theme), then `QueryClientProvider`
+ * (server state), innermost `SessionProvider` (auth gate + splash controller).
  * Query stays outside Session: auth middleware reads SecureStore directly,
  * so the order is safe and features can still use `useSession()` inside.
  * `NotificationsBootstrap` + `ObservabilityBootstrap` sit inside Session:
@@ -48,8 +49,20 @@ function KeyboardScope({ children }: { children: ReactNode }) {
  * (see `shared/query/persist`); first paint never waits for it.
  * Sentry inits early at module scope (env DSN, disabled when missing).
  */
+/**
+ * Router theme follows the app theme (G2.4: explicit sáng/tối wins over the
+ * system scheme, so nav chrome matches the app).
+ */
+function ThemedRouter({ children }: { children: ReactNode }) {
+  const name = useThemeName();
+  return (
+    <RouterThemeProvider value={name === "dark" ? DarkTheme : DefaultTheme}>
+      {children}
+    </RouterThemeProvider>
+  );
+}
+
 export function AppProviders({ children }: AppProvidersProps) {
-  const colorScheme = useColorScheme();
 
   useEffect(() => setupOnlineManager(), []);
   // Offline mutation queue (F1.3 composer `post.create`): drains once when
@@ -66,23 +79,27 @@ export function AppProviders({ children }: AppProvidersProps) {
   }, []);
 
   return (
-    <ThemeProvider>
-      {/* Gestures need a root view; harmless on web, required on native. */}
-      <GestureHandlerRootView style={{ flex: 1 }}>
-      <KeyboardScope>
-        <RouterThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-          <QueryClientProvider client={queryClient}>
-            <SessionProvider>
-              <RealtimeProvider>
-                <NotificationsBootstrap />
-                <ObservabilityBootstrap />
-                {children}
-              </RealtimeProvider>
-            </SessionProvider>
-          </QueryClientProvider>
-        </RouterThemeProvider>
-      </KeyboardScope>
-      </GestureHandlerRootView>
-    </ThemeProvider>
+    <LocaleProvider>
+      <ThemePreferenceProvider>
+        <ThemeProvider>
+          {/* Gestures need a root view; harmless on web, required on native. */}
+          <GestureHandlerRootView style={{ flex: 1 }}>
+          <KeyboardScope>
+            <ThemedRouter>
+              <QueryClientProvider client={queryClient}>
+                <SessionProvider>
+                  <RealtimeProvider>
+                    <NotificationsBootstrap />
+                    <ObservabilityBootstrap />
+                    {children}
+                  </RealtimeProvider>
+                </SessionProvider>
+              </QueryClientProvider>
+            </ThemedRouter>
+          </KeyboardScope>
+          </GestureHandlerRootView>
+        </ThemeProvider>
+      </ThemePreferenceProvider>
+    </LocaleProvider>
   );
 }

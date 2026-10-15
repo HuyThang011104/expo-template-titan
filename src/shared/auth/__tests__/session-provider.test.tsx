@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 
+import { clearDeactivated, isDeactivated, setDeactivated } from "../../account/deactivation";
 import { getSecureItem } from "../../storage/secure";
 import { SESSION_KEY, SessionProvider } from "../session-provider";
 import { useSession } from "../use-session";
@@ -53,5 +54,22 @@ describe("SessionProvider", () => {
 
   it("throws when used outside the provider", async () => {
     await expect(renderHook(() => useSession())).rejects.toThrow(/SessionProvider/);
+  });
+
+  it("clears a deactivation mark on sign-in (G2.4 login re-opens)", async () => {
+    clearDeactivated();
+    setDeactivated();
+    expect(isDeactivated()).toBe(true);
+
+    const { result } = await renderHook(() => useSession(), { wrapper });
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      result.current.signIn();
+    });
+    expect(result.current.session).toBe("dev-token");
+    expect(isDeactivated()).toBe(false);
   });
 });
