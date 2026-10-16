@@ -9,7 +9,7 @@ import { client } from "@/shared/api";
 import { endpoints } from "@/shared/api/endpoints";
 import { logger } from "@/shared/observability/logger";
 
-import { parseConversation, parseMessage } from "./schema";
+import { parseConversation, parseMessage, parsePresence } from "./schema";
 
 export type FetchOptions = {
   fetchImpl?: typeof fetch;
@@ -63,6 +63,37 @@ export async function fetchConversation(
     fetchImpl: opts.fetchImpl,
   });
   return parseConversation(data);
+}
+
+/** GET `/users/:id/presence` -> `Presence | null` (G3.2 online + typing). */
+export async function fetchPresence(
+  userId: string,
+  opts: FetchOptions = {},
+): Promise<ReturnType<typeof parsePresence>> {
+  const data = await client.get<unknown>(endpoints.userPresence(userId), {
+    fetchImpl: opts.fetchImpl,
+  });
+  return parsePresence(data);
+}
+
+/**
+ * POST `/conversations/:id/read` — tell the server the thread was opened.
+ * Returns `true` on ack, `false` on transport/validation failure (local
+ * badge/messages are already cleared; callers never roll back read state).
+ */
+export async function markConversationReadRemote(
+  conversationId: string,
+  opts: FetchOptions = {},
+): Promise<boolean> {
+  try {
+    await client.post<unknown>(endpoints.conversationRead(conversationId), {}, {
+      fetchImpl: opts.fetchImpl,
+    });
+    return true;
+  } catch {
+    logger.warn("[conversation] mark-read sync failed", { conversationId });
+    return false;
+  }
 }
 
 /** GET `/conversations/:id/messages?cursor=` -> raw wire page. */

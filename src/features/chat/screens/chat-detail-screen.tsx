@@ -1,7 +1,9 @@
 /**
- * Chat detail screen (F4 + G3.1).
+ * Chat detail screen (F4 + G3.1 + G3.2).
  *
  * - Header reads the canonical conversation; opening marks read + seen.
+ * - G3.2: peer presence (online/offline) + `Đang nhập...` with TTL;
+ *   composer keystrokes emit throttled typing events.
  * - Messages paginate older pages; composer sends text and/or one image.
  * - Draft survives remount via sqlite; socket stub appends live messages (dedup by id).
  * - Image errors render inline and keep the typed text.
@@ -11,8 +13,9 @@ import { useEffect, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { KeyboardAvoidingView, StyleSheet, View } from "react-native";
 
-import { markConversationRead, markMessagesSeen } from "@/entities/conversation";
+import { markThreadRead, usePresence } from "@/entities/conversation";
 import { canMessageTarget, useMe, useUser } from "@/entities/user";
+import { formatRelative } from "@/shared/lib/date";
 import { uploadMedia } from "@/shared/media";
 import { Button, Screen, Text } from "@/shared/ui";
 import { useQueryClient } from "@tanstack/react-query";
@@ -20,10 +23,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { logChatSend } from "../analytics";
 import { ChatComposer } from "../components/chat-composer";
 import { MessageList } from "../components/message-list";
+import { TypingIndicator } from "../components/typing-indicator";
 import { useChatDraft } from "../hooks/use-chat-draft";
 import { useChatImage } from "../hooks/use-chat-image";
 import { useChatThread } from "../queries/use-chat-thread";
 import { useConversationChannel } from "../realtime/use-conversation-channel";
+import { usePresenceChannel } from "../realtime/use-presence-channel";
+import { useSendTyping } from "../realtime/use-send-typing";
 
 export function ChatDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -35,31 +41,33 @@ export function ChatDetailScreen() {
   const [uploading, setUploading] = useState(false);
 
   useConversationChannel(conversationId || null);
-
-  // Open thread = read: badge drops + loaded messages flip to `seen`.
-  useEffect(() => {
-    if (conversationId && thread.conversation.data) {
-      markConversationRead(qc, conversationId);
-      markMessagesSeen(qc, conversationId);
-    }
-  }, [qc, conversationId, thread.conversation.data]);
-
-  // Live peer message while viewing: show immediately (socket) + mark seen.
-  useEffect(() => {
-    if (conversationId && thread.messageIds.length > 0 && thread.conversation.data) {
-      markConversationRead(qc, conversationId);
-      markMessagesSeen(qc, conversationId);
-    }
-  }, [qc, conversationId, thread.conversation.data, thread.messageIds.length]);
+  const typing = useSendTyping(conversationId || null);
 
   // G2.3: respect the peer's messageAudience (everyone/following/none).
   // Privacy warms through `useUser`; unknown entries fail open.
   // Hooks stay above all early returns.
   const me = useMe();
   const participantId = thread.conversation.data?.participantIds[0] ?? "";
-  useUser(participantId);
+  const peerQuery = useUser(participantId);
+  usePresenceChannel(participantId || null);
+  const presenceQuery = usePresence(participantId);
   const messageAllowed =
     !participantId || !conversationId || canMessageTarget(qc, participantId, me.data?.id ?? "");
+
+  // Open thread = read: badge drops + loaded messages flip to `seen`,
+  // then best-effort sync the receipt (local state never rolls back).
+  useEffect(() => {
+    if (conversationId && thread.conversation.data) {
+      void markThreadRead(qc, conversationId);
+    }
+  }, [qc, conversationId, thread.conversation.data]);
+
+  // Live peer message while viewing: show immediately (socket) + mark seen.
+  useEffect(() => {
+    if (conversationId && thread.messageIds.length > 0 && thread.conversation.data) {
+      void markThreadRead(qc, conversationId);
+    }
+  }, [qc, conversationId, thread.conversation.data, thread.messageIds.length]);
 
   if (!conversationId) {
     return (
@@ -69,10 +77,17 @@ export function ChatDetailScreen() {
     );
   }
 
+  const handleChange = (next: string) => {
+    draft.setBody(next);
+    if (next.trim().length > 0) typing.sendTyping();
+    else typing.stopTyping();
+  };
+
   const handleSend = () => {
     const body = draft.body.trim();
     if ((!body && !image.asset) || thread.isSending || uploading || !messageAllowed) return;
     logChatSend(conversationId);
+    typing.stopTyping();
     if (image.asset) {
       const asset = image.asset;
       setUploading(true);
@@ -122,9 +137,31 @@ export function ChatDetailScreen() {
     );
   }
 
+  const peerName =
+    peerQuery.data?.displayName ?? thread.conversation.data?.title ?? "Chat";
+  const presence = presenceQuery.data;
+  const statusText = presence?.online
+    ? "Online"
+    : presence?.lastSeenAt
+      ? `Offline · ${formatRelative(presence.lastSeenAt)}`
+      : "Offline";
+
   return (
     <Screen testID="chat-detail-screen">
       <KeyboardAvoidingView style={styles.flex} behavior="padding" keyboardVerticalOffset={80}>
+        <View style={styles.header} testID="chat-peer-header">
+          <Text variant="small" style={styles.peerName}>
+            {peerName}
+          </Text>
+          {participantId ? (
+            <Text variant="caption" color="textSecondary" testID="chat-peer-status">
+              {statusText}
+            </Text>
+          ) : null}
+          {participantId ? (
+            <TypingIndicator conversationId={conversationId} userId={participantId} />
+          ) : null}
+        </View>
         <View style={styles.flex}>
           <MessageList
             conversationId={conversationId}
@@ -153,7 +190,7 @@ export function ChatDetailScreen() {
         ) : null}
         <ChatComposer
           value={draft.body}
-          onChange={draft.setBody}
+          onChange={handleChange}
           onSend={handleSend}
           isSending={thread.isSending}
           sendDisabled={!messageAllowed}
@@ -174,6 +211,14 @@ export function ChatDetailScreen() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    gap: 2,
+  },
+  peerName: {
+    fontWeight: "700",
   },
   center: {
     alignItems: "center",

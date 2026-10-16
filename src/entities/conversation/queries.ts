@@ -7,6 +7,8 @@
  * - `useSendMessage` wraps `sendMessage` with no extra handlers or retry.
  */
 
+import { useEffect, useState } from "react";
+
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -17,9 +19,17 @@ import {
   fetchConversation,
   fetchConversationsPageWire,
   fetchMessagesPageWire,
+  fetchPresence,
   sendMessageRemote,
 } from "./api";
-import { getMessageData, hydrateConversation, sendMessage, setMessage } from "./cache";
+import {
+  getMessageData,
+  getPresenceData,
+  hydrateConversation,
+  isTypingIn,
+  sendMessage,
+  setMessage,
+} from "./cache";
 import { parseConversation, parseMessage } from "./schema";
 
 export type QueryFetchOptions = {
@@ -164,4 +174,51 @@ export function useSendMessage(conversationId: string, opts: QueryFetchOptions =
 export function useHydrateMessage(conversationId: string) {
   const qc = useQueryClient();
   return (messageId: string) => getMessageData(qc, conversationId, messageId);
+}
+
+/**
+ * G3.2 presence for one user (online + typing). Short staleTime because
+ * realtime events patch the cache between fetches; never throws when the
+ * id is empty (disabled query).
+ */
+export function usePresence(userId: string, opts: QueryFetchOptions = {}) {
+  const qc = useQueryClient();
+  return useQuery({
+    queryKey: queryKeys.presence(userId),
+    queryFn: async () => {
+      const presence = await fetchPresence(userId, opts);
+      if (!presence) throw new Error(`Invalid presence ${userId}`);
+      return presence;
+    },
+    staleTime: 15_000,
+    enabled: userId.length > 0,
+    initialData: () => getPresenceData(qc, userId),
+  });
+}
+
+/**
+ * G3.2: is `userId` typing in `conversationId` right now? Reads the
+ * canonical presence and re-evaluates when the TTL lapses so a stuck
+ * `A đang nhập...` clears without another socket event.
+ */
+export function useTypingIn(conversationId: string, userId: string): boolean {
+  const presenceQuery = usePresence(userId);
+  const presence = presenceQuery.data;
+  const typing = isTypingIn(presence, conversationId);
+  const [, forceTick] = useTypingTick(typing ? presence?.typingExpiresAt ?? null : null);
+  void forceTick;
+  return typing;
+}
+
+/** Re-render once when the current typing TTL lapses. */
+function useTypingTick(expiresAt: string | null): [number, () => void] {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!expiresAt) return;
+    const delay = Date.parse(expiresAt) - Date.now();
+    if (!Number.isFinite(delay) || delay <= 0) return;
+    const timer = setTimeout(() => setTick((v) => v + 1), delay + 50);
+    return () => clearTimeout(timer);
+  }, [expiresAt]);
+  return [tick, () => setTick((v) => v + 1)];
 }

@@ -13,8 +13,9 @@ import type { InfiniteData, QueryClient } from "@tanstack/react-query";
 import { logger } from "@/shared/observability/logger";
 import { queryKeys } from "@/shared/query";
 
-import { sendMessageRemote } from "./api";
-import type { Conversation, Message, MessageStatus } from "./model";
+import { markConversationReadRemote, sendMessageRemote } from "./api";
+import type { Conversation, Message, MessageStatus, Presence } from "./model";
+import { TYPING_TTL_MS } from "./model";
 
 export type ChatSendInput = {
   body: string;
@@ -140,6 +141,113 @@ export function markConversationRead(qc: QueryClient, id: string): void {
   const prev = getConversationData(qc, id);
   if (!prev || prev.unreadCount === 0) return;
   setConversation(qc, { ...prev, unreadCount: 0 });
+}
+
+/* ------------------------------------------------------------------ */
+/* G3.2 presence + typing (one entry per user, TTL read as idle).       */
+/* ------------------------------------------------------------------ */
+
+/** Overwrite the canonical presence for one user. */
+export function setPresence(qc: QueryClient, presence: Presence): void {
+  qc.setQueryData(queryKeys.presence(presence.userId), presence);
+}
+
+/** Read the canonical presence (no fetch). */
+export function getPresenceData(qc: QueryClient, userId: string): Presence | undefined {
+  if (!userId) return undefined;
+  return qc.getQueryData<Presence>(queryKeys.presence(userId));
+}
+
+/** Merge a `presence.updated` payload into the cache. */
+export function upsertPresence(qc: QueryClient, presence: Presence): void {
+  setPresence(qc, presence);
+}
+
+/**
+ * G3.2: peer started typing in a conversation. Refreshes the TTL so the
+ * indicator stays while keystrokes keep arriving and dies ~5s after the
+ * last one. Switching conversations replaces the previous entry.
+ */
+export function upsertTypingStarted(
+  qc: QueryClient,
+  conversationId: string,
+  userId: string,
+  ttlMs: number = TYPING_TTL_MS,
+  now: number = Date.now(),
+): void {
+  if (!conversationId || !userId) return;
+  const prev = getPresenceData(qc, userId);
+  setPresence(qc, {
+    userId,
+    online: prev?.online ?? true,
+    lastSeenAt: prev?.lastSeenAt ?? null,
+    typingInConversationId: conversationId,
+    typingExpiresAt: new Date(now + ttlMs).toISOString(),
+  });
+}
+
+/**
+ * G3.2: peer stopped typing. Only clears when the stored conversation
+ * matches, so a stale stop for an old thread never kills a new one.
+ */
+export function upsertTypingStopped(qc: QueryClient, conversationId: string, userId: string): void {
+  if (!conversationId || !userId) return;
+  const prev = getPresenceData(qc, userId);
+  if (!prev || prev.typingInConversationId !== conversationId) return;
+  setPresence(qc, {
+    ...prev,
+    typingInConversationId: null,
+    typingExpiresAt: null,
+  });
+}
+
+/** Drop expired typing entries (read path already treats them as idle). */
+export function pruneExpiredTyping(
+  qc: QueryClient,
+  userId: string,
+  now: number = Date.now(),
+): void {
+  const prev = getPresenceData(qc, userId);
+  if (!prev || !prev.typingInConversationId || !prev.typingExpiresAt) return;
+  if (Date.parse(prev.typingExpiresAt) > now) return;
+  setPresence(qc, { ...prev, typingInConversationId: null, typingExpiresAt: null });
+}
+
+/**
+ * G3.2: is `userId` currently typing in `conversationId`?
+ * Missing/expired entries read as idle (never throw on bad dates).
+ */
+export function isTypingIn(
+  presence: Presence | undefined,
+  conversationId: string,
+  now: number = Date.now(),
+): boolean {
+  if (!presence || !conversationId) return false;
+  if (presence.typingInConversationId !== conversationId) return false;
+  if (!presence.typingExpiresAt) return false;
+  const expires = Date.parse(presence.typingExpiresAt);
+  return Number.isFinite(expires) && expires > now;
+}
+
+/**
+ * G3.2: opening a thread clears the badge + flips loaded messages to
+ * `seen`, then best-effort syncs the read receipt (server failure never
+ * rolls back local read state). Returns `{ flipped, synced }`.
+ */
+export async function markThreadRead(
+  qc: QueryClient,
+  conversationId: string,
+  opts: { markReadRemote?: typeof markConversationReadRemote } = {},
+): Promise<{ flipped: number; synced: boolean }> {
+  markConversationRead(qc, conversationId);
+  const flipped = markMessagesSeen(qc, conversationId);
+  const remote = opts.markReadRemote ?? markConversationReadRemote;
+  try {
+    const synced = await remote(conversationId);
+    return { flipped, synced };
+  } catch {
+    return { flipped, synced: false };
+  }
 }
 
 /**

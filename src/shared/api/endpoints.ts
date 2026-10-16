@@ -79,6 +79,8 @@ export const endpoints = {
     cursor
       ? `/conversations/${encode(id)}/messages?cursor=${encode(cursor)}`
       : `/conversations/${encode(id)}/messages`,
+  conversationRead: (id: string) => `/conversations/${encode(id)}/read`,
+  userPresence: (id: string) => `/users/${encode(id)}/presence`,
   notifications: (cursor?: string | null) =>
     cursor ? `/notifications?cursor=${encode(cursor)}` : "/notifications",
   markNotificationRead: (id: string) => `/notifications/${encode(id)}/read`,

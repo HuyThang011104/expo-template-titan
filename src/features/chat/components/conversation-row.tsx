@@ -1,20 +1,24 @@
 /**
- * Conversation row (F4).
+ * Conversation row (F4 + G3.2).
  *
  * Reads the canonical `useConversation`; tapping warms the thread and
  * follows the shared chat link. Unread shows a count badge.
+ * G3.2: peer online dot on the avatar; typing replaces the preview with
+ * `Đang nhập...` while the TTL is fresh.
  */
 
 import { Link } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { useConversation } from "@/entities/conversation";
+import { useConversation, useTypingIn } from "@/entities/conversation";
 import { Avatar, useUser } from "@/entities/user";
 import { hrefs } from "@/shared/navigation/hrefs";
 import { formatRelative } from "@/shared/lib/date";
 import { Text, useTheme } from "@/shared/ui";
 
 import { logChatOpenThread } from "../analytics";
+import { usePresenceChannel } from "../realtime/use-presence-channel";
+import { PresenceDot } from "./presence-dot";
 
 export type ConversationRowProps = {
   conversationId: string;
@@ -27,6 +31,8 @@ export function ConversationRow({ conversationId, prefetchThread }: Conversation
 
   const participantId = query.data?.participantIds[0] ?? "";
   const userQuery = useUser(participantId);
+  usePresenceChannel(participantId || null);
+  const peerTyping = useTypingIn(conversationId, participantId);
 
   if (query.isPending) {
     return (
@@ -58,18 +64,36 @@ export function ConversationRow({ conversationId, prefetchThread }: Conversation
         }}
         style={styles.row}
       >
-        <Avatar
-          displayName={displayName}
-          avatarUrl={userQuery.data?.avatarUrl ?? null}
-          size={48}
-        />
+        <View style={styles.avatarWrap}>
+          <Avatar
+            displayName={displayName}
+            avatarUrl={userQuery.data?.avatarUrl ?? null}
+            size={48}
+          />
+          {participantId ? (
+            <View style={styles.dot}>
+              <PresenceDot userId={participantId} />
+            </View>
+          ) : null}
+        </View>
         <View style={styles.texts}>
           <Text variant="small" style={styles.title}>
             {displayName}
           </Text>
-          <Text variant="caption" color="textSecondary" numberOfLines={1}>
-            {conversation.lastMessagePreview}
-          </Text>
+          {peerTyping ? (
+            <Text
+              variant="caption"
+              color="textSecondary"
+              numberOfLines={1}
+              testID={`conversation-typing-${conversationId}`}
+            >
+              Đang nhập...
+            </Text>
+          ) : (
+            <Text variant="caption" color="textSecondary" numberOfLines={1}>
+              {conversation.lastMessagePreview}
+            </Text>
+          )}
         </View>
         <View style={styles.meta}>
           <Text variant="caption" color="textSecondary">
@@ -120,5 +144,13 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontWeight: "700",
+  },
+  avatarWrap: {
+    position: "relative",
+  },
+  dot: {
+    position: "absolute",
+    right: -2,
+    bottom: -2,
   },
 });

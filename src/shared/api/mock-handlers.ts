@@ -614,6 +614,43 @@ function buildChatMessages(): ChatMessageMockItem[] {
 
 const chatMessageFixtures: ChatMessageMockItem[] = buildChatMessages();
 
+/**
+ * Presence mock (G3.2): `{ userId, online, lastSeenAt, typingInConvId }`.
+ * Deterministic per user id so list/detail show stable online dots;
+ * typing is always idle over HTTP (live typing rides the socket stub).
+ */
+type PresenceMockItem = {
+  userId: string;
+  online: boolean;
+  lastSeenAt: string | null;
+  typingInConversationId: string | null;
+  typingExpiresAt: string | null;
+};
+
+function mockPresenceResponse(userId: string): Response {
+  if (!knownUserId(userId) && userId !== "me") {
+    return notFound("GET", `/users/${userId}/presence`);
+  }
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
+  const online = hash % 2 === 0;
+  const item: PresenceMockItem = {
+    userId,
+    online,
+    lastSeenAt: online ? null : new Date(Date.parse("2026-09-09T10:00:00.000Z") - (hash % 20 + 1) * 3_600_000).toISOString(),
+    typingInConversationId: null,
+    typingExpiresAt: null,
+  };
+  return jsonResponse(item, 200);
+}
+
+function mockConversationReadResponse(conversationId: string): Response {
+  const known =
+    conversationFixtures.some((c) => c.id === conversationId) || conversationId === "c-1";
+  if (!known) return notFound("POST", `/conversations/${conversationId}/read`);
+  return jsonResponse({ ok: true }, 200);
+}
+
 function conversationsPageResponse(cursor: string | null): Response {
   let offset = 0;
   if (cursor !== null) {
@@ -1707,6 +1744,10 @@ function defaultEntityResponse(
       );
       return item ? jsonResponse(item, 200) : notFound(method, path);
     }
+    const presenceMatch = /^\/users\/([^/]+)\/presence$/.exec(path);
+    if (presenceMatch?.[1]) {
+      return mockPresenceResponse(decodeURIComponent(presenceMatch[1]));
+    }
     const postCommentsMatch = /^\/posts\/([^/]+)\/comments$/.exec(path);
     if (postCommentsMatch?.[1]) {
       return postCommentsPageResponse(
@@ -1812,6 +1853,10 @@ function defaultEntityResponse(
     const sendMatch = /^\/conversations\/([^/]+)\/messages$/.exec(path);
     if (sendMatch?.[1]) {
       return mockSendMessageResponse(decodeURIComponent(sendMatch[1]), bodyText);
+    }
+    const convReadMatch = /^\/conversations\/([^/]+)\/read$/.exec(path);
+    if (convReadMatch?.[1]) {
+      return mockConversationReadResponse(decodeURIComponent(convReadMatch[1]));
     }
     if (path === "/reports") {
       return mockReportResponse(bodyText);

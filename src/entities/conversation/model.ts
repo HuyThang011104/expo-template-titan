@@ -18,6 +18,22 @@ export type Conversation = {
 
 export type MessageStatus = "sending" | "sent" | "seen";
 
+/**
+ * G3.2 presence: one entry per user. `typingInConversationId` is the
+ * conversation being typed in (null = idle); `typingExpiresAt` auto-clears
+ * the indicator a few seconds after the peer stops (stale entries read as idle).
+ */
+export type Presence = {
+  userId: string;
+  online: boolean;
+  lastSeenAt: string | null;
+  typingInConversationId: string | null;
+  typingExpiresAt: string | null;
+};
+
+/** G3.2: typing indicator lives ~5s after the last keystroke. */
+export const TYPING_TTL_MS = 5_000;
+
 export type Message = {
   id: MessageId;
   conversationId: ConversationId;

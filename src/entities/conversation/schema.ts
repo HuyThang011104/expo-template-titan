@@ -8,7 +8,7 @@ import { z } from "zod";
 
 import { logger } from "@/shared/observability/logger";
 
-import type { Conversation, Message } from "./model";
+import type { Conversation, Message, Presence } from "./model";
 
 export const conversationSchema = z.object({
   id: z.string().min(1),
@@ -58,6 +58,68 @@ export function parseMessage(data: unknown): Message | null {
     entity: "message",
     id: extractId(data),
   });
+  return null;
+}
+
+export const presenceSchema = z.object({
+  userId: z.string().min(1),
+  online: z.boolean(),
+  lastSeenAt: z.string().datetime({ offset: true }).nullable(),
+  // G3.2: `typingInConvId` is the mock wire alias for `typingInConversationId`.
+  typingInConversationId: z.string().min(1).nullable().optional().transform((v) => v ?? null),
+  typingExpiresAt: z.string().datetime({ offset: true }).nullable().optional().transform((v) => v ?? null),
+});
+
+const typingPayloadSchema = z.object({
+  conversationId: z.string().min(1),
+  userId: z.string().min(1),
+});
+
+const messageSeenPayloadSchema = z.object({
+  conversationId: z.string().min(1),
+  messageIds: z.array(z.string().min(1)).optional(),
+});
+
+/** Parse `unknown` -> `Presence | null`. Accepts the mock `typingInConvId` alias. */
+export function parsePresence(data: unknown): Presence | null {
+  const normalized =
+    data !== null && typeof data === "object" && "typingInConvId" in data && !("typingInConversationId" in data)
+      ? { ...(data as Record<string, unknown>), typingInConversationId: (data as Record<string, unknown>)["typingInConvId"] }
+      : data;
+  const result = presenceSchema.safeParse(normalized);
+  if (result.success) {
+    // G3.2: a typing entry without expiry never clears — default it to now + TTL.
+    // Keep server expiries as-is.
+    if (result.data.typingInConversationId && !result.data.typingExpiresAt) {
+      return {
+        ...result.data,
+        typingExpiresAt: new Date(Date.now() + 5_000).toISOString(),
+      };
+    }
+    return result.data;
+  }
+  logger.warn("[entity] schema parse failed", {
+    entity: "presence",
+    id: extractId(data),
+  });
+  return null;
+}
+
+/** Parse a `typing.started` / `typing.stopped` payload -> `{ conversationId, userId } | null`. */
+export function parseTypingPayload(data: unknown): { conversationId: string; userId: string } | null {
+  const result = typingPayloadSchema.safeParse(data);
+  if (result.success) return result.data;
+  logger.warn("[entity] schema parse failed", { entity: "typing-payload" });
+  return null;
+}
+
+/** Parse a `message.seen` payload -> `{ conversationId, messageIds? } | null`. */
+export function parseMessageSeenPayload(
+  data: unknown,
+): { conversationId: string; messageIds?: string[] } | null {
+  const result = messageSeenPayloadSchema.safeParse(data);
+  if (result.success) return result.data;
+  logger.warn("[entity] schema parse failed", { entity: "message-seen-payload" });
   return null;
 }
 

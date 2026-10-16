@@ -3,7 +3,7 @@
  * Not exported via `index.ts`.
  */
 
-import type { Conversation, Message } from "./model";
+import type { Conversation, Message, Presence } from "./model";
 
 export const mockConversation1: Conversation = {
   id: "c-1",
@@ -51,4 +51,20 @@ export const mockImageMessage: Message = {
   imageUrl: "https://picsum.photos/seed/chat-img-1/800/600",
   status: "sent",
   createdAt: "2026-09-09T10:01:00.000Z",
+};
+
+export const mockPresenceOnline: Presence = {
+  userId: "u-1",
+  online: true,
+  lastSeenAt: null,
+  typingInConversationId: null,
+  typingExpiresAt: null,
+};
+
+export const mockPresenceOffline: Presence = {
+  userId: "u-2",
+  online: false,
+  lastSeenAt: "2026-09-09T09:00:00.000Z",
+  typingInConversationId: null,
+  typingExpiresAt: null,
 };
