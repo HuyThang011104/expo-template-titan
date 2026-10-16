@@ -79,19 +79,29 @@ export async function fetchMessagesPageWire(
 }
 
 /**
- * POST `/conversations/:id/messages` with `{ body }` -> `Message | null`.
+ * POST `/conversations/:id/messages` with `{ body, imageUrl }` -> `Message | null`.
  * Throws on transport/HTTP errors (callers decide rollback);
  * `null` only means the server payload failed schema validation.
+ * G3.1: text-only, image-only, or both; at least one is required.
  */
 export async function sendMessageRemote(
   conversationId: string,
-  body: string,
-  opts: FetchOptions = {},
+  bodyOrInput: string | { body: string; imageUrl?: string | null },
+  imageUrlOrOpts: string | null | FetchOptions = null,
+  maybeOpts: FetchOptions = {},
 ): Promise<ReturnType<typeof parseMessage>> {
-  const data = await client.post<unknown>(
-    endpoints.conversationMessages(conversationId),
-    { body },
-    { fetchImpl: opts.fetchImpl },
-  );
+  const normalized =
+    typeof bodyOrInput === "string"
+      ? { body: bodyOrInput, imageUrl: typeof imageUrlOrOpts === "string" ? imageUrlOrOpts : null }
+      : bodyOrInput;
+  const opts: FetchOptions =
+    typeof imageUrlOrOpts === "object" && imageUrlOrOpts !== null ? imageUrlOrOpts : maybeOpts;
+  const payload = {
+    body: normalized.body,
+    ...(normalized.imageUrl ? { imageUrl: normalized.imageUrl } : {}),
+  };
+  const data = await client.post<unknown>(endpoints.conversationMessages(conversationId), payload, {
+    fetchImpl: opts.fetchImpl,
+  });
   return parseMessage(data);
 }

@@ -23,7 +23,11 @@ export const messageSchema = z.object({
   id: z.string().min(1),
   conversationId: z.string().min(1),
   senderId: z.string().min(1),
-  body: z.string().min(1).max(2000),
+  // G3.1: image-only messages may carry an empty body.
+  body: z.string().max(2000),
+  // Old wire payloads lack these — default keeps them parseable.
+  imageUrl: z.string().min(1).nullable().optional().transform((v) => v ?? null),
+  status: z.enum(["sending", "sent", "seen"]).optional().transform((v) => v ?? "sent"),
   createdAt: z.string().datetime({ offset: true }),
 });
 
@@ -57,9 +61,14 @@ export function parseMessage(data: unknown): Message | null {
   return null;
 }
 
-export const sendMessageInputSchema = z.object({
-  body: z.string().trim().min(1).max(2000),
-});
+export const sendMessageInputSchema = z
+  .object({
+    body: z.string().trim().max(2000),
+    imageUrl: z.string().min(1).nullable().optional().transform((v) => v ?? null),
+  })
+  .refine((v) => v.body.length > 0 || v.imageUrl !== null, {
+    message: "Empty message",
+  });
 
 export type SendMessageInput = z.infer<typeof sendMessageInputSchema>;
 

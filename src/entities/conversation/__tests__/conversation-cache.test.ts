@@ -69,6 +69,8 @@ describe("conversation cache", () => {
       conversationId: "c-1",
       senderId: "u-1",
       body: "live socket message",
+      imageUrl: null,
+      status: "sent",
       createdAt: "2026-09-09T11:00:00.000Z",
     });
 

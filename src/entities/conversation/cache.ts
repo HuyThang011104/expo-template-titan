@@ -14,7 +14,12 @@ import { logger } from "@/shared/observability/logger";
 import { queryKeys } from "@/shared/query";
 
 import { sendMessageRemote } from "./api";
-import type { Conversation, Message } from "./model";
+import type { Conversation, Message, MessageStatus } from "./model";
+
+export type ChatSendInput = {
+  body: string;
+  imageUrl?: string | null;
+};
 
 export type ConversationsPageShape = {
   ids: string[];
@@ -66,8 +71,10 @@ export function hydrateConversation(
 }
 
 /**
- * Hydrate one wire message: canonical entry + append to the first
- * messages page when the list is already loaded. Returns `{ messageId }`.
+ * Hydrate one wire message: canonical entry + append to the message ids.
+ * Creates the first page when the list was never fetched so a live socket
+ * message shows immediately; skips append when the id exists on any page.
+ * Returns `{ messageId }`.
  */
 export function hydrateMessage(
   qc: QueryClient,
@@ -77,10 +84,12 @@ export function hydrateMessage(
   qc.setQueryData<InfiniteData<MessagesPageShape, string | null>>(
     queryKeys.conversationMessages(message.conversationId),
     (old) => {
-      if (!old) return old;
+      if (!old) {
+        return { pages: [{ ids: [message.id], nextCursor: null }], pageParams: [null] };
+      }
+      if (old.pages.some((page) => page.ids.includes(message.id))) return old;
       const [first, ...rest] = old.pages;
       if (!first) return old;
-      if (first.ids.includes(message.id)) return old;
       return {
         ...old,
         pages: [{ ...first, ids: [...first.ids, message.id] }, ...rest],
@@ -91,19 +100,37 @@ export function hydrateMessage(
 }
 
 /**
+ * Preview for the conversation row. G3.1: image-only shows `[Ảnh]`.
+ */
+export function previewForMessage(body: string, imageUrl: string | null): string {
+  const trimmed = body.trim();
+  if (trimmed.length > 0) return trimmed.slice(0, 120);
+  if (imageUrl) return "[Ảnh]";
+  return "";
+}
+
+/**
  * Socket stub entrypoint: an incoming `message.added` payload hydrates the
  * canonical message and bumps the conversation preview. Invalid payloads
- * only warn (never crash the subscriber).
+ * only warn (never crash the subscriber). G3.1: dedup by id (no double
+ * append), own echoes never bump unread.
  */
 export function upsertIncomingMessage(qc: QueryClient, message: Message): void {
-  hydrateMessage(qc, message);
+  const known = getMessageData(qc, message.conversationId, message.id);
+  if (known) return;
+  const incoming: Message = {
+    ...message,
+    status: message.status === "sending" ? "sent" : message.status,
+  };
+  hydrateMessage(qc, incoming);
   const prev = getConversationData(qc, message.conversationId);
   if (prev) {
     setConversation(qc, {
       ...prev,
-      lastMessagePreview: message.body.slice(0, 120),
-      lastMessageAt: message.createdAt,
-      unreadCount: prev.unreadCount + 1,
+      lastMessagePreview: previewForMessage(incoming.body, incoming.imageUrl),
+      lastMessageAt: incoming.createdAt,
+      // Own echo: preview moves, badge stays. Peer message: badge +1.
+      unreadCount: incoming.senderId === "me" ? prev.unreadCount : prev.unreadCount + 1,
     });
   }
 }
@@ -115,6 +142,25 @@ export function markConversationRead(qc: QueryClient, id: string): void {
   setConversation(qc, { ...prev, unreadCount: 0 });
 }
 
+/**
+ * G3.1: mark every loaded message in a thread `seen` when the peer opens it.
+ * `sending` temps stay `sending` until the server answers. Returns the count flipped.
+ */
+export function markMessagesSeen(qc: QueryClient, conversationId: string): number {
+  const list = qc.getQueryData<InfiniteData<MessagesPageShape, string | null>>(
+    queryKeys.conversationMessages(conversationId),
+  );
+  const ids = (list?.pages ?? []).flatMap((page) => page.ids);
+  let flipped = 0;
+  for (const id of ids) {
+    const current = getMessageData(qc, conversationId, id);
+    if (!current || current.status === "seen" || current.status === "sending") continue;
+    setMessage(qc, { ...current, status: "seen" satisfies MessageStatus });
+    flipped += 1;
+  }
+  return flipped;
+}
+
 export type SendMessageRemoteFn = typeof sendMessageRemote;
 
 export type SendMessageOptions = {
@@ -123,21 +169,27 @@ export type SendMessageOptions = {
 
 /**
  * Send a message with optimistic append; all callers must use this.
- * Temp id `temp-<ts>` rolls back (removed) when the server fails.
+ * Temp id `temp-<ts>` shows `sending` (Đang gửi), swaps to `sent` (Đã gửi)
+ * on server win, rolls back (removed) when the server fails.
+ * G3.1: accepts text, image, or both — at least one is required.
  */
 export async function sendMessage(
   qc: QueryClient,
   conversationId: string,
-  body: string,
+  bodyOrInput: string | ChatSendInput,
   opts: SendMessageOptions = {},
 ): Promise<void> {
-  const trimmed = body.trim();
-  if (!trimmed) return;
+  const raw = typeof bodyOrInput === "string" ? { body: bodyOrInput, imageUrl: null } : bodyOrInput;
+  const trimmed = raw.body.trim();
+  const imageUrl = raw.imageUrl ?? null;
+  if (!trimmed && !imageUrl) return;
   const temp: Message = {
     id: `temp-${Date.now().toString(36)}`,
     conversationId,
     senderId: "me",
     body: trimmed,
+    imageUrl,
+    status: "sending",
     createdAt: new Date().toISOString(),
   };
   setMessage(qc, temp);
@@ -158,7 +210,7 @@ export async function sendMessage(
 
   const remote = opts.sendRemote ?? sendMessageRemote;
   try {
-    const server = await remote(conversationId, trimmed);
+    const server = await remote(conversationId, { body: trimmed, imageUrl });
     if (server) {
       qc.setQueryData<InfiniteData<MessagesPageShape, string | null>>(
         queryKeys.conversationMessages(conversationId),
@@ -176,12 +228,12 @@ export async function sendMessage(
         },
       );
       qc.removeQueries({ queryKey: messageKey(conversationId, temp.id) });
-      hydrateMessage(qc, { ...server, conversationId });
+      hydrateMessage(qc, { ...server, conversationId, status: "sent" });
       const prev = getConversationData(qc, conversationId);
       if (prev) {
         setConversation(qc, {
           ...prev,
-          lastMessagePreview: server.body.slice(0, 120),
+          lastMessagePreview: previewForMessage(server.body, server.imageUrl),
           lastMessageAt: server.createdAt,
         });
       }

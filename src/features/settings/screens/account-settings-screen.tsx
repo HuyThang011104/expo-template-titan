@@ -426,7 +426,7 @@ function DeleteSection({ handle }: { handle: string }) {
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const matches = confirmation.trim().toLowerCase() === handle.toLowerCase();
+  const matches = confirmation.trim().replace(/^@/, "").toLowerCase() === handle.toLowerCase();
 
   const submit = (): void => {
     setError(null);

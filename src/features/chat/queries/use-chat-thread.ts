@@ -26,7 +26,9 @@ export function useChatThread(conversationId: string, opts: ChatThreadFetchOptio
     conversation,
     messages,
     messageIds: messages.messageIds,
-    send: (body: string) => send.mutate(body),
+    send: (input: string | { body: string; imageUrl?: string | null }) => send.mutate(input),
+    sendAsync: (input: string | { body: string; imageUrl?: string | null }) =>
+      send.mutateAsync(input),
     sendResult: send.data,
     isSending: send.isPending,
     sendError: send.error,

@@ -28,6 +28,8 @@ export const mockMessage1: Message = {
   conversationId: "c-1",
   senderId: "u-1",
   body: "Hey, how is it going?",
+  imageUrl: null,
+  status: "seen",
   createdAt: "2026-09-09T09:58:00.000Z",
 };
 
@@ -36,5 +38,17 @@ export const mockMessage2: Message = {
   conversationId: "c-1",
   senderId: "me",
   body: "All good, see you tomorrow",
+  imageUrl: null,
+  status: "sent",
   createdAt: "2026-09-09T10:00:00.000Z",
+};
+
+export const mockImageMessage: Message = {
+  id: "m-img-1",
+  conversationId: "c-1",
+  senderId: "me",
+  body: "",
+  imageUrl: "https://picsum.photos/seed/chat-img-1/800/600",
+  status: "sent",
+  createdAt: "2026-09-09T10:01:00.000Z",
 };

@@ -560,6 +560,8 @@ type ChatMessageMockItem = {
   conversationId: string;
   senderId: string;
   body: string;
+  imageUrl: string | null;
+  status: "sent" | "seen";
   createdAt: string;
 };
 
@@ -596,11 +598,14 @@ function buildChatMessages(): ChatMessageMockItem[] {
   const baseTime = Date.parse("2026-09-09T10:00:00.000Z");
   const items: ChatMessageMockItem[] = [];
   for (let i = 1; i <= 30; i++) {
+    const withImage = i === 7;
     items.push({
       id: `m-${i}`,
       conversationId: "c-1",
       senderId: i % 2 === 0 ? "me" : "u-1",
-      body: `Chat message #${i} in c-1`,
+      body: withImage ? "" : `Chat message #${i} in c-1`,
+      imageUrl: withImage ? "https://picsum.photos/seed/chat-m-7/800/600" : null,
+      status: i <= 28 ? "seen" : "sent",
       createdAt: new Date(baseTime - (30 - i) * 120_000).toISOString(),
     });
   }
@@ -647,16 +652,21 @@ function mockSendMessageResponse(conversationId: string, bodyText: string | null
     conversationFixtures.some((c) => c.id === conversationId) || conversationId === "c-1";
   if (!known) return notFound("POST", `/conversations/${conversationId}/messages`);
   let body = "";
+  let imageUrl: string | null = null;
   try {
     const parsed: unknown = bodyText ? (JSON.parse(bodyText) as unknown) : null;
-    if (parsed !== null && typeof parsed === "object" && "body" in parsed) {
-      const candidate = (parsed as { body?: unknown }).body;
-      if (typeof candidate === "string") body = candidate.trim();
+    if (parsed !== null && typeof parsed === "object") {
+      const candidate = parsed as { body?: unknown; imageUrl?: unknown };
+      if (typeof candidate.body === "string") body = candidate.body.trim();
+      if (typeof candidate.imageUrl === "string" && candidate.imageUrl.length > 0) {
+        imageUrl = candidate.imageUrl;
+      }
     }
   } catch {
     return jsonResponse({ message: "[mock] Invalid JSON" }, 400);
   }
-  if (body.length < 1 || body.length > 2000) {
+  // G3.1: text-only, image-only, or both — at least one is required.
+  if ((body.length < 1 && !imageUrl) || body.length > 2000) {
     return jsonResponse({ message: "[mock] Invalid message input" }, 400);
   }
   return jsonResponse(
@@ -665,6 +675,8 @@ function mockSendMessageResponse(conversationId: string, bodyText: string | null
       conversationId,
       senderId: "me",
       body,
+      imageUrl,
+      status: "sent",
       createdAt: new Date().toISOString(),
     },
     201,

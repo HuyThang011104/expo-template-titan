@@ -11,6 +11,7 @@ export type {
   ConversationId,
   Message,
   MessageId,
+  MessageStatus,
 } from "./model";
 // Parses wire payloads; raw zod schemas stay private.
 export { parseConversation, parseMessage, parseSendMessageInput, type SendMessageInput } from "./schema";
@@ -29,10 +30,13 @@ export {
   hydrateConversation,
   hydrateMessage,
   markConversationRead,
+  markMessagesSeen,
+  previewForMessage,
   sendMessage,
   setConversation,
   setMessage,
   upsertIncomingMessage,
+  type ChatSendInput,
   type ConversationsPageShape,
   type MessagesPageShape,
   type SendMessageOptions,

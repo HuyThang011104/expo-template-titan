@@ -149,9 +149,14 @@ export function useMessage(conversationId: string, messageId: string) {
 export function useSendMessage(conversationId: string, opts: QueryFetchOptions = {}) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: string) =>
-      sendMessage(qc, conversationId, body, {
-        sendRemote: (convId, text) => sendMessageRemote(convId, text, opts),
+    mutationFn: (input: string | { body: string; imageUrl?: string | null }) =>
+      sendMessage(qc, conversationId, input, {
+        sendRemote: (convId, bodyOrInput) =>
+          sendMessageRemote(
+            convId,
+            typeof bodyOrInput === "string" ? bodyOrInput : bodyOrInput,
+            opts,
+          ),
       }),
   });
 }

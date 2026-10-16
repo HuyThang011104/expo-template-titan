@@ -16,10 +16,16 @@ export type Conversation = {
   unreadCount: number;
 };
 
+export type MessageStatus = "sending" | "sent" | "seen";
+
 export type Message = {
   id: MessageId;
   conversationId: ConversationId;
   senderId: string;
   body: string;
+  /** Remote image url; `null` for text-only. Local `file://` only lives on the optimistic temp. */
+  imageUrl: string | null;
+  /** G3.1: `sending` (Đang gửi) -> `sent` (Đã gửi) -> `seen` (Đã xem). */
+  status: MessageStatus;
   createdAt: string;
 };
