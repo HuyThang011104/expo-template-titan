@@ -5,7 +5,9 @@ import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
-import { dispatchComposerOutboxJob } from "@/features/composer";
+import { CHAT_OUTBOX_KIND, dispatchChatOutboxJob } from "@/features/chat";
+import { COMPOSER_OUTBOX_KIND, dispatchComposerOutboxJob } from "@/features/composer";
+import { logger } from "@/shared/observability/logger";
 import { SessionProvider } from "@/shared/auth";
 import { LocaleProvider } from "@/shared/i18n/locale-provider";
 import { NotificationsBootstrap } from "@/shared/notifications";
@@ -65,11 +67,17 @@ function ThemedRouter({ children }: { children: ReactNode }) {
 export function AppProviders({ children }: AppProvidersProps) {
 
   useEffect(() => setupOnlineManager(), []);
-  // Offline mutation queue (F1.3 composer `post.create`): drains once when
-  // online + on every offline->online transition. Unknown kinds are dropped
-  // inside the dispatcher so they never head-of-line block the queue.
+  // Offline mutation queue (F1.3 composer `post.create`, G3.3 chat `chat.send`):
+  // drains once when online + on every offline->online transition. Unknown
+  // kinds are dropped inside the dispatchers so they never head-of-line
+  // block the queue. App-level routing keeps features decoupled
+  // (feature-to-feature imports stay forbidden).
   useEffect(() => {
-    const stop = startOutboxSync((job) => dispatchComposerOutboxJob(job));
+    const stop = startOutboxSync(async (job) => {
+      if (job.kind === COMPOSER_OUTBOX_KIND) return dispatchComposerOutboxJob(job);
+      if (job.kind === CHAT_OUTBOX_KIND) return dispatchChatOutboxJob(job);
+      logger.warn("[outbox] unknown kind, dropping", { kind: job.kind });
+    });
     return stop;
   }, []);
   // Background cache restore (identity/profile keys only) + throttled writes.

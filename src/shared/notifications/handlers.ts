@@ -4,11 +4,12 @@ import { useEffect, useRef } from "react";
 import type { Href } from "expo-router";
 
 import { logger } from "../observability/logger";
-import { hrefs, postPath } from "../navigation";
+import { chatPath, hrefs, postPath } from "../navigation";
 
 /**
  * Notification tap -> deep link handlers.
- * Supports `{ type: "post", id }` plus a `data.url` fallback path.
+ * Supports `{ type: "post", id }` and G3.3 `{ type: "message" | "chat",
+ * id | conversationId | convId }`, plus a `data.url` fallback path.
  * Queues the href when logged out and flushes after login.
  */
 
@@ -36,7 +37,41 @@ export function parsePostNotificationTarget(data: unknown): string | null {
   return null;
 }
 
+/**
+ * G3.3: message pushes open the exact thread (`chats/[id]`).
+ * Accepts `{ type: "message" | "chat", id | conversationId | convId }`
+ * plus a `data.url` fallback (`/chat(s)/<id>`, `/c/<id>`).
+ */
+export function parseChatNotificationTarget(data: unknown): string | null {
+  if (data === null || typeof data !== "object" || Array.isArray(data)) return null;
+  const record = data as Record<string, unknown>;
+
+  const type = record["type"];
+  if (type === "message" || type === "chat") {
+    const id = record["id"] ?? record["conversationId"] ?? record["convId"];
+    if (typeof id === "string" && id.trim() !== "") {
+      return id;
+    }
+    return null;
+  }
+
+  const url = record["url"];
+  if (typeof url === "string") {
+    const match = /^\/(?:chat|chats|c)\/([^/?#]+)/.exec(url.trim());
+    if (match?.[1]) {
+      try {
+        return decodeURIComponent(match[1]);
+      } catch {
+        return match[1];
+      }
+    }
+  }
+  return null;
+}
+
 export function resolveNotificationHref(data: unknown): Href | null {
+  const chatId = parseChatNotificationTarget(data);
+  if (chatId) return hrefs.chat(chatId);
   const id = parsePostNotificationTarget(data);
   return id ? hrefs.post(id) : null;
 }
@@ -61,8 +96,9 @@ export function navigateFromNotificationData(
   if (!href) return false;
   if (!options.authenticated) {
     pendingHref = href;
+    const chatId = parseChatNotificationTarget(data);
     logger.info("[notifications] queued deep link until login", {
-      path: postPath(parsePostNotificationTarget(data) ?? ""),
+      path: chatId ? chatPath(chatId) : postPath(parsePostNotificationTarget(data) ?? ""),
     });
     return true;
   }

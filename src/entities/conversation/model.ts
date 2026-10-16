@@ -16,7 +16,11 @@ export type Conversation = {
   unreadCount: number;
 };
 
-export type MessageStatus = "sending" | "sent" | "seen";
+/**
+ * G3.3: `queued` = offline, persisted to the outbox; drains exactly once
+ * when online (no duplicate), then swaps to the server `sent` message.
+ */
+export type MessageStatus = "sending" | "sent" | "seen" | "queued";
 
 /**
  * G3.2 presence: one entry per user. `typingInConversationId` is the

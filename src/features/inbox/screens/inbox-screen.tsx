@@ -7,8 +7,10 @@
  */
 
 import { useEffect } from "react";
+import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
+import { hrefs } from "@/shared/navigation/hrefs";
 import { Button, Screen, Text } from "@/shared/ui";
 
 import { logInboxOpen, logMarkAllRead } from "../analytics";
@@ -56,6 +58,15 @@ export function InboxScreen() {
         <View style={styles.headerFlex}>
           <Text variant="title">Inbox</Text>
         </View>
+        <Button
+          title="Chats"
+          variant="secondary"
+          size="sm"
+          testID="inbox-open-chats"
+          onPress={() => {
+            router.push(hrefs.chats());
+          }}
+        />
         <Button
           title={inbox.isMarkingAll ? "Marking…" : "Mark all read"}
           variant="secondary"

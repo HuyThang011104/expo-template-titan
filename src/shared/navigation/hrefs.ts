@@ -34,4 +34,6 @@ export const hrefs = {
   accountSettings: (): Href => ({ pathname: "/account-settings" }) as unknown as Href,
   chat: (id: string): Href =>
     ({ pathname: "/(app)/(inbox)/chats/[id]", params: { id } }) as unknown as Href,
+  /** G3.3: thread list entry (Inbox header button, push targets). */
+  chats: (): Href => ({ pathname: "/(app)/(inbox)/chats" }) as unknown as Href,
 };

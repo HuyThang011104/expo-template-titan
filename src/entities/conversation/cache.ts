@@ -121,7 +121,8 @@ export function upsertIncomingMessage(qc: QueryClient, message: Message): void {
   if (known) return;
   const incoming: Message = {
     ...message,
-    status: message.status === "sending" ? "sent" : message.status,
+    // Local-only states never survive the wire; the server copy is `sent`.
+    status: message.status === "sending" || message.status === "queued" ? "sent" : message.status,
   };
   hydrateMessage(qc, incoming);
   const prev = getConversationData(qc, message.conversationId);
@@ -252,7 +253,8 @@ export async function markThreadRead(
 
 /**
  * G3.1: mark every loaded message in a thread `seen` when the peer opens it.
- * `sending` temps stay `sending` until the server answers. Returns the count flipped.
+ * `sending` temps stay `sending` until the server answers; G3.3 `queued`
+ * (offline) stays `queued` until the outbox drain confirms it. Returns flipped.
  */
 export function markMessagesSeen(qc: QueryClient, conversationId: string): number {
   const list = qc.getQueryData<InfiniteData<MessagesPageShape, string | null>>(
@@ -262,11 +264,159 @@ export function markMessagesSeen(qc: QueryClient, conversationId: string): numbe
   let flipped = 0;
   for (const id of ids) {
     const current = getMessageData(qc, conversationId, id);
-    if (!current || current.status === "seen" || current.status === "sending") continue;
+    if (!current || current.status !== "sent") continue;
     setMessage(qc, { ...current, status: "seen" satisfies MessageStatus });
     flipped += 1;
   }
   return flipped;
+}
+
+/* ------------------------------------------------------------------ */
+/* G3.3 offline queue (one `queued` entry per tap, drain swaps to sent). */
+/* ------------------------------------------------------------------ */
+
+export type QueueMessageInput = {
+  body: string;
+  /** Remote url when already uploaded; `localImageUri` (file://) otherwise. */
+  imageUrl?: string | null;
+  /** Local file uri queued offline; re-uploaded by the outbox sender at drain. */
+  localImageUri?: string | null;
+};
+
+export type QueueMessageOptions = {
+  /** Stable idempotency key; generated when omitted. */
+  clientId?: string;
+  /** Injected for tests. */
+  now?: number;
+};
+
+function newClientId(now: number): string {
+  return `${now.toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`;
+}
+
+function appendMessageId(qc: QueryClient, conversationId: string, id: string): void {
+  qc.setQueryData<InfiniteData<MessagesPageShape, string | null>>(
+    queryKeys.conversationMessages(conversationId),
+    (old) => {
+      if (!old) {
+        return { pages: [{ ids: [id], nextCursor: null }], pageParams: [null] };
+      }
+      if (old.pages.some((page) => page.ids.includes(id))) return old;
+      const [first, ...rest] = old.pages;
+      if (!first) return old;
+      return {
+        ...old,
+        pages: [{ ...first, ids: [...first.ids, id] }, ...rest],
+      };
+    },
+  );
+}
+
+/**
+ * G3.3: park one offline message as `queued` (badge shows `Queued`).
+ * Returns `{ messageId, clientId }` — the caller persists `clientId` in the
+ * outbox payload so the drain can confirm exactly this entry, once.
+ */
+export function queueMessage(
+  qc: QueryClient,
+  conversationId: string,
+  input: QueueMessageInput,
+  opts: QueueMessageOptions = {},
+): { messageId: string; clientId: string } {
+  const trimmed = input.body.trim();
+  const imageUrl = input.imageUrl ?? input.localImageUri ?? null;
+  const now = opts.now ?? Date.now();
+  const clientId = opts.clientId ?? newClientId(now);
+  const messageId = `queued-${clientId}`;
+  const queued: Message = {
+    id: messageId,
+    conversationId,
+    senderId: "me",
+    body: trimmed,
+    imageUrl,
+    status: "queued",
+    createdAt: new Date(now).toISOString(),
+  };
+  setMessage(qc, queued);
+  appendMessageId(qc, conversationId, messageId);
+  const prev = getConversationData(qc, conversationId);
+  if (prev) {
+    setConversation(qc, {
+      ...prev,
+      lastMessagePreview: previewForMessage(trimmed, imageUrl),
+      lastMessageAt: queued.createdAt,
+    });
+  }
+  return { messageId, clientId };
+}
+
+/** Read one queued entry (no fetch); `undefined` once confirmed/drained. */
+export function getQueuedMessage(
+  qc: QueryClient,
+  conversationId: string,
+  queuedId: string,
+): Message | undefined {
+  const current = getMessageData(qc, conversationId, queuedId);
+  return current?.status === "queued" ? current : undefined;
+}
+
+/**
+ * G3.3: swap a drained `queued` entry for the server `sent` message.
+ * No-op when the entry is already gone (second drain pass sends nothing —
+ * the outbox job is deleted after the first ack, this is the backstop).
+ */
+export function confirmQueuedMessage(
+  qc: QueryClient,
+  conversationId: string,
+  queuedId: string,
+  server: Message,
+): void {
+  const pending = getMessageData(qc, conversationId, queuedId);
+  if (!pending || pending.status !== "queued") return;
+  qc.setQueryData<InfiniteData<MessagesPageShape, string | null>>(
+    queryKeys.conversationMessages(conversationId),
+    (old) => {
+      if (!old) {
+        return { pages: [{ ids: [server.id], nextCursor: null }], pageParams: [null] };
+      }
+      return {
+        ...old,
+        pages: old.pages.map((page) => ({
+          ...page,
+          ids: page.ids.map((id) => (id === queuedId ? server.id : id)),
+        })),
+      };
+    },
+  );
+  qc.removeQueries({ queryKey: messageKey(conversationId, queuedId) });
+  hydrateMessage(qc, { ...server, conversationId, status: "sent" });
+  const prev = getConversationData(qc, conversationId);
+  if (prev) {
+    setConversation(qc, {
+      ...prev,
+      lastMessagePreview: previewForMessage(server.body, server.imageUrl),
+      lastMessageAt: server.createdAt,
+    });
+  }
+}
+
+/** All still-unsent queued entries in a thread, oldest first. */
+export function getQueuedMessages(qc: QueryClient, conversationId: string): Message[] {
+  const list = qc.getQueryData<InfiniteData<MessagesPageShape, string | null>>(
+    queryKeys.conversationMessages(conversationId),
+  );
+  const ids = (list?.pages ?? []).flatMap((page) => page.ids);
+  const out: Message[] = [];
+  for (const id of ids) {
+    const current = getMessageData(qc, conversationId, id);
+    if (current?.status === "queued") out.push(current);
+  }
+  return out;
+}
+
+/** Count of unsent queued entries (drives the `Queued` badge). */
+export function countQueuedMessages(qc: QueryClient, conversationId: string): number {
+  return getQueuedMessages(qc, conversationId).length;
 }
 
 export type SendMessageRemoteFn = typeof sendMessageRemote;
@@ -280,17 +430,19 @@ export type SendMessageOptions = {
  * Temp id `temp-<ts>` shows `sending` (Đang gửi), swaps to `sent` (Đã gửi)
  * on server win, rolls back (removed) when the server fails.
  * G3.1: accepts text, image, or both — at least one is required.
+ * G3.3: returns `true` when the server acked, `false` when the input was
+ * empty or the send rolled back (callers decide queue-vs-retry from this).
  */
 export async function sendMessage(
   qc: QueryClient,
   conversationId: string,
   bodyOrInput: string | ChatSendInput,
   opts: SendMessageOptions = {},
-): Promise<void> {
+): Promise<boolean> {
   const raw = typeof bodyOrInput === "string" ? { body: bodyOrInput, imageUrl: null } : bodyOrInput;
   const trimmed = raw.body.trim();
   const imageUrl = raw.imageUrl ?? null;
-  if (!trimmed && !imageUrl) return;
+  if (!trimmed && !imageUrl) return false;
   const temp: Message = {
     id: `temp-${Date.now().toString(36)}`,
     conversationId,
@@ -345,7 +497,7 @@ export async function sendMessage(
           lastMessageAt: server.createdAt,
         });
       }
-      return;
+      return true;
     }
   } catch {
     // Fall through to rollback below.
@@ -365,4 +517,5 @@ export async function sendMessage(
   );
   qc.removeQueries({ queryKey: messageKey(conversationId, temp.id) });
   logger.warn("[conversation] send failed, rolled back", { conversationId });
+  return false;
 }

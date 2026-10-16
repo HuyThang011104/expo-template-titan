@@ -4,6 +4,17 @@ export { ChatDetailScreen } from "./screens/chat-detail-screen";
 export { ChatListScreen } from "./screens/chat-list-screen";
 export { useChatList, type ChatListFetchOptions } from "./queries/use-conversations";
 export { useChatThread, type ChatThreadFetchOptions } from "./queries/use-chat-thread";
+export { useChatSend, type ChatSendFetchOptions, type ChatSendInput, type ChatSendResult } from "./mutations/use-chat-send";
+export {
+  buildChatSendPayload,
+  CHAT_OUTBOX_KIND,
+  dispatchChatOutboxJob,
+  handleChatSendJob,
+  parseChatSendPayload,
+  type ChatOutboxJob,
+  type ChatSenderOptions,
+  type ChatSendOutboxPayload,
+} from "./outbox-sender";
 export { chatDraftKey, useChatDraft } from "./hooks/use-chat-draft";
 export { useChatImage } from "./hooks/use-chat-image";
 export { useConversationChannel } from "./realtime/use-conversation-channel";

@@ -561,7 +561,8 @@ type ChatMessageMockItem = {
   senderId: string;
   body: string;
   imageUrl: string | null;
-  status: "sent" | "seen";
+  // G3.3: `queued` is local-only (outbox); the mock server only emits sent/seen.
+  status: "sent" | "seen" | "queued";
   createdAt: string;
 };
 

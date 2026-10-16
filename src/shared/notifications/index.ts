@@ -11,6 +11,7 @@ export {
   configureNotificationHandler,
   consumePendingNotificationHref,
   navigateFromNotificationData,
+  parseChatNotificationTarget,
   parsePostNotificationTarget,
   resolveNotificationHref,
   useNotificationObserver,

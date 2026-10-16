@@ -1,8 +1,9 @@
 /**
- * Message bubble (F4 + G3.1). Dumb: reads the canonical `useMessage`.
+ * Message bubble (F4 + G3.1 + G3.3). Dumb: reads the canonical `useMessage`.
  * Own messages align right; others align left with sender name.
  * G3.1: optional image via `AppImage`; own status shows
  * `Đang gửi` (sending) / `Đã gửi` (sent) / `Đã xem` (seen).
+ * G3.3: offline messages show the `Queued` badge until the outbox drains.
  */
 
 import { StyleSheet, View } from "react-native";
@@ -22,6 +23,7 @@ const STATUS_LABEL: Record<string, string> = {
   sending: "Đang gửi",
   sent: "Đã gửi",
   seen: "Đã xem",
+  queued: "Queued",
 };
 
 export function MessageBubble({ conversationId, messageId }: MessageBubbleProps) {

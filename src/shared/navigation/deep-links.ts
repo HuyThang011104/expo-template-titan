@@ -75,3 +75,8 @@ export function rewriteUniversalPath(path: string | null): string | null {
 export function postPath(id: string): string {
   return `/post/${encodeURIComponent(id)}`;
 }
+
+/** String path for a chat href, for logging/display only (never push). */
+export function chatPath(id: string): string {
+  return `/chats/${encodeURIComponent(id)}`;
+}

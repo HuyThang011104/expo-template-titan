@@ -27,7 +27,7 @@ export const messageSchema = z.object({
   body: z.string().max(2000),
   // Old wire payloads lack these — default keeps them parseable.
   imageUrl: z.string().min(1).nullable().optional().transform((v) => v ?? null),
-  status: z.enum(["sending", "sent", "seen"]).optional().transform((v) => v ?? "sent"),
+  status: z.enum(["sending", "sent", "seen", "queued"]).optional().transform((v) => v ?? "sent"),
   createdAt: z.string().datetime({ offset: true }),
 });
 

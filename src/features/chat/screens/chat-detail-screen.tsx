@@ -1,9 +1,12 @@
 /**
- * Chat detail screen (F4 + G3.1 + G3.2).
+ * Chat detail screen (F4 + G3.1 + G3.2 + G3.3).
  *
  * - Header reads the canonical conversation; opening marks read + seen.
  * - G3.2: peer presence (online/offline) + `Đang nhập...` with TTL;
  *   composer keystrokes emit throttled typing events.
+ * - G3.3: sends go through `useChatSend` (offline taps park as `Queued`
+ *   + one outbox job; the badge clears only after the drain confirms).
+ *   Draft/image clear only after sent-or-queued — never a silent loss.
  * - Messages paginate older pages; composer sends text and/or one image.
  * - Draft survives remount via sqlite; socket stub appends live messages (dedup by id).
  * - Image errors render inline and keep the typed text.
@@ -13,10 +16,9 @@ import { useEffect, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { KeyboardAvoidingView, StyleSheet, View } from "react-native";
 
-import { markThreadRead, usePresence } from "@/entities/conversation";
+import { countQueuedMessages, markThreadRead, usePresence } from "@/entities/conversation";
 import { canMessageTarget, useMe, useUser } from "@/entities/user";
 import { formatRelative } from "@/shared/lib/date";
-import { uploadMedia } from "@/shared/media";
 import { Button, Screen, Text } from "@/shared/ui";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -26,6 +28,7 @@ import { MessageList } from "../components/message-list";
 import { TypingIndicator } from "../components/typing-indicator";
 import { useChatDraft } from "../hooks/use-chat-draft";
 import { useChatImage } from "../hooks/use-chat-image";
+import { useChatSend } from "../mutations/use-chat-send";
 import { useChatThread } from "../queries/use-chat-thread";
 import { useConversationChannel } from "../realtime/use-conversation-channel";
 import { usePresenceChannel } from "../realtime/use-presence-channel";
@@ -38,7 +41,8 @@ export function ChatDetailScreen() {
   const thread = useChatThread(conversationId);
   const draft = useChatDraft(conversationId);
   const image = useChatImage();
-  const [uploading, setUploading] = useState(false);
+  const chatSend = useChatSend(conversationId);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   useConversationChannel(conversationId || null);
   const typing = useSendTyping(conversationId || null);
@@ -83,31 +87,30 @@ export function ChatDetailScreen() {
     else typing.stopTyping();
   };
 
+  const queuedCount = conversationId ? countQueuedMessages(qc, conversationId) : 0;
+
   const handleSend = () => {
     const body = draft.body.trim();
-    if ((!body && !image.asset) || thread.isSending || uploading || !messageAllowed) return;
+    if ((!body && !image.asset) || chatSend.isSending || !messageAllowed) return;
+    setSendError(null);
     logChatSend(conversationId);
     typing.stopTyping();
-    if (image.asset) {
-      const asset = image.asset;
-      setUploading(true);
-      void uploadMedia(asset)
-        .then((uploaded) => thread.sendAsync({ body, imageUrl: uploaded.url }))
-        .then(() => {
-          void draft.clear();
-          image.remove();
-        })
-        .catch(() => {
-          // Keep the typed text; surface the upload failure inline.
-          image.setInlineError("Tải ảnh lên thất bại. Hãy thử lại, nội dung đã gõ vẫn giữ nguyên.");
-        })
-        .finally(() => {
-          setUploading(false);
-        });
-      return;
-    }
-    thread.send(body);
-    void draft.clear();
+    // Upload-when-online / park-when-offline both live in `useChatSend`;
+    // the typed text + picked image clear only after sent-or-queued.
+    const task = image.asset
+      ? chatSend.send({ body, localImageUri: image.asset.uri })
+      : chatSend.send({ body });
+    task
+      .then(() => {
+        void draft.clear();
+        image.remove();
+      })
+      .catch((error: unknown) => {
+        // Loud failure (blocked / upload / server) — text stays, badge explains.
+        setSendError(
+          error instanceof Error ? error.message : "Không gửi được tin nhắn. Thử lại.",
+        );
+      });
   };
 
   if (thread.conversation.isPending || thread.messages.isPending) {
@@ -188,16 +191,36 @@ export function ChatDetailScreen() {
             Bạn không thể nhắn tin cho người này.
           </Text>
         ) : null}
+        {queuedCount > 0 ? (
+          <Text
+            variant="caption"
+            color="textSecondary"
+            testID="chat-queued-badge"
+            style={styles.blockedNotice}
+          >
+            Queued — will send when online.
+          </Text>
+        ) : null}
+        {sendError ? (
+          <Text
+            variant="caption"
+            color="textSecondary"
+            testID="chat-send-error"
+            style={styles.blockedNotice}
+          >
+            {sendError}
+          </Text>
+        ) : null}
         <ChatComposer
           value={draft.body}
           onChange={handleChange}
           onSend={handleSend}
-          isSending={thread.isSending}
+          isSending={chatSend.isSending}
           sendDisabled={!messageAllowed}
           imageUri={image.asset?.uri ?? null}
           imageError={image.error}
           isPickingImage={image.picking}
-          isUploadingImage={uploading}
+          isUploadingImage={false}
           onPickImage={() => {
             void image.pick();
           }}
