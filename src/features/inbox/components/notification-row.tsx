@@ -87,7 +87,7 @@ function RowBody({
         logNotificationTap(notificationId);
         markMutation.mutate();
       }}
-      style={[styles.row, markMutation.isPending && styles.marking]}
+      style={StyleSheet.flatten([styles.row, markMutation.isPending && styles.marking])}
     >
       <Avatar
         displayName={actorQuery.data?.displayName ?? "?"}
