@@ -7,9 +7,9 @@ import { ErrorScreen } from "@/shared/ui";
 
 /**
  * Native tabs root with 5 tabs.
- * Create has no stack — `disabled` blocks the native switch
- * (still emits `tabPress`); the listener pushes the composer sheet.
- * TODO: refresh router typegen on the next online `expo start` so `/composer` appears.
+ * Create is `disabled` (blocks the native switch, still emits `tabPress`);
+ * the listener pushes the composer sheet. Its route lives at `/create` so it
+ * can never win the `/` match over `(home)` on cold start.
  */
 export default function AppTabsLayout() {
   return (
