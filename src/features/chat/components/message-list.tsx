@@ -5,9 +5,9 @@
  */
 
 import { FlashList } from "@shopify/flash-list";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
-import { Text, useTheme } from "@/shared/ui";
+import { EmptyState, LoadingState } from "@/shared/ui";
 
 import { MessageBubble } from "./message-bubble";
 
@@ -28,8 +28,6 @@ export function MessageList({
   onLoadOlder,
   onRefresh,
 }: MessageListProps) {
-  const theme = useTheme();
-
   return (
     <FlashList
       testID="message-list"
@@ -43,15 +41,16 @@ export function MessageList({
       onRefresh={onRefresh}
       refreshing={isRefetching}
       ListEmptyComponent={
-        <View style={styles.empty}>
-          <Text variant="body" testID="message-empty">
-            Say hello to start the conversation.
-          </Text>
-        </View>
+        <EmptyState
+          icon="comment"
+          title="Say hello"
+          description="Send the first message to start the conversation."
+          testID="message-empty"
+        />
       }
       ListFooterComponent={
         isFetchingNextPage ? (
-          <ActivityIndicator color={theme.color.primary} style={styles.footer} />
+          <LoadingState label="Loading older messages" style={styles.footer} />
         ) : null
       }
       ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -65,12 +64,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  empty: {
-    alignItems: "center",
-    padding: 24,
-  },
   footer: {
-    padding: 16,
+    paddingVertical: 16,
   },
   separator: {
     height: 8,

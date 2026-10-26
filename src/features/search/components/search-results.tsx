@@ -8,13 +8,13 @@
 
 import { Link, router } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { PostCard } from "@/entities/post";
 import { SaveButton } from "@/entities/saved";
 import { UserRow, useUser } from "@/entities/user";
 import { hrefs } from "@/shared/navigation/hrefs";
-import { Text, useTheme } from "@/shared/ui";
+import { EmptyState, LoadingState, Text } from "@/shared/ui";
 
 import { logSearchOpen } from "../analytics";
 
@@ -99,11 +99,12 @@ function SearchHeader({ userIds }: { userIds: string[] }) {
 
 function SearchEmpty() {
   return (
-    <View style={styles.empty}>
-      <Text variant="body" testID="search-empty">
-        No results. Try another keyword.
-      </Text>
-    </View>
+    <EmptyState
+      icon="search"
+      title="No results"
+      description="Try another keyword or check the spelling."
+      testID="search-empty"
+    />
   );
 }
 
@@ -116,8 +117,6 @@ export function SearchResults({
   onRefresh,
   prefetchPost,
 }: SearchResultsProps) {
-  const theme = useTheme();
-
   return (
     <FlashList
       testID="search-list"
@@ -132,7 +131,7 @@ export function SearchResults({
       ListEmptyComponent={<SearchEmpty />}
       ListFooterComponent={
         isFetchingNextPage ? (
-          <ActivityIndicator color={theme.color.primary} style={styles.footer} />
+          <LoadingState label="Loading more results" style={styles.footer} />
         ) : null
       }
       ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -149,12 +148,8 @@ const styles = StyleSheet.create({
   usersTitle: {
     fontWeight: "700",
   },
-  empty: {
-    alignItems: "center",
-    padding: 24,
-  },
   footer: {
-    padding: 16,
+    paddingVertical: 16,
   },
   separator: {
     height: 8,

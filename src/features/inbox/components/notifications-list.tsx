@@ -6,9 +6,9 @@
  */
 
 import { FlashList } from "@shopify/flash-list";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
-import { Text, useTheme } from "@/shared/ui";
+import { EmptyState, LoadingState } from "@/shared/ui";
 
 import { NotificationRow } from "./notification-row";
 
@@ -23,11 +23,12 @@ export type NotificationsListProps = {
 
 function InboxEmpty() {
   return (
-    <View style={styles.empty}>
-      <Text variant="body" testID="inbox-empty">
-        You&apos;re all caught up.
-      </Text>
-    </View>
+    <EmptyState
+      icon="inbox"
+      title="You're all caught up"
+      description="New likes, follows, and mentions will show up here."
+      testID="inbox-empty"
+    />
   );
 }
 
@@ -39,8 +40,6 @@ export function NotificationsList({
   onRefresh,
   prefetchTarget,
 }: NotificationsListProps) {
-  const theme = useTheme();
-
   return (
     <FlashList
       testID="inbox-list"
@@ -56,7 +55,7 @@ export function NotificationsList({
       ListEmptyComponent={<InboxEmpty />}
       ListFooterComponent={
         isFetchingNextPage ? (
-          <ActivityIndicator color={theme.color.primary} style={styles.footer} />
+          <LoadingState label="Loading more notifications" style={styles.footer} />
         ) : null
       }
       ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -65,12 +64,8 @@ export function NotificationsList({
 }
 
 const styles = StyleSheet.create({
-  empty: {
-    alignItems: "center",
-    padding: 24,
-  },
   footer: {
-    padding: 16,
+    paddingVertical: 16,
   },
   separator: {
     height: 8,

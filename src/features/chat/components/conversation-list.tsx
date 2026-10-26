@@ -5,9 +5,9 @@
  */
 
 import { FlashList } from "@shopify/flash-list";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
-import { Text, useTheme } from "@/shared/ui";
+import { EmptyState, LoadingState } from "@/shared/ui";
 
 import { ConversationRow } from "./conversation-row";
 
@@ -22,11 +22,12 @@ export type ConversationListProps = {
 
 function ChatEmpty() {
   return (
-    <View style={styles.empty}>
-      <Text variant="body" testID="chat-empty">
-        No conversations yet.
-      </Text>
-    </View>
+    <EmptyState
+      icon="comment"
+      title="No conversations yet"
+      description="Start a chat from a profile to see it here."
+      testID="chat-empty"
+    />
   );
 }
 
@@ -38,8 +39,6 @@ export function ConversationList({
   onRefresh,
   prefetchThread,
 }: ConversationListProps) {
-  const theme = useTheme();
-
   return (
     <FlashList
       testID="chat-list"
@@ -55,7 +54,7 @@ export function ConversationList({
       ListEmptyComponent={<ChatEmpty />}
       ListFooterComponent={
         isFetchingNextPage ? (
-          <ActivityIndicator color={theme.color.primary} style={styles.footer} />
+          <LoadingState label="Loading more conversations" style={styles.footer} />
         ) : null
       }
       ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -64,12 +63,8 @@ export function ConversationList({
 }
 
 const styles = StyleSheet.create({
-  empty: {
-    alignItems: "center",
-    padding: 24,
-  },
   footer: {
-    padding: 16,
+    paddingVertical: 16,
   },
   separator: {
     height: 8,

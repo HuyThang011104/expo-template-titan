@@ -24,7 +24,7 @@ import {
   useUserByHandle,
 } from "@/entities/user";
 import { hrefs } from "@/shared/navigation/hrefs";
-import { Button, Screen, Text } from "@/shared/ui";
+import { Button, ErrorState, LoadingState, Screen, Text } from "@/shared/ui";
 
 import { logUserOpen } from "../analytics";
 import { ProfileHeader } from "../components/profile-header";
@@ -60,23 +60,21 @@ function UserDetailBody({ handle }: { handle: string }) {
 
   if (userQuery.isPending) {
     return (
-      <Screen style={styles.center} testID="user-detail-screen">
-        <Text variant="body">Loading user…</Text>
+      <Screen testID="user-detail-screen">
+        <LoadingState label="Loading user" testID="user-detail-loading" />
       </Screen>
     );
   }
 
   if (userQuery.isError || !userQuery.data) {
     return (
-      <Screen style={styles.center} testID="user-detail-screen">
-        <Text variant="title">@{handle}</Text>
-        <Text variant="body" testID="user-not-found">
-          User không tồn tại.
-        </Text>
-        <Button
-          title="Retry"
-          testID="user-detail-retry-button"
-          onPress={() => {
+      <Screen testID="user-detail-screen">
+        <ErrorState
+          title={`@${handle}`}
+          message="User không tồn tại."
+          testID="user-not-found"
+          retryTestID="user-detail-retry-button"
+          onRetry={() => {
             void userQuery.refetch();
           }}
         />
@@ -115,20 +113,17 @@ function UserDetailBody({ handle }: { handle: string }) {
         }
       />
       {rel.isPending ? (
-        <View style={styles.center}>
-          <Text variant="body">Loading posts…</Text>
-        </View>
+        <LoadingState label="Loading posts" testID="user-relationship-loading" />
       ) : rel.isError || !rel.data ? (
-        <View style={styles.center}>
-          <Text variant="body">Couldn&apos;t load follow status.</Text>
-          <Button
-            title="Retry"
-            testID="user-relationship-retry-button"
-            onPress={() => {
-              void rel.refetch();
-            }}
-          />
-        </View>
+        <ErrorState
+          title="Couldn't load follow status"
+          message="Check your connection and try again."
+          testID="user-relationship-error"
+          retryTestID="user-relationship-retry-button"
+          onRetry={() => {
+            void rel.refetch();
+          }}
+        />
       ) : blockReason !== null ? (
         <View style={styles.center}>
           {blockReason === "private" ? (
@@ -148,20 +143,17 @@ function UserDetailBody({ handle }: { handle: string }) {
           )}
         </View>
       ) : posts.isPending ? (
-        <View style={styles.center}>
-          <Text variant="body">Loading posts…</Text>
-        </View>
+        <LoadingState label="Loading posts" testID="user-posts-loading" />
       ) : posts.isError ? (
-        <View style={styles.center}>
-          <Text variant="body">Couldn&apos;t load posts.</Text>
-          <Button
-            title="Retry"
-            testID="user-posts-retry-button"
-            onPress={() => {
-              void posts.refetch();
-            }}
-          />
-        </View>
+        <ErrorState
+          title="Couldn't load posts"
+          message="Check your connection and try again."
+          testID="user-posts-error"
+          retryTestID="user-posts-retry-button"
+          onRetry={() => {
+            void posts.refetch();
+          }}
+        />
       ) : (
         <View style={styles.listFlex}>
           <ProfilePostsList

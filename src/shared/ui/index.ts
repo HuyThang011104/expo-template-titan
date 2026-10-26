@@ -44,6 +44,7 @@ export {
   Input,
   ListItem,
   LoadingState,
+  OfflineBanner,
   Tabs,
   TextArea,
   type AvatarProps,

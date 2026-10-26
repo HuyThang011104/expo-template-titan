@@ -11,7 +11,7 @@ import { router } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
 import { hrefs } from "@/shared/navigation/hrefs";
-import { Button, Screen, Text } from "@/shared/ui";
+import { Button, ErrorState, LoadingState, Screen, Text } from "@/shared/ui";
 
 import { logInboxOpen, logMarkAllRead } from "../analytics";
 import { NotificationsList } from "../components/notifications-list";
@@ -27,22 +27,20 @@ export function InboxScreen() {
   if (inbox.isPending) {
     return (
       <Screen testID="inbox-screen">
-        <Text variant="body" testID="inbox-loading">
-          Loading inbox…
-        </Text>
+        <LoadingState label="Loading inbox" testID="inbox-loading" />
       </Screen>
     );
   }
 
   if (inbox.isError) {
     return (
-      <Screen style={styles.center} testID="inbox-screen">
-        <Text variant="title">Inbox</Text>
-        <Text variant="body">Couldn&apos;t load your notifications.</Text>
-        <Button
-          title="Retry"
-          testID="inbox-retry-button"
-          onPress={() => {
+      <Screen testID="inbox-screen">
+        <ErrorState
+          title="Couldn't load your notifications"
+          message="Check your connection and try again."
+          testID="inbox-error"
+          retryTestID="inbox-retry-button"
+          onRetry={() => {
             void inbox.refetch();
           }}
         />
@@ -98,11 +96,6 @@ export function InboxScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",

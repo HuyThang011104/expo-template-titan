@@ -8,6 +8,8 @@ export type ErrorStateProps = {
   message?: string;
   onRetry: () => void;
   retryLabel?: string;
+  /** Keeps an existing retry testID when adopting the shared state. */
+  retryTestID?: string;
   accessibilityLabel?: string;
   style?: StyleProp<ViewStyle>;
   testID?: string;
@@ -18,6 +20,7 @@ export function ErrorState({
   message = "Please try again.",
   onRetry,
   retryLabel = "Retry",
+  retryTestID,
   accessibilityLabel,
   style,
   testID,
@@ -30,7 +33,7 @@ export function ErrorState({
       title={title}
       description={message}
       accessibilityLabel={accessibilityLabel}
-      action={<Button title={retryLabel} onPress={onRetry} />}
+      action={<Button title={retryLabel} onPress={onRetry} testID={retryTestID} />}
       style={style}
       testID={testID}
     />

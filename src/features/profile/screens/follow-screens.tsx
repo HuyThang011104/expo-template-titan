@@ -17,7 +17,15 @@ import {
   useRejectFollowRequest,
   useUserByHandle,
 } from "@/entities/user";
-import { AppList, Button, Screen, Text } from "@/shared/ui";
+import {
+  AppList,
+  Button,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  Screen,
+  Text,
+} from "@/shared/ui";
 
 import { FollowUserRow } from "../components/follow-user-row";
 
@@ -54,14 +62,15 @@ function FollowListShell({
         <Text variant="title">{title}</Text>
       </View>
       {isPending ? (
-        <View style={styles.center}>
-          <Text variant="body">Loading…</Text>
-        </View>
+        <LoadingState label={title} testID={`${testID}-loading`} />
       ) : isError ? (
-        <View style={styles.center}>
-          <Text variant="body">Couldn&apos;t load this list.</Text>
-          <Button title="Retry" testID={`${testID}-retry-button`} onPress={refetch} />
-        </View>
+        <ErrorState
+          title="Couldn't load this list"
+          message="Check your connection and try again."
+          testID={`${testID}-error`}
+          retryTestID={`${testID}-retry-button`}
+          onRetry={refetch}
+        />
       ) : (
         <AppList
           testID={`${testID}-list`}
@@ -76,9 +85,12 @@ function FollowListShell({
           onRefresh={refetch}
           refreshing={isRefetching}
           ListEmptyComponent={
-            <View style={styles.center}>
-              <Text variant="body">{emptyCopy}</Text>
-            </View>
+            <EmptyState
+              icon="profile"
+              title={emptyCopy}
+              description="When people connect, they show up here."
+              testID={`${testID}-empty`}
+            />
           }
         />
       )}
@@ -94,23 +106,35 @@ export function FollowersScreen() {
 
   if (!handle) {
     return (
-      <Screen style={styles.center} testID="followers-screen">
-        <Text variant="body">Missing user handle.</Text>
+      <Screen testID="followers-screen">
+        <EmptyState
+          icon="profile"
+          title="Missing user handle"
+          description="Open this list from a profile."
+          testID="followers-missing-handle"
+        />
       </Screen>
     );
   }
   if (resolved.isPending) {
     return (
-      <Screen style={styles.center} testID="followers-screen">
-        <Text variant="body">Loading user…</Text>
+      <Screen testID="followers-screen">
+        <LoadingState label="Loading user" testID="followers-user-loading" />
       </Screen>
     );
   }
   if (resolved.isError || !resolved.data) {
     return (
-      <Screen style={styles.center} testID="followers-screen">
-        <Text variant="title">@{handle}</Text>
-        <Text variant="body">User not found.</Text>
+      <Screen testID="followers-screen">
+        <ErrorState
+          title={`@${handle}`}
+          message="User not found."
+          testID="followers-user-error"
+          retryTestID="followers-user-retry-button"
+          onRetry={() => {
+            void resolved.refetch();
+          }}
+        />
       </Screen>
     );
   }
@@ -143,23 +167,35 @@ export function FollowingScreen() {
 
   if (!handle) {
     return (
-      <Screen style={styles.center} testID="following-screen">
-        <Text variant="body">Missing user handle.</Text>
+      <Screen testID="following-screen">
+        <EmptyState
+          icon="profile"
+          title="Missing user handle"
+          description="Open this list from a profile."
+          testID="following-missing-handle"
+        />
       </Screen>
     );
   }
   if (resolved.isPending) {
     return (
-      <Screen style={styles.center} testID="following-screen">
-        <Text variant="body">Loading user…</Text>
+      <Screen testID="following-screen">
+        <LoadingState label="Loading user" testID="following-user-loading" />
       </Screen>
     );
   }
   if (resolved.isError || !resolved.data) {
     return (
-      <Screen style={styles.center} testID="following-screen">
-        <Text variant="title">@{handle}</Text>
-        <Text variant="body">User not found.</Text>
+      <Screen testID="following-screen">
+        <ErrorState
+          title={`@${handle}`}
+          message="User not found."
+          testID="following-user-error"
+          retryTestID="following-user-retry-button"
+          onRetry={() => {
+            void resolved.refetch();
+          }}
+        />
       </Screen>
     );
   }
@@ -256,12 +292,6 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-  },
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    padding: 24,
   },
   requestActions: {
     flexDirection: "row",

@@ -7,12 +7,12 @@
  */
 
 import { Link, router } from "expo-router";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 
 import { PostCard } from "@/entities/post";
 import { SaveButton } from "@/entities/saved";
 import { hrefs } from "@/shared/navigation/hrefs";
-import { AppList, Text, useTheme } from "@/shared/ui";
+import { AppList, EmptyState, LoadingState } from "@/shared/ui";
 
 import { logProfileOpenDetail } from "../analytics";
 
@@ -66,9 +66,12 @@ function ProfilePostItem({
 
 function ProfilePostsEmpty() {
   return (
-    <View style={styles.empty}>
-      <Text variant="body">No posts yet.</Text>
-    </View>
+    <EmptyState
+      icon="image"
+      title="No posts yet"
+      description="Posts you share will appear here."
+      testID="profile-empty"
+    />
   );
 }
 
@@ -99,17 +102,12 @@ export function ProfilePostsList({
 }
 
 const styles = StyleSheet.create({
-  empty: {
-    alignItems: "center",
-    padding: 24,
-  },
   footer: {
-    padding: 16,
+    paddingVertical: 16,
   },
 });
 
 export function ProfilePostsFooter({ visible }: { visible: boolean }) {
-  const theme = useTheme();
   if (!visible) return null;
-  return <ActivityIndicator color={theme.color.primary} style={styles.footer} />;
+  return <LoadingState label="Loading more posts" style={styles.footer} />;
 }

@@ -18,7 +18,7 @@ import { useUserPosts } from "@/entities/post";
 import { useSavedPosts } from "@/entities/saved";
 import { useSession } from "@/shared/auth";
 import { hrefs } from "@/shared/navigation/hrefs";
-import { Button, Screen, Text } from "@/shared/ui";
+import { Button, ErrorState, LoadingState, Screen, Text } from "@/shared/ui";
 
 import { logProfileOpen } from "../analytics";
 import { ProfileHeader } from "../components/profile-header";
@@ -40,8 +40,8 @@ export function ProfileScreen() {
 
   if (me.isPending) {
     return (
-      <Screen style={styles.center} testID="profile-screen">
-        <Text variant="body">Loading profile…</Text>
+      <Screen testID="profile-screen">
+        <LoadingState label="Loading profile" testID="profile-loading" />
       </Screen>
     );
   }
@@ -49,12 +49,12 @@ export function ProfileScreen() {
   if (me.isError || !me.data) {
     return (
       <Screen style={styles.center} testID="profile-screen">
-        <Text variant="title">Profile</Text>
-        <Text variant="body">Couldn&apos;t load your profile.</Text>
-        <Button
-          title="Retry"
-          testID="profile-retry-button"
-          onPress={() => {
+        <ErrorState
+          title="Couldn't load your profile"
+          message="Check your connection and try again."
+          testID="profile-error"
+          retryTestID="profile-retry-button"
+          onRetry={() => {
             void me.refetch();
           }}
         />
@@ -136,20 +136,17 @@ export function ProfileScreen() {
       {tab === "saved" ? (
         <SavedTab saved={saved} />
       ) : posts.isPending ? (
-        <View style={styles.center}>
-          <Text variant="body">Loading posts…</Text>
-        </View>
+        <LoadingState label="Loading posts" testID="profile-posts-loading" />
       ) : posts.isError ? (
-        <View style={styles.center}>
-          <Text variant="body">Couldn&apos;t load posts.</Text>
-          <Button
-            title="Retry"
-            testID="profile-posts-retry-button"
-            onPress={() => {
-              void posts.refetch();
-            }}
-          />
-        </View>
+        <ErrorState
+          title="Couldn't load posts"
+          message="Check your connection and try again."
+          testID="profile-posts-error"
+          retryTestID="profile-posts-retry-button"
+          onRetry={() => {
+            void posts.refetch();
+          }}
+        />
       ) : (
         <View style={styles.listFlex}>
           <ProfilePostsList
@@ -213,24 +210,19 @@ const styles = StyleSheet.create({
 
 function SavedTab({ saved }: { saved: ReturnType<typeof useSavedPosts> }) {
   if (saved.isPending) {
-    return (
-      <View style={styles.center}>
-        <Text variant="body">Loading saved…</Text>
-      </View>
-    );
+    return <LoadingState label="Loading saved posts" testID="saved-loading" />;
   }
   if (saved.isError) {
     return (
-      <View style={styles.center}>
-        <Text variant="body">Couldn&apos;t load saved posts.</Text>
-        <Button
-          title="Retry"
-          testID="saved-retry-button"
-          onPress={() => {
-            void saved.refetch();
-          }}
-        />
-      </View>
+      <ErrorState
+        title="Couldn't load saved posts"
+        message="Check your connection and try again."
+        testID="saved-error"
+        retryTestID="saved-retry-button"
+        onRetry={() => {
+          void saved.refetch();
+        }}
+      />
     );
   }
   return (

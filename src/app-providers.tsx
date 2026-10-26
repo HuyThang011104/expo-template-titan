@@ -15,7 +15,7 @@ import { ObservabilityBootstrap, initObservability } from "@/shared/observabilit
 import { queryClient, setupOnlineManager, startQueryPersistence } from "@/shared/query";
 import { RealtimeProvider } from "@/shared/realtime";
 import { startOutboxSync } from "@/shared/storage/db/outbox-worker";
-import { ThemePreferenceProvider, ThemeProvider, useTheme } from "@/shared/ui";
+import { OfflineBanner, ThemePreferenceProvider, ThemeProvider, useTheme } from "@/shared/ui";
 import { navigationTheme } from "@/shared/ui/navigation/navigation-theme";
 
 type AppProvidersProps = {
@@ -98,6 +98,8 @@ export function AppProviders({ children }: AppProvidersProps) {
                   <RealtimeProvider>
                     <NotificationsBootstrap />
                     <ObservabilityBootstrap />
+                    {/* App-scope: never unmounts with a screen, never blocks cache. */}
+                    <OfflineBanner />
                     {children}
                   </RealtimeProvider>
                 </SessionProvider>

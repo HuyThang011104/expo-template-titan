@@ -19,7 +19,7 @@ import { KeyboardAvoidingView, StyleSheet, View } from "react-native";
 import { countQueuedMessages, markThreadRead, usePresence } from "@/entities/conversation";
 import { canMessageTarget, useMe, useUser } from "@/entities/user";
 import { formatRelative } from "@/shared/lib/date";
-import { Button, Screen, Text } from "@/shared/ui";
+import { ErrorState, LoadingState, Screen, Text } from "@/shared/ui";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { logChatSend } from "../analytics";
@@ -116,22 +116,20 @@ export function ChatDetailScreen() {
   if (thread.conversation.isPending || thread.messages.isPending) {
     return (
       <Screen testID="chat-detail-screen">
-        <Text variant="body" testID="chat-thread-loading">
-          Loading conversation...
-        </Text>
+        <LoadingState label="Loading conversation" testID="chat-thread-loading" />
       </Screen>
     );
   }
 
   if (thread.conversation.isError || thread.messages.isError) {
     return (
-      <Screen style={styles.center} testID="chat-detail-screen">
-        <Text variant="title">Chat</Text>
-        <Text variant="body">Could not load this conversation.</Text>
-        <Button
-          title="Retry"
-          testID="chat-thread-retry"
-          onPress={() => {
+      <Screen testID="chat-detail-screen">
+        <ErrorState
+          title="Couldn't load this conversation"
+          message="Check your connection and try again."
+          testID="chat-thread-error"
+          retryTestID="chat-thread-retry"
+          onRetry={() => {
             void thread.conversation.refetch();
             void thread.messages.refetch();
           }}

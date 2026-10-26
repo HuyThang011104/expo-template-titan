@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import { Platform, ScrollView, StyleSheet, View } from "react-native";
 
 import { useMe } from "@/entities/user";
-import { Button, Screen, Text } from "@/shared/ui";
+import { EmptyState, ErrorState, LoadingState, Screen } from "@/shared/ui";
 
 import {
   logSearchHistorySelect,
@@ -118,29 +118,26 @@ export function SearchScreen() {
           !trending.isError &&
           trending.tags.length === 0 &&
           trending.userIds.length === 0 ? (
-            <View style={styles.center}>
-              <Text variant="body">Type at least {SEARCH_MIN_LENGTH} characters to search.</Text>
-            </View>
+            <EmptyState
+              icon="search"
+              title="Search posts and people"
+              description={`Type at least ${SEARCH_MIN_LENGTH} characters to search.`}
+              testID="search-empty-state"
+            />
           ) : null}
         </ScrollView>
       ) : search.isPending ? (
-        <View style={styles.center}>
-          <Text variant="body" testID="search-loading">
-            Searching…
-          </Text>
-        </View>
+        <LoadingState label="Searching" testID="search-loading" />
       ) : search.isError || !search.data ? (
-        <View style={styles.center}>
-          <Text variant="title">Search</Text>
-          <Text variant="body">Couldn&apos;t run search.</Text>
-          <Button
-            title="Retry"
-            testID="search-retry-button"
-            onPress={() => {
-              void search.refetch();
-            }}
-          />
-        </View>
+        <ErrorState
+          title="Couldn't run search"
+          message="Check your connection and try again."
+          testID="search-error"
+          retryTestID="search-retry-button"
+          onRetry={() => {
+            void search.refetch();
+          }}
+        />
       ) : (
         <View style={styles.listFlex}>
           <SearchResults
@@ -163,12 +160,6 @@ export function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    padding: 24,
-  },
   listFlex: {
     flex: 1,
   },

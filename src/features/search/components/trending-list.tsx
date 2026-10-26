@@ -11,7 +11,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import { UserRow, useUser } from "@/entities/user";
 import { hrefs } from "@/shared/navigation/hrefs";
-import { Button, Text } from "@/shared/ui";
+import { ErrorState, LoadingState, Text } from "@/shared/ui";
 
 import type { HashtagInfo } from "../schema";
 
@@ -69,19 +69,25 @@ function SuggestedUserRow({ userId }: { userId: string }) {
 export function TrendingList({ tags, userIds, isPending, isError, onRetry, onTagPress }: TrendingListProps) {
   if (isPending) {
     return (
-      <View style={styles.section} testID="trending-list">
-        <Text variant="body" testID="trending-loading">
-          Đang tải trending…
-        </Text>
-      </View>
+      <LoadingState
+        variant="skeleton"
+        rows={2}
+        label="Loading trending"
+        testID="trending-loading"
+        style={styles.section}
+      />
     );
   }
   if (isError) {
     return (
-      <View style={styles.section} testID="trending-list">
-        <Text variant="small">Couldn&apos;t load trending.</Text>
-        <Button title="Retry" size="sm" variant="secondary" testID="trending-retry-button" onPress={onRetry} />
-      </View>
+      <ErrorState
+        title="Couldn't load trending"
+        message="Pull to refresh or try again."
+        testID="trending-error"
+        retryTestID="trending-retry-button"
+        onRetry={onRetry}
+        style={styles.section}
+      />
     );
   }
   if (tags.length === 0 && userIds.length === 0) return null;

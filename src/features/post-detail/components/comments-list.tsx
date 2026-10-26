@@ -9,7 +9,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import {
   buildCommentThread,
@@ -17,7 +17,13 @@ import {
   getCommentData,
   usePostComments,
 } from "@/entities/comment";
-import { AppList, Button, Text, useTheme } from "@/shared/ui";
+import {
+  AppList,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  Text,
+} from "@/shared/ui";
 
 import type { ReplyTarget } from "./comment-composer";
 
@@ -29,7 +35,6 @@ export type CommentsListProps = {
 };
 
 export function CommentsList({ postId, header, onReplyPress, fetchImpl }: CommentsListProps) {
-  const theme = useTheme();
   const qc = useQueryClient();
   const comments = usePostComments(postId, { fetchImpl });
 
@@ -37,9 +42,7 @@ export function CommentsList({ postId, header, onReplyPress, fetchImpl }: Commen
     return (
       <View style={styles.flex}>
         {header}
-        <View style={styles.center}>
-          <Text variant="body">Loading comments…</Text>
-        </View>
+        <LoadingState label="Loading comments" testID="comments-loading" />
       </View>
     );
   }
@@ -48,16 +51,15 @@ export function CommentsList({ postId, header, onReplyPress, fetchImpl }: Commen
     return (
       <View style={styles.flex}>
         {header}
-        <View style={styles.center}>
-          <Text variant="body">Couldn&apos;t load comments.</Text>
-          <Button
-            title="Retry"
-            testID="comments-retry-button"
-            onPress={() => {
-              void comments.refetch();
-            }}
-          />
-        </View>
+        <ErrorState
+          title="Couldn't load comments"
+          message="Check your connection and try again."
+          testID="comments-error"
+          retryTestID="comments-retry-button"
+          onRetry={() => {
+            void comments.refetch();
+          }}
+        />
       </View>
     );
   }
@@ -88,13 +90,16 @@ export function CommentsList({ postId, header, onReplyPress, fetchImpl }: Commen
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.center}>
-            <Text variant="body">Be the first to comment.</Text>
-          </View>
+          <EmptyState
+            icon="comment"
+            title="Be the first to comment"
+            description="Replies appear here."
+            testID="comments-empty"
+          />
         }
         ListFooterComponent={
           comments.isFetchingNextPage ? (
-            <ActivityIndicator color={theme.color.primary} style={styles.footer} />
+            <LoadingState label="Loading more comments" style={styles.footer} />
           ) : null
         }
         onEndReached={() => {
@@ -113,17 +118,11 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    padding: 24,
-  },
   count: {
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
   footer: {
-    padding: 16,
+    paddingVertical: 16,
   },
 });

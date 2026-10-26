@@ -10,7 +10,7 @@
 import { useLocalSearchParams } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
-import { Button, Screen, Text } from "@/shared/ui";
+import { EmptyState, ErrorState, LoadingState, Screen } from "@/shared/ui";
 
 import { HashtagHeader } from "../components/hashtag-header";
 import { SearchResults } from "../components/search-results";
@@ -23,8 +23,13 @@ export function HashtagScreen() {
 
   if (!tag || normalized.length === 0) {
     return (
-      <Screen style={styles.center} testID="hashtag-screen">
-        <Text variant="body">Missing hashtag.</Text>
+      <Screen testID="hashtag-screen">
+        <EmptyState
+          icon="search"
+          title="Missing hashtag"
+          description="Open a tag from a post or search."
+          testID="hashtag-missing"
+        />
       </Screen>
     );
   }
@@ -38,21 +43,21 @@ function HashtagBody({ tag }: { tag: string }) {
 
   if (feed.isPending) {
     return (
-      <Screen style={styles.center} testID="hashtag-screen">
-        <Text variant="body">Loading #{normalized}…</Text>
+      <Screen testID="hashtag-screen">
+        <LoadingState label={`Loading #${normalized}`} testID="hashtag-loading" />
       </Screen>
     );
   }
 
   if (feed.isError) {
     return (
-      <Screen style={styles.center} testID="hashtag-screen">
-        <Text variant="title">#{normalized}</Text>
-        <Text variant="body">Couldn&apos;t load posts for this tag.</Text>
-        <Button
-          title="Retry"
-          testID="hashtag-retry-button"
-          onPress={() => {
+      <Screen testID="hashtag-screen">
+        <ErrorState
+          title={`#${normalized}`}
+          message="Couldn't load posts for this tag."
+          testID="hashtag-error"
+          retryTestID="hashtag-retry-button"
+          onRetry={() => {
             void feed.refetch();
           }}
         />
@@ -83,11 +88,6 @@ function HashtagBody({ tag }: { tag: string }) {
 }
 
 const styles = StyleSheet.create({
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
   listFlex: {
     flex: 1,
   },

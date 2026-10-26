@@ -23,6 +23,7 @@ export {
   type LoadingStateProps,
   type LoadingStateVariant,
 } from "./loading-state";
+export { OfflineBanner } from "./offline-banner";
 export {
   Tabs,
   type TabItem,

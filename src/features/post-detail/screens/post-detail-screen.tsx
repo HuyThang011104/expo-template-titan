@@ -7,7 +7,7 @@ import { PostCard, usePost } from "@/entities/post";
 import { SaveButton } from "@/entities/saved";
 import { getViewBlockReason, useMe, useRelationship } from "@/entities/user";
 import { hrefs } from "@/shared/navigation/hrefs";
-import { Button, Screen, Text } from "@/shared/ui";
+import { EmptyState, ErrorState, LoadingState, Screen } from "@/shared/ui";
 
 import { CommentComposer, type ReplyTarget } from "../components/comment-composer";
 import { CommentsList } from "../components/comments-list";
@@ -23,7 +23,12 @@ export function PostDetailScreen() {
   if (!id) {
     return (
       <Screen>
-        <Text variant="body">Missing post id.</Text>
+        <EmptyState
+          icon="alert"
+          title="Missing post id"
+          description="Open a post from the feed to view it here."
+          testID="post-missing-id"
+        />
       </Screen>
     );
   }
@@ -42,7 +47,7 @@ function PostDetailBody({ postId }: { postId: string }) {
   if (post.isPending || rel.isPending) {
     return (
       <Screen>
-        <Text variant="body">Loading post…</Text>
+        <LoadingState label="Loading post" testID="post-detail-loading" />
       </Screen>
     );
   }
@@ -50,12 +55,12 @@ function PostDetailBody({ postId }: { postId: string }) {
   if (post.isError || !post.data) {
     return (
       <Screen testID="post-detail-screen">
-        <View style={styles.center}>
-          <Text variant="title" testID="post-gone-title">
-            Bài viết không còn
-          </Text>
-          <Text variant="body">It may have been deleted.</Text>
-        </View>
+        <EmptyState
+          icon="alert"
+          title="Bài viết không còn"
+          description="It may have been deleted."
+          testID="post-gone-title"
+        />
       </Screen>
     );
   }
@@ -63,16 +68,15 @@ function PostDetailBody({ postId }: { postId: string }) {
   if (rel.isError || !rel.data) {
     return (
       <Screen>
-        <View style={styles.center}>
-          <Text variant="body">Couldn&apos;t load author status.</Text>
-          <Button
-            title="Retry"
-            testID="post-relationship-retry-button"
-            onPress={() => {
-              void rel.refetch();
-            }}
-          />
-        </View>
+        <ErrorState
+          title="Couldn't load author status"
+          message="Check your connection and try again."
+          testID="post-relationship-error"
+          retryTestID="post-relationship-retry-button"
+          onRetry={() => {
+            void rel.refetch();
+          }}
+        />
       </Screen>
     );
   }
@@ -81,18 +85,12 @@ function PostDetailBody({ postId }: { postId: string }) {
   if (reason !== null) {
     return (
       <Screen>
-        <View style={styles.center}>
-          {reason === "private" ? (
-            <Text variant="title" testID="private-empty-state">
-              Private account
-            </Text>
-          ) : (
-            <Text variant="title" testID="blocked-empty-state">
-              Not available
-            </Text>
-          )}
-          <Text variant="body">You can&apos;t see this post.</Text>
-        </View>
+        <EmptyState
+          icon="lock"
+          title={reason === "private" ? "Private account" : "Not available"}
+          description="You can't see this post."
+          testID={reason === "private" ? "private-empty-state" : "blocked-empty-state"}
+        />
       </Screen>
     );
   }
@@ -137,11 +135,6 @@ function PostDetailBody({ postId }: { postId: string }) {
 }
 
 const styles = StyleSheet.create({
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
   listFlex: {
     flex: 1,
   },

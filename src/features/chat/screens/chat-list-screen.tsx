@@ -6,9 +6,8 @@
  */
 
 import { useEffect } from "react";
-import { StyleSheet } from "react-native";
 
-import { Button, Screen, Text } from "@/shared/ui";
+import { ErrorState, LoadingState, Screen } from "@/shared/ui";
 
 import { logChatOpenList } from "../analytics";
 import { ConversationList } from "../components/conversation-list";
@@ -24,22 +23,20 @@ export function ChatListScreen() {
   if (list.isPending) {
     return (
       <Screen testID="chat-list-screen">
-        <Text variant="body" testID="chat-loading">
-          Loading chats...
-        </Text>
+        <LoadingState label="Loading chats" testID="chat-loading" />
       </Screen>
     );
   }
 
   if (list.isError) {
     return (
-      <Screen style={styles.center} testID="chat-list-screen">
-        <Text variant="title">Chats</Text>
-        <Text variant="body">Could not load your conversations.</Text>
-        <Button
-          title="Retry"
-          testID="chat-retry-button"
-          onPress={() => {
+      <Screen testID="chat-list-screen">
+        <ErrorState
+          title="Couldn't load your conversations"
+          message="Check your connection and try again."
+          testID="chat-error"
+          retryTestID="chat-retry-button"
+          onRetry={() => {
             void list.refetch();
           }}
         />
@@ -65,10 +62,3 @@ export function ChatListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-});

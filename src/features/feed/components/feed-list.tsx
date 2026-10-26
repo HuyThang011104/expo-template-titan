@@ -11,12 +11,12 @@ import { Link, router, useFocusEffect } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, AppState, Pressable, StyleSheet, View } from "react-native";
+import { AppState, Pressable, StyleSheet, View } from "react-native";
 
 import { PostCard, getPostData } from "@/entities/post";
 import { SaveButton } from "@/entities/saved";
 import { hrefs } from "@/shared/navigation/hrefs";
-import { Text, useTheme } from "@/shared/ui";
+import { EmptyState, LoadingState } from "@/shared/ui";
 
 import { logFeedOpenDetail } from "../analytics";
 import { pickActiveVideoId, type FeedMediaKind } from "../hooks/use-active-video-id";
@@ -72,9 +72,12 @@ function FeedItem({
 
 function FeedEmpty() {
   return (
-    <View style={styles.empty}>
-      <Text variant="body">No posts yet. Pull to refresh.</Text>
-    </View>
+    <EmptyState
+      icon="inbox"
+      title="No posts yet"
+      description="Pull to refresh to check for new posts."
+      testID="feed-empty"
+    />
   );
 }
 
@@ -91,7 +94,6 @@ export function FeedList({
   onRefresh,
   prefetchPost,
 }: FeedListProps) {
-  const theme = useTheme();
   const queryClient = useQueryClient();
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
 
@@ -148,7 +150,7 @@ export function FeedList({
       ListEmptyComponent={<FeedEmpty />}
       ListFooterComponent={
         isFetchingNextPage ? (
-          <ActivityIndicator color={theme.color.primary} style={styles.footer} />
+          <LoadingState label="Loading more posts" style={styles.footer} />
         ) : null
       }
       ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -157,12 +159,8 @@ export function FeedList({
 }
 
 const styles = StyleSheet.create({
-  empty: {
-    alignItems: "center",
-    padding: 24,
-  },
   footer: {
-    padding: 16,
+    paddingVertical: 16,
   },
   separator: {
     height: 8,
