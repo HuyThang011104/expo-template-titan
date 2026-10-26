@@ -443,12 +443,12 @@ Tham chiếu thêm: `schedule/device-run-checklist.md`.
 | P1.4 — Components A | [x] | `components/` + compat re-exports; typecheck/lint/test pass |
 | P1.5 — Components B + States | [x] | 7 components + tests; typecheck/lint/test pass |
 | P1.6 — Design Lab + guard | [ ] | Song song P1.2–P1.5 được, chốt cuối P1 |
-| P2.1 — Nav theme + header factory | [ ] | Sau P1.1 + P1.2 |
-| P2.2 — Shared header | [ ] | Sau P2.1 |
-| P2.3 — Screen edges | [ ] | Sau P2.2 |
-| P2.4 — Tab badge | [ ] | Sau P1.5 |
-| P2.5 — States adoption | [ ] | Sau P1.5 |
-| P2.6 — Templates | [ ] | Chỉ ListPage/DetailPage |
-| P2.7 — Settings/back QA | [ ] | Sau P2.2 + P2.3 |
+| P2.1 — Nav theme + header factory | [x] | `navigation-theme.ts` + `header-options.ts`; pure factory tests pass |
+| P2.2 — Shared header | [x] | Shared/tab headers + profile settings `headerRight`; device matrix QA pending |
+| P2.3 — Screen edges | [x] | `Screen header` prop + headerless auth/not-found/media; before/after images pending |
+| P2.4 — Tab badge | [x] | `useInbox().unreadCount`, cap `99+`; device QA pending |
+| P2.5 — States adoption | [x] | Loading/empty/error across lists + `OfflineBanner`; device QA pending |
+| P2.6 — Templates | [x] | `ListPage` + `DetailPage` with state tests |
+| P2.7 — Settings/back QA | [x] | Header factory + deep-link anchors; manual back-stack QA pending |
 | P3.1–P3.8 — Redesign | [ ] | Theo bảng §5 |
 | P4 — Polish | [ ] | Sau P3 |
