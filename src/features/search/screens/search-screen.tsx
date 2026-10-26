@@ -8,8 +8,9 @@
  * - Unknown handles/tags fall back to their screens, never a crash.
  */
 
+import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, View } from "react-native";
 
 import { useMe } from "@/entities/user";
 import { Button, Screen, Text } from "@/shared/ui";
@@ -57,16 +58,36 @@ export function SearchScreen() {
 
   const needsMoreChars = debounced.trim().length < SEARCH_MIN_LENGTH;
 
+  const nativeSearch = Platform.OS === "ios";
+
   return (
     <Screen testID="search-screen">
-      <SearchBar
-        value={query}
-        onChangeText={setQuery}
-        onClear={() => {
-          setQuery("");
-        }}
-        onSubmit={submitCurrent}
-      />
+      {nativeSearch ? (
+        <Stack.Screen
+          options={{
+            headerSearchBarOptions: {
+              placeholder: "Search posts and people",
+              autoCapitalize: "none",
+              onChangeText: (event) => {
+                setQuery(event.nativeEvent.text);
+              },
+              onSearchButtonPress: submitCurrent,
+              onCancelButtonPress: () => {
+                setQuery("");
+              },
+            },
+          }}
+        />
+      ) : (
+        <SearchBar
+          value={query}
+          onChangeText={setQuery}
+          onClear={() => {
+            setQuery("");
+          }}
+          onSubmit={submitCurrent}
+        />
+      )}
       {needsMoreChars ? (
         <ScrollView testID="search-empty-state">
           <SearchHistoryList

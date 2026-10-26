@@ -88,15 +88,6 @@ export function ProfileScreen() {
             }}
           />
           <Button
-            title="Settings"
-            variant="secondary"
-            size="sm"
-            testID="profile-settings-button"
-            onPress={() => {
-              router.push(hrefs.settings());
-            }}
-          />
-          <Button
             title="Sign out"
             variant="secondary"
             size="sm"
