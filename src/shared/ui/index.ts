@@ -95,4 +95,5 @@ export {
   type StackProps,
 } from "./primitives";
 export { Sheet, type SheetProps } from "./sheet";
+export { DetailPage, ListPage, type DetailPageProps, type ListPageProps } from "./templates";
 export { Text, type TextComponentProps, type TextVariant } from "./text";
