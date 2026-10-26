@@ -10,6 +10,14 @@ import { ErrorScreen } from "@/shared/ui";
 
 SplashScreen.preventAutoHideAsync();
 
+/**
+ * Deep links anchor on the tabs so a shared detail opened without history
+ * still has a back destination (Home) instead of an empty stack.
+ */
+export const unstable_settings = {
+  initialRouteName: "(app)",
+};
+
 // TODO: branded splash — SplashScreenController currently keeps the splash
 // until session hydrate to avoid a double-hide race.
 
