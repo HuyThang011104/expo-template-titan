@@ -1,5 +1,5 @@
 /**
- * Account settings screen (G2.4, `formSheet`).
+ * Account settings screen (G2.4, stack screen).
  *
  * Store-review required: password change, login sessions + remote logout,
  * language (vi/en), theme (sáng/tối), data export (profile + my posts),
@@ -537,7 +537,7 @@ export function AccountSettingsScreen() {
 
   if (me.isPending) {
     return (
-      <Screen style={styles.center} testID="account-settings-screen">
+      <Screen edges={["left", "right", "bottom"]} style={styles.center} testID="account-settings-screen">
         <Text variant="body">Loading account settings…</Text>
       </Screen>
     );
@@ -545,7 +545,7 @@ export function AccountSettingsScreen() {
 
   if (me.isError || !me.data) {
     return (
-      <Screen style={styles.center} testID="account-settings-screen">
+      <Screen edges={["left", "right", "bottom"]} style={styles.center} testID="account-settings-screen">
         <Text variant="title">Tài khoản</Text>
         <Text variant="body">Couldn&apos;t load your account.</Text>
         <Button
@@ -560,7 +560,7 @@ export function AccountSettingsScreen() {
   }
 
   return (
-    <Screen testID="account-settings-screen">
+    <Screen edges={["left", "right", "bottom"]} testID="account-settings-screen">
       <ScrollView>
         <PasswordSection />
         <SessionsSection />

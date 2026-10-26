@@ -12,11 +12,19 @@ export {
 } from "./theme/theme-preference";
 export { useTheme } from "./theme/use-theme";
 export {
+  breakpoint,
   colors,
+  elevation,
+  iconSize,
+  layout,
+  motion,
   radius,
+  space,
   spacing,
   tokens,
   typography,
+  type IconSizeName,
+  type SemanticColorName,
   type Theme,
   type ThemeColorName,
   type ThemeName,

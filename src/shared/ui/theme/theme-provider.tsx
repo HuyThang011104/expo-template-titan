@@ -1,6 +1,18 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 
-import { colors, radius, spacing, typography, type Theme, type ThemeName } from "./tokens";
+import {
+  breakpoint,
+  colors,
+  elevation,
+  iconSize,
+  layout,
+  motion,
+  radius,
+  spacing,
+  typography,
+  type Theme,
+  type ThemeName,
+} from "./tokens";
 import { useColorScheme } from "./use-color-scheme";
 import { useThemePreferenceOptional } from "./theme-preference";
 
@@ -32,6 +44,11 @@ export function ThemeProvider({ children, initialName }: ThemeProviderProps) {
       space: spacing,
       radius,
       type: typography,
+      icon: iconSize,
+      elevation,
+      motion,
+      breakpoint,
+      layout,
     };
   }, [initialName, preference, scheme]);
 

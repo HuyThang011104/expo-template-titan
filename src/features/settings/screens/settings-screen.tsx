@@ -1,5 +1,5 @@
 /**
- * Settings hub (G2.3 menu + G2.4 account).
+ * Settings hub (G2.3 menu + G2.4 account). Stack screen, not a modal.
  *
  * Thin menu: notifications + privacy + account (store-review required).
  * Route is viewer-scoped (own settings only); no user id param, no crash.
@@ -54,7 +54,7 @@ export function SettingsScreen() {
   }, []);
 
   return (
-    <Screen testID="settings-screen">
+    <Screen edges={["left", "right", "bottom"]} testID="settings-screen">
       <View style={styles.root}>
         <SettingsRow
           title="Thông báo"

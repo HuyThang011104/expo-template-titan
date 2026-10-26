@@ -1,5 +1,5 @@
 /**
- * Privacy settings screen (G2.3, `formSheet`).
+ * Privacy settings screen (G2.3, stack screen).
  *
  * - Reads the viewer's `privacySettings` from the canonical `useMe`.
  * - Each option saves immediately (PATCH /users/me/privacy, partial); the
@@ -41,7 +41,7 @@ export function PrivacySettingsScreen() {
 
   if (me.isPending) {
     return (
-      <Screen style={styles.center} testID="privacy-settings-screen">
+      <Screen edges={["left", "right", "bottom"]} style={styles.center} testID="privacy-settings-screen">
         <Text variant="body">Loading privacy settings…</Text>
       </Screen>
     );
@@ -49,7 +49,7 @@ export function PrivacySettingsScreen() {
 
   if (me.isError || !me.data) {
     return (
-      <Screen style={styles.center} testID="privacy-settings-screen">
+      <Screen edges={["left", "right", "bottom"]} style={styles.center} testID="privacy-settings-screen">
         <Text variant="title">Quyền riêng tư</Text>
         <Text variant="body">Couldn&apos;t load your privacy settings.</Text>
         <Button
@@ -79,7 +79,7 @@ export function PrivacySettingsScreen() {
   };
 
   return (
-    <Screen testID="privacy-settings-screen">
+    <Screen edges={["left", "right", "bottom"]} testID="privacy-settings-screen">
       <View style={styles.root}>
         <AudienceOptionGroup<MessageAudience>
           title="Ai được nhắn tin"
