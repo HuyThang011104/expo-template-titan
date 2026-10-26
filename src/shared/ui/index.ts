@@ -33,6 +33,7 @@ export {
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from "./button";
 export { ErrorScreen, type ErrorScreenProps } from "./error-screen";
 export { ExternalLink } from "./external-link";
+export { Icon, iconMap, iconNames, type IconName, type IconProps } from "./icons";
 export { Input, type InputProps } from "./input";
 export { AppList, type AppListProps } from "./list";
 export { Screen, type ScreenProps } from "./screen";

@@ -121,9 +121,9 @@ src/shared/ui/icons/__tests__/icon-map.test.tsx
 - Không thêm `@expo/vector-icons`.
 
 **Xong khi**
-- [ ] Test: mọi `IconName` có đủ 3 key, không rỗng.
-- [ ] Render test mock `expo-symbols` (jest-expo) pass.
-- [ ] Icon đã thêm vào Design Lab (P1.6) — nếu lab chưa có, thêm tạm route ở P1.6 cùng PR.
+- [x] Test: mọi `IconName` có đủ 3 key, không rỗng.
+- [x] Render test mock `expo-symbols` (jest-expo) pass.
+- [x] Icon đã thêm vào Design Lab (P1.6) — nếu lab chưa có, thêm tạm route ở P1.6 cùng PR.
 
 ---
 
@@ -433,7 +433,7 @@ Tham chiếu thêm: `schedule/device-run-checklist.md`.
 |---|---|---|
 | P0 — Chốt spec | [x] | `docs/design-system.md` v1.1 |
 | P1.1 — Tokens v2 | [x] | `primitive.ts` + `semantic.ts` + alias; typecheck/lint/test pass |
-| P1.2 — Icon | [ ] next | Sau P1.1 |
+| P1.2 — Icon | [x] | `icons/icon-map.ts` + `Icon`; 26 semantic names, typecheck/lint/test pass |
 | P1.3 — Primitives + Text | [ ] | Sau P1.1 |
 | P1.4 — Components A | [ ] | Sau P1.1 / P1.3 |
 | P1.5 — Components B + States | [ ] | Sau P1.3 |
