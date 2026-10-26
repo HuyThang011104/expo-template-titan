@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { DarkTheme, DefaultTheme, ThemeProvider as RouterThemeProvider } from "expo-router";
+import { ThemeProvider as RouterThemeProvider } from "expo-router";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -15,7 +15,8 @@ import { ObservabilityBootstrap, initObservability } from "@/shared/observabilit
 import { queryClient, setupOnlineManager, startQueryPersistence } from "@/shared/query";
 import { RealtimeProvider } from "@/shared/realtime";
 import { startOutboxSync } from "@/shared/storage/db/outbox-worker";
-import { ThemePreferenceProvider, ThemeProvider, useThemeName } from "@/shared/ui";
+import { ThemePreferenceProvider, ThemeProvider, useTheme } from "@/shared/ui";
+import { navigationTheme } from "@/shared/ui/navigation/navigation-theme";
 
 type AppProvidersProps = {
   children: ReactNode;
@@ -56,11 +57,9 @@ function KeyboardScope({ children }: { children: ReactNode }) {
  * system scheme, so nav chrome matches the app).
  */
 function ThemedRouter({ children }: { children: ReactNode }) {
-  const name = useThemeName();
+  const theme = useTheme();
   return (
-    <RouterThemeProvider value={name === "dark" ? DarkTheme : DefaultTheme}>
-      {children}
-    </RouterThemeProvider>
+    <RouterThemeProvider value={navigationTheme(theme)}>{children}</RouterThemeProvider>
   );
 }
 
