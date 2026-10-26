@@ -10,7 +10,7 @@ export default function NotFoundScreen() {
   return (
     <>
       <Stack.Screen options={{ title: "Not found" }} />
-      <Screen style={styles.container}>
+      <Screen header={false} style={styles.container}>
         <Text variant="title">Not found</Text>
         <Text variant="body">This screen does not exist.</Text>
         <Link href="/" asChild>

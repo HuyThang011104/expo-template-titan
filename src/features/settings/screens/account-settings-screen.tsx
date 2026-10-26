@@ -537,7 +537,7 @@ export function AccountSettingsScreen() {
 
   if (me.isPending) {
     return (
-      <Screen edges={["left", "right", "bottom"]} style={styles.center} testID="account-settings-screen">
+      <Screen style={styles.center} testID="account-settings-screen">
         <Text variant="body">Loading account settings…</Text>
       </Screen>
     );
@@ -545,7 +545,7 @@ export function AccountSettingsScreen() {
 
   if (me.isError || !me.data) {
     return (
-      <Screen edges={["left", "right", "bottom"]} style={styles.center} testID="account-settings-screen">
+      <Screen style={styles.center} testID="account-settings-screen">
         <Text variant="title">Tài khoản</Text>
         <Text variant="body">Couldn&apos;t load your account.</Text>
         <Button
@@ -560,7 +560,7 @@ export function AccountSettingsScreen() {
   }
 
   return (
-    <Screen edges={["left", "right", "bottom"]} testID="account-settings-screen">
+    <Screen testID="account-settings-screen">
       <ScrollView>
         <PasswordSection />
         <SessionsSection />

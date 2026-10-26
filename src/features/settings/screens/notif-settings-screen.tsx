@@ -62,7 +62,7 @@ export function NotifSettingsScreen() {
 
   if (prefs.isPending) {
     return (
-      <Screen edges={["left", "right", "bottom"]} style={styles.center} testID="notif-settings-screen">
+      <Screen style={styles.center} testID="notif-settings-screen">
         <Text variant="body">Loading notification settings…</Text>
       </Screen>
     );
@@ -70,7 +70,7 @@ export function NotifSettingsScreen() {
 
   if (prefs.isError || !prefs.data) {
     return (
-      <Screen edges={["left", "right", "bottom"]} style={styles.center} testID="notif-settings-screen">
+      <Screen style={styles.center} testID="notif-settings-screen">
         <Text variant="title">Thông báo</Text>
         <Text variant="body">Couldn&apos;t load your notification settings.</Text>
         <Button
@@ -103,7 +103,7 @@ export function NotifSettingsScreen() {
   };
 
   return (
-    <Screen edges={["left", "right", "bottom"]} testID="notif-settings-screen">
+    <Screen testID="notif-settings-screen">
       <View style={styles.root}>
         {ROWS.map((row) => (
           <PrefToggleRow

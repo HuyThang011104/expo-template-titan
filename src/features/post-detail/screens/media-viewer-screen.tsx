@@ -8,7 +8,7 @@ import { Screen, Text } from "@/shared/ui";
  */
 export function MediaViewerScreen() {
   return (
-    <Screen style={styles.root}>
+    <Screen header={false} style={styles.root}>
       <Text variant="title">Media</Text>
       <Text variant="body">Coming soon.</Text>
     </Screen>

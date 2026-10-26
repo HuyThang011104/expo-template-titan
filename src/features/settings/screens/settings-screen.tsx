@@ -54,7 +54,7 @@ export function SettingsScreen() {
   }, []);
 
   return (
-    <Screen edges={["left", "right", "bottom"]} testID="settings-screen">
+    <Screen testID="settings-screen">
       <View style={styles.root}>
         <SettingsRow
           title="Thông báo"

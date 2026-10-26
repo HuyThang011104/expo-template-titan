@@ -14,7 +14,10 @@ export function SignInScreen() {
   const theme = useTheme();
 
   return (
-    <Screen style={[styles.screen, { paddingHorizontal: theme.space.lg, gap: theme.space.md }]}>
+    <Screen
+      header={false}
+      style={[styles.screen, { paddingHorizontal: theme.space.lg, gap: theme.space.md }]}
+    >
       <Text variant="title">{t("auth.signIn")}</Text>
       <Button
         title={t("auth.signIn")}
