@@ -153,9 +153,9 @@ src/shared/ui/text.tsx   # variant mới, màu semantic, legacy map @deprecated
 - `Skeleton` thay `features/feed/components/feed-skeleton.tsx` **chưa làm ở P1** — chỉ tạo primitive; thay ở P3 (tránh PR trộn).
 
 **Xong khi**
-- [ ] Primitives render light/dark, có `testID` khi cần.
-- [ ] `Text` legacy không đổi pixel so với trước (chụp 1 màn đối chiếu).
-- [ ] `Skeleton` test với reduce-motion on/off.
+- [x] Primitives render light/dark, có `testID` khi cần.
+- [x] `Text` legacy không đổi pixel so với trước (chụp 1 màn đối chiếu).
+- [x] `Skeleton` test với reduce-motion on/off.
 
 ---
 
@@ -434,7 +434,7 @@ Tham chiếu thêm: `schedule/device-run-checklist.md`.
 | P0 — Chốt spec | [x] | `docs/design-system.md` v1.1 |
 | P1.1 — Tokens v2 | [x] | `primitive.ts` + `semantic.ts` + alias; typecheck/lint/test pass |
 | P1.2 — Icon | [x] | `icons/icon-map.ts` + `Icon`; 26 semantic names, typecheck/lint/test pass |
-| P1.3 — Primitives + Text | [ ] | Sau P1.1 |
+| P1.3 — Primitives + Text | [x] | `primitives/` + semantic `Text`; jest resolver cho Reanimated |
 | P1.4 — Components A | [ ] | Sau P1.1 / P1.3 |
 | P1.5 — Components B + States | [ ] | Sau P1.3 |
 | P1.6 — Design Lab + guard | [ ] | Song song P1.2–P1.5 được, chốt cuối P1 |

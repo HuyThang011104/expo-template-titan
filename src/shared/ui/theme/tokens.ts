@@ -35,6 +35,8 @@ export {
   typography,
 };
 export type { IconSizeName, ThemeName, TypographyVariant };
+export type SpaceName = keyof typeof space;
+export type RadiusName = keyof typeof radius;
 
 /**
  * Legacy spacing aliases. Numbers stay available as `space[4]`; the named

@@ -24,7 +24,9 @@ export {
   tokens,
   typography,
   type IconSizeName,
+  type RadiusName,
   type SemanticColorName,
+  type SpaceName,
   type Theme,
   type ThemeColorName,
   type ThemeName,
@@ -37,5 +39,23 @@ export { Icon, iconMap, iconNames, type IconName, type IconProps } from "./icons
 export { Input, type InputProps } from "./input";
 export { AppList, type AppListProps } from "./list";
 export { Screen, type ScreenProps } from "./screen";
+export {
+  Box,
+  Column,
+  Divider,
+  Pressable,
+  Row,
+  Skeleton,
+  Spinner,
+  Stack,
+  type BoxProps,
+  type DividerProps,
+  type PressableProps,
+  type RowProps,
+  type SkeletonProps,
+  type SpinnerProps,
+  type SpinnerSize,
+  type StackProps,
+} from "./primitives";
 export { Sheet, type SheetProps } from "./sheet";
 export { Text, type TextComponentProps, type TextVariant } from "./text";
