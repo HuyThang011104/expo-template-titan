@@ -32,11 +32,29 @@ export {
   type ThemeName,
   type TypographyVariant,
 } from "./theme/tokens";
-export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from "./button";
+export {
+  Avatar,
+  Button,
+  Field,
+  IconButton,
+  Input,
+  TextArea,
+  type AvatarProps,
+  type AvatarSize,
+  type ButtonIconPosition,
+  type ButtonProps,
+  type ButtonSize,
+  type ButtonVariant,
+  type FieldProps,
+  type IconButtonProps,
+  type IconButtonSize,
+  type IconButtonVariant,
+  type InputProps,
+  type TextAreaProps,
+} from "./components";
 export { ErrorScreen, type ErrorScreenProps } from "./error-screen";
 export { ExternalLink } from "./external-link";
 export { Icon, iconMap, iconNames, type IconName, type IconProps } from "./icons";
-export { Input, type InputProps } from "./input";
 export { AppList, type AppListProps } from "./list";
 export { Screen, type ScreenProps } from "./screen";
 export {

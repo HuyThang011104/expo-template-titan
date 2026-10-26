@@ -12,39 +12,44 @@ export type IconProps = {
   color?: ThemeColorName;
   /** Required when the icon is the only content of a control. */
   accessibilityLabel?: string;
+  /** Hide the icon from assistive tech when adjacent text already labels it. */
+  decorative?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
 /**
  * Cross-platform icon. Defaults to `lg` (24) and `textSecondary`; icon-only
- * controls must pass `accessibilityLabel`.
+ * controls must pass `accessibilityLabel`, while icons next to text should
+ * pass `decorative`.
  */
 export function Icon({
   name,
   size = "lg",
   color = "textSecondary",
   accessibilityLabel,
+  decorative = false,
   style,
 }: IconProps) {
   const theme = useTheme();
 
   useEffect(() => {
-    if (__DEV__ && accessibilityLabel === undefined) {
+    if (__DEV__ && accessibilityLabel === undefined && !decorative) {
       console.warn(
-        `[Icon] "${name}" is missing accessibilityLabel. Add one when the icon is the only content of a control.`,
+        `[Icon] "${name}" is missing accessibilityLabel. Add one when the icon is the only content of a control, or pass decorative.`,
       );
     }
-  }, [accessibilityLabel, name]);
+  }, [accessibilityLabel, decorative, name]);
 
   const symbol = iconMap[name];
+  const accessible = accessibilityLabel !== undefined && !decorative;
 
   return (
     <SymbolView
       name={{ ios: symbol.ios, android: symbol.android, web: symbol.web }}
       size={theme.icon[size]}
       tintColor={theme.color[color]}
-      accessibilityLabel={accessibilityLabel}
-      accessible={accessibilityLabel !== undefined}
+      accessibilityLabel={decorative ? undefined : accessibilityLabel}
+      accessible={accessible}
       style={style}
     />
   );

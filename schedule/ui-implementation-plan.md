@@ -186,9 +186,9 @@ src/entities/user/ui/avatar.tsx   # -> re-export từ shared, giữ import path 
 - `Avatar`: size mở rộng `24|32|40|48|64|96`; fallback initial trên `surfaceMuted`; không fetch. `entities/user` re-export để không vỡ 5 call site.
 
 **Xong khi**
-- [ ] Composer, auth, chat, settings vẫn dùng được, không đổi `testID`.
-- [ ] `pnpm test` pass (composer/chat tests đang render Input/Button).
-- [ ] Lab có đủ variant × size × state (thêm ở P1.6 nếu chưa có lab).
+- [x] Composer, auth, chat, settings vẫn dùng được, không đổi `testID`.
+- [x] `pnpm test` pass (composer/chat tests đang render Input/Button).
+- [x] Lab có đủ variant × size × state (thêm ở P1.6 nếu chưa có lab).
 
 ---
 
@@ -435,7 +435,7 @@ Tham chiếu thêm: `schedule/device-run-checklist.md`.
 | P1.1 — Tokens v2 | [x] | `primitive.ts` + `semantic.ts` + alias; typecheck/lint/test pass |
 | P1.2 — Icon | [x] | `icons/icon-map.ts` + `Icon`; 26 semantic names, typecheck/lint/test pass |
 | P1.3 — Primitives + Text | [x] | `primitives/` + semantic `Text`; jest resolver cho Reanimated |
-| P1.4 — Components A | [ ] | Sau P1.1 / P1.3 |
+| P1.4 — Components A | [x] | `components/` + compat re-exports; typecheck/lint/test pass |
 | P1.5 — Components B + States | [ ] | Sau P1.3 |
 | P1.6 — Design Lab + guard | [ ] | Song song P1.2–P1.5 được, chốt cuối P1 |
 | P2.1 — Nav theme + header factory | [ ] | Sau P1.1 + P1.2 |
