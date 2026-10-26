@@ -214,6 +214,11 @@ src/shared/ui/components/loading-state.tsx
 - `EmptyState/ErrorState/LoadingState`: đúng spec §6.3; có `testID`, `accessibilityLabel`; Không dùng chữ "Loading..." nếu có thể skeleton.
 - Chưa thay call site ở P1 — thay ở P2.5/P3 để PR nhỏ.
 
+**Xong khi**
+- [x] 7 components render light/dark; `testID` và accessibility label có mặt.
+- [x] `pnpm typecheck`, `pnpm lint`, `pnpm exec eslint .`, `pnpm test -- --ci` pass.
+- [x] Lab coverage để P1.6.
+
 ---
 
 ### P1.6 Design Lab + guardrails
@@ -436,7 +441,7 @@ Tham chiếu thêm: `schedule/device-run-checklist.md`.
 | P1.2 — Icon | [x] | `icons/icon-map.ts` + `Icon`; 26 semantic names, typecheck/lint/test pass |
 | P1.3 — Primitives + Text | [x] | `primitives/` + semantic `Text`; jest resolver cho Reanimated |
 | P1.4 — Components A | [x] | `components/` + compat re-exports; typecheck/lint/test pass |
-| P1.5 — Components B + States | [ ] | Sau P1.3 |
+| P1.5 — Components B + States | [x] | 7 components + tests; typecheck/lint/test pass |
 | P1.6 — Design Lab + guard | [ ] | Song song P1.2–P1.5 được, chốt cuối P1 |
 | P2.1 — Nav theme + header factory | [ ] | Sau P1.1 + P1.2 |
 | P2.2 — Shared header | [ ] | Sau P2.1 |
