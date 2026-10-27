@@ -12,8 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { formatRelative } from "@/shared/lib/date";
 import { queryKeys } from "@/shared/query";
-import { Text } from "@/shared/ui/text";
-import { useTheme } from "@/shared/ui/theme/use-theme";
+import { Icon, Skeleton, Text } from "@/shared/ui";
 
 import { useComment, useLikeComment } from "../queries";
 
@@ -57,7 +56,6 @@ function useCommentAuthorSnapshot(authorId: string): { displayName: string; hand
 }
 
 export function CommentRow({ commentId, depth = 0, onReplyPress, testID }: CommentRowProps) {
-  const theme = useTheme();
   const query = useComment(commentId);
   const like = useLikeComment(commentId);
   const snapshot = useCommentAuthorSnapshot(query.data?.authorId ?? "");
@@ -65,19 +63,14 @@ export function CommentRow({ commentId, depth = 0, onReplyPress, testID }: Comme
   if (query.isPending) {
     return (
       <View style={[styles.row, depth === 1 && styles.reply]} testID={testID}>
-        <View
-          style={[
-            styles.skeleton,
-            { backgroundColor: theme.color.backgroundElement, borderRadius: theme.radius.sm },
-          ]}
-        />
+        <Skeleton width={160} height={14} />
       </View>
     );
   }
 
   if (query.isError || !query.data) {
     return (
-      <Text variant="small" color="textSecondary" testID={testID}>
+      <Text variant="label" color="textSecondary" testID={testID}>
         Comment unavailable
       </Text>
     );
@@ -87,7 +80,7 @@ export function CommentRow({ commentId, depth = 0, onReplyPress, testID }: Comme
   return (
     <View style={[styles.row, depth === 1 && styles.reply]} testID={testID ?? `comment-row-${commentId}`}>
       <View style={styles.body}>
-        <Text variant="small" style={styles.author}>
+        <Text variant="labelStrong">
           {snapshot.displayName}{" "}
           <Text variant="caption" color="textSecondary">
             @{snapshot.handle} · {formatRelative(comment.createdAt)}
@@ -99,6 +92,7 @@ export function CommentRow({ commentId, depth = 0, onReplyPress, testID }: Comme
             testID={`comment-like-${commentId}`}
             accessibilityRole="button"
             accessibilityLabel={comment.likedByMe ? "Unlike comment" : "Like comment"}
+            accessibilityState={{ selected: comment.likedByMe, busy: like.isPending }}
             hitSlop={8}
             disabled={like.isPending}
             onPress={() => {
@@ -106,12 +100,20 @@ export function CommentRow({ commentId, depth = 0, onReplyPress, testID }: Comme
             }}
             style={styles.actionTouch}
           >
-            <Text
-              variant="small"
-              style={{ color: comment.likedByMe ? theme.color.primary : theme.color.textSecondary }}
-            >
-              ♥ {comment.likeCount}
-            </Text>
+            <View style={styles.actionRow}>
+              <Icon
+                name={comment.likedByMe ? "heartFill" : "heart"}
+                size="sm"
+                color={comment.likedByMe ? "danger" : "textSecondary"}
+              />
+              <Text
+                variant="label"
+                color={comment.likedByMe ? "danger" : "textSecondary"}
+                style={styles.count}
+              >
+                {comment.likeCount}
+              </Text>
+            </View>
           </Pressable>
           {onReplyPress ? (
             <Pressable
@@ -124,7 +126,7 @@ export function CommentRow({ commentId, depth = 0, onReplyPress, testID }: Comme
               }}
               style={styles.actionTouch}
             >
-              <Text variant="small" color="textSecondary">
+              <Text variant="label" color="textSecondary">
                 Reply
               </Text>
             </Pressable>
@@ -146,9 +148,6 @@ const styles = StyleSheet.create({
   body: {
     gap: 4,
   },
-  author: {
-    fontWeight: "700",
-  },
   actions: {
     flexDirection: "row",
     gap: 16,
@@ -157,8 +156,12 @@ const styles = StyleSheet.create({
   actionTouch: {
     paddingVertical: 4,
   },
-  skeleton: {
-    width: 160,
-    height: 14,
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  count: {
+    fontVariant: ["tabular-nums"],
   },
 });

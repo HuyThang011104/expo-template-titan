@@ -1,13 +1,18 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { StyleSheet, View } from "react-native";
 
 import { PostCard, usePost } from "@/entities/post";
 import { SaveButton } from "@/entities/saved";
 import { getViewBlockReason, useMe, useRelationship } from "@/entities/user";
 import { hrefs } from "@/shared/navigation/hrefs";
-import { EmptyState, ErrorState, LoadingState, Screen } from "@/shared/ui";
+import {
+  DetailPage,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  Screen,
+} from "@/shared/ui";
 
 import { CommentComposer, type ReplyTarget } from "../components/comment-composer";
 import { CommentsList } from "../components/comments-list";
@@ -57,7 +62,7 @@ function PostDetailBody({ postId }: { postId: string }) {
       <Screen testID="post-detail-screen">
         <EmptyState
           icon="alert"
-          title="Bài viết không còn"
+          title="This post is gone"
           description="It may have been deleted."
           testID="post-gone-title"
         />
@@ -96,46 +101,42 @@ function PostDetailBody({ postId }: { postId: string }) {
   }
 
   return (
-    <Screen testID="post-detail-screen">
-      <View style={styles.listFlex}>
-        <CommentsList
+    <DetailPage
+      testID="post-detail-screen"
+      footer={
+        <CommentComposer
           postId={postId}
-          header={
-            <PostCard
-              postId={postId}
-              onSafetyPress={() => {
-                router.push(hrefs.report("post", postId));
-              }}
-              onOwnerEditPress={() => {
-                router.push(hrefs.editPost(postId));
-              }}
-              onMentionPress={(handle) => {
-                router.push(hrefs.user(handle));
-              }}
-              onHashtagPress={(tag) => {
-                router.push(hrefs.hashtag(tag));
-              }}
-              saveAffordance={<SaveButton postId={postId} />}
-            />
-          }
-          onReplyPress={(target) => {
-            setReplyTo(target);
+          replyTo={replyTo}
+          onClearReply={() => {
+            setReplyTo(null);
           }}
         />
-      </View>
-      <CommentComposer
+      }
+    >
+      <CommentsList
         postId={postId}
-        replyTo={replyTo}
-        onClearReply={() => {
-          setReplyTo(null);
+        header={
+          <PostCard
+            postId={postId}
+            onSafetyPress={() => {
+              router.push(hrefs.report("post", postId));
+            }}
+            onOwnerEditPress={() => {
+              router.push(hrefs.editPost(postId));
+            }}
+            onMentionPress={(handle) => {
+              router.push(hrefs.user(handle));
+            }}
+            onHashtagPress={(tag) => {
+              router.push(hrefs.hashtag(tag));
+            }}
+            saveAffordance={<SaveButton postId={postId} />}
+          />
+        }
+        onReplyPress={(target) => {
+          setReplyTo(target);
         }}
       />
-    </Screen>
+    </DetailPage>
   );
 }
-
-const styles = StyleSheet.create({
-  listFlex: {
-    flex: 1,
-  },
-});

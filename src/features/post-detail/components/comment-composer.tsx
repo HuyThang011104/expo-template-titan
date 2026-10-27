@@ -18,7 +18,7 @@ import { parseRichText } from "@/entities/post";
 import { canTagUser, getUserByHandleData, useMe } from "@/entities/user";
 import { useSession } from "@/shared/auth";
 import { findBlockedMentionHandles } from "@/shared/lib/mention-gate";
-import { Button, Input, Text } from "@/shared/ui";
+import { Button, Icon, Input, Text, useTheme } from "@/shared/ui";
 
 export type ReplyTarget = {
   id: string;
@@ -36,6 +36,7 @@ export function CommentComposer({ postId, replyTo, onClearReply, fetchImpl }: Co
   const { session } = useSession();
   const qc = useQueryClient();
   const me = useMe();
+  const theme = useTheme();
   const [body, setBody] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
   const create = useCreateComment(postId, { fetchImpl });
@@ -79,10 +80,13 @@ export function CommentComposer({ postId, replyTo, onClearReply, fetchImpl }: Co
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <View style={styles.root} testID="comment-composer">
+      <View
+        style={[styles.root, { borderTopColor: theme.color.border }]}
+        testID="comment-composer"
+      >
         {replyTo ? (
           <View style={styles.replyBanner}>
-            <Text variant="small" color="textSecondary" testID="comment-reply-banner">
+            <Text variant="label" color="textSecondary" testID="comment-reply-banner">
               Replying to @{replyTo.handle}
             </Text>
             <Pressable
@@ -92,9 +96,7 @@ export function CommentComposer({ postId, replyTo, onClearReply, fetchImpl }: Co
               hitSlop={8}
               onPress={onClearReply}
             >
-              <Text variant="small" color="textSecondary">
-                ✕
-              </Text>
+              <Icon name="close" size="sm" color="textSecondary" />
             </Pressable>
           </View>
         ) : null}
@@ -124,7 +126,7 @@ export function CommentComposer({ postId, replyTo, onClearReply, fetchImpl }: Co
           />
         </View>
         {error ? (
-          <Text variant="caption" color="textSecondary" testID="comment-error">
+          <Text variant="caption" color="danger" testID="comment-error">
             {error}
           </Text>
         ) : null}
@@ -138,6 +140,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     gap: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   replyBanner: {
     flexDirection: "row",
