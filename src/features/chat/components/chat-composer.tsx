@@ -7,7 +7,7 @@
 import { Image } from "expo-image";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { Button, Input, Text } from "@/shared/ui";
+import { Button, Icon, Input, Text, useTheme } from "@/shared/ui";
 
 export type ChatComposerProps = {
   value: string;
@@ -38,18 +38,23 @@ export function ChatComposer({
   onPickImage,
   onRemoveImage,
 }: ChatComposerProps) {
+  const theme = useTheme();
   const busy = isSending || isUploadingImage;
   const canSend = (value.trim().length > 0 || imageUri) && !busy && !sendDisabled;
   return (
     <View style={styles.column}>
       {imageError ? (
-        <Text variant="caption" color="textSecondary" testID="chat-image-error" style={styles.error}>
+        <Text variant="caption" color="danger" testID="chat-image-error" style={styles.error}>
           {imageError}
         </Text>
       ) : null}
       {imageUri ? (
         <View style={styles.previewRow} testID="chat-image-preview">
-          <Image source={imageUri} style={styles.preview} contentFit="cover" />
+          <Image
+            source={imageUri}
+            style={[styles.preview, { borderRadius: theme.radius.md }]}
+            contentFit="cover"
+          />
           <Pressable
             testID="chat-image-remove"
             accessibilityRole="button"
@@ -57,14 +62,14 @@ export function ChatComposer({
             onPress={onRemoveImage}
             style={styles.remove}
           >
-            <Text variant="small">✕</Text>
+            <Icon name="close" size="sm" color="textSecondary" />
           </Pressable>
         </View>
       ) : null}
       <View style={styles.row}>
         {onPickImage ? (
           <Button
-            title={isPickingImage ? "..." : "＋"}
+            title={isPickingImage ? "..." : "Attach"}
             testID="chat-attach-button"
             variant="secondary"
             disabled={busy || isPickingImage}
@@ -120,7 +125,6 @@ const styles = StyleSheet.create({
   preview: {
     width: 96,
     height: 96,
-    borderRadius: 12,
   },
   remove: {
     marginLeft: 8,

@@ -1,6 +1,6 @@
 /**
  * Typing indicator (G3.2). Reads the canonical presence for `userId` and
- * renders `Đang nhập...` while the TTL is fresh, else null.
+ * renders `Typing…` while the TTL is fresh, else null.
  */
 
 import { StyleSheet } from "react-native";
@@ -23,8 +23,7 @@ export function TypingIndicator({ conversationId, userId }: TypingIndicatorProps
       testID={`typing-indicator-${conversationId}`}
       style={styles.typing}
     >
-      Đang nhập...
-    </Text>
+      Typing…    </Text>
   );
 }
 

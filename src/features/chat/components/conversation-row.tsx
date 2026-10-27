@@ -14,7 +14,7 @@ import { useConversation, useTypingIn } from "@/entities/conversation";
 import { Avatar, useUser } from "@/entities/user";
 import { hrefs } from "@/shared/navigation/hrefs";
 import { formatRelative } from "@/shared/lib/date";
-import { Text, useTheme } from "@/shared/ui";
+import { Badge, Skeleton, Text } from "@/shared/ui";
 
 import { logChatOpenThread } from "../analytics";
 import { usePresenceChannel } from "../realtime/use-presence-channel";
@@ -26,7 +26,6 @@ export type ConversationRowProps = {
 };
 
 export function ConversationRow({ conversationId, prefetchThread }: ConversationRowProps) {
-  const theme = useTheme();
   const query = useConversation(conversationId);
 
   const participantId = query.data?.participantIds[0] ?? "";
@@ -36,14 +35,18 @@ export function ConversationRow({ conversationId, prefetchThread }: Conversation
 
   if (query.isPending) {
     return (
-      <Text variant="small" color="textSecondary" testID={`conversation-row-${conversationId}`}>
-        Loading...
-      </Text>
+      <View style={styles.row} testID={`conversation-row-${conversationId}`}>
+        <Skeleton width={48} height={48} radius="full" />
+        <View style={styles.texts}>
+          <Skeleton width={120} height={14} />
+          <Skeleton width={160} height={12} />
+        </View>
+      </View>
     );
   }
   if (query.isError || !query.data) {
     return (
-      <Text variant="small" color="textSecondary" testID={`conversation-row-${conversationId}`}>
+      <Text variant="label" color="textSecondary" testID={`conversation-row-${conversationId}`}>
         Conversation unavailable
       </Text>
     );
@@ -77,9 +80,7 @@ export function ConversationRow({ conversationId, prefetchThread }: Conversation
           ) : null}
         </View>
         <View style={styles.texts}>
-          <Text variant="small" style={styles.title}>
-            {displayName}
-          </Text>
+          <Text variant="labelStrong">{displayName}</Text>
           {peerTyping ? (
             <Text
               variant="caption"
@@ -87,7 +88,7 @@ export function ConversationRow({ conversationId, prefetchThread }: Conversation
               numberOfLines={1}
               testID={`conversation-typing-${conversationId}`}
             >
-              Đang nhập...
+              Typing…
             </Text>
           ) : (
             <Text variant="caption" color="textSecondary" numberOfLines={1}>
@@ -100,14 +101,13 @@ export function ConversationRow({ conversationId, prefetchThread }: Conversation
             {formatRelative(conversation.lastMessageAt)}
           </Text>
           {conversation.unreadCount > 0 ? (
-            <View
+            <Badge
+              variant="count"
+              tone="primary"
+              count={conversation.unreadCount}
               testID={`conversation-unread-${conversationId}`}
-              style={[styles.badge, { backgroundColor: theme.color.primary }]}
-            >
-              <Text variant="caption" color="onPrimary" style={styles.badgeText}>
-                {conversation.unreadCount > 99 ? "99+" : String(conversation.unreadCount)}
-              </Text>
-            </View>
+              accessibilityLabel={`${conversation.unreadCount} unread messages`}
+            />
           ) : null}
         </View>
       </Pressable>
@@ -126,24 +126,11 @@ const styles = StyleSheet.create({
   texts: {
     flex: 1,
     justifyContent: "center",
-  },
-  title: {
-    fontWeight: "700",
+    gap: 4,
   },
   meta: {
     alignItems: "flex-end",
     gap: 4,
-  },
-  badge: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 6,
-  },
-  badgeText: {
-    fontWeight: "700",
   },
   avatarWrap: {
     position: "relative",

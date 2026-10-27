@@ -108,7 +108,7 @@ export function ChatDetailScreen() {
       .catch((error: unknown) => {
         // Loud failure (blocked / upload / server) — text stays, badge explains.
         setSendError(
-          error instanceof Error ? error.message : "Không gửi được tin nhắn. Thử lại.",
+          error instanceof Error ? error.message : "Couldn't send the message. Try again.",
         );
       });
   };
@@ -151,9 +151,7 @@ export function ChatDetailScreen() {
     <Screen testID="chat-detail-screen">
       <KeyboardAvoidingView style={styles.flex} behavior="padding" keyboardVerticalOffset={80}>
         <View style={styles.header} testID="chat-peer-header">
-          <Text variant="small" style={styles.peerName}>
-            {peerName}
-          </Text>
+          <Text variant="labelStrong">{peerName}</Text>
           {participantId ? (
             <Text variant="caption" color="textSecondary" testID="chat-peer-status">
               {statusText}
@@ -186,7 +184,7 @@ export function ChatDetailScreen() {
             testID="chat-blocked-notice"
             style={styles.blockedNotice}
           >
-            Bạn không thể nhắn tin cho người này.
+            You can&apos;t message this person.
           </Text>
         ) : null}
         {queuedCount > 0 ? (
@@ -202,7 +200,7 @@ export function ChatDetailScreen() {
         {sendError ? (
           <Text
             variant="caption"
-            color="textSecondary"
+            color="danger"
             testID="chat-send-error"
             style={styles.blockedNotice}
           >
@@ -237,9 +235,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     gap: 2,
-  },
-  peerName: {
-    fontWeight: "700",
   },
   center: {
     alignItems: "center",

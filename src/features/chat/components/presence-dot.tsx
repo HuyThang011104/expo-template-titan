@@ -27,8 +27,8 @@ export function PresenceDot({ userId, size = 12 }: PresenceDotProps) {
           width: size,
           height: size,
           borderRadius: size / 2,
-          borderColor: theme.color.background,
-          backgroundColor: online ? "#22c55e" : theme.color.textSecondary,
+          borderColor: theme.color.surface,
+          backgroundColor: online ? theme.color.success : theme.color.textTertiary,
         },
       ]}
     />

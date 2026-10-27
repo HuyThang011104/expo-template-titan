@@ -18,16 +18,12 @@ const EXCLUDED_FILE_PATTERNS = [/\.test\.[jt]sx?$/, /fixture/i];
 
 /** Files allowed to keep raw colors (migrate + remove entries when done). */
 const COLOR_ALLOWLIST = new Set([
-  "src/features/chat/components/presence-dot.tsx",
   "src/features/showcase/components/animated-icon.tsx",
 ]);
 
 /** Files allowed to keep raw fontSize/fontWeight until their P3 migration. */
 const FONT_ALLOWLIST = new Set([
-  "src/features/chat/components/conversation-row.tsx",
-  "src/features/chat/screens/chat-detail-screen.tsx",
   "src/features/composer/components/composer-media-strip.tsx",
-  "src/features/inbox/components/notification-row.tsx",
   "src/features/settings/components/audience-option-group.tsx",
   "src/features/settings/components/pref-toggle-row.tsx",
   "src/features/settings/screens/account-settings-screen.tsx",

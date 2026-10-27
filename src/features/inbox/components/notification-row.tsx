@@ -18,7 +18,7 @@ import {
 } from "@/entities/notification";
 import { Avatar, useUser } from "@/entities/user";
 import { formatRelative } from "@/shared/lib/date";
-import { Text, useTheme } from "@/shared/ui";
+import { Skeleton, Text, useTheme } from "@/shared/ui";
 
 import { logNotificationTap } from "../analytics";
 import type { NotificationKind } from "@/entities/notification";
@@ -59,14 +59,18 @@ function RowBody({
   const notification = query.data;
   if (query.isPending) {
     return (
-      <Text variant="small" color="textSecondary" testID={`notification-row-${notificationId}`}>
-        Loading…
-      </Text>
+      <View style={styles.row} testID={`notification-row-${notificationId}`}>
+        <Skeleton width={40} height={40} radius="full" />
+        <View style={styles.texts}>
+          <Skeleton width={160} height={14} />
+          <Skeleton width={80} height={12} />
+        </View>
+      </View>
     );
   }
   if (query.isError || !notification) {
     return (
-      <Text variant="small" color="textSecondary" testID={`notification-row-${notificationId}`}>
+      <Text variant="label" color="textSecondary" testID={`notification-row-${notificationId}`}>
         Notification unavailable
       </Text>
     );
@@ -95,7 +99,7 @@ function RowBody({
         size={40}
       />
       <View style={styles.texts}>
-        <Text variant="small" style={styles.title}>
+        <Text variant="labelStrong">
           {actorName} {verbFor(notification.kind)}
         </Text>
         <Text variant="caption" color="textSecondary">
@@ -139,9 +143,7 @@ const styles = StyleSheet.create({
   texts: {
     flex: 1,
     justifyContent: "center",
-  },
-  title: {
-    fontWeight: "700",
+    gap: 4,
   },
   dot: {
     width: 10,

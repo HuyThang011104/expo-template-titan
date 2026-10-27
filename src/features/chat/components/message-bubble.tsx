@@ -20,9 +20,9 @@ export type MessageBubbleProps = {
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  sending: "Đang gửi",
-  sent: "Đã gửi",
-  seen: "Đã xem",
+  sending: "Sending",
+  sent: "Sent",
+  seen: "Seen",
   queued: "Queued",
 };
 
@@ -66,16 +66,17 @@ export function MessageBubble({ conversationId, messageId }: MessageBubbleProps)
           uri={message.imageUrl}
           testID={`message-image-${messageId}`}
           accessibilityLabel="Attached image"
-          style={styles.image}
+          style={[styles.image, { borderRadius: theme.radius.md }]}
         />
       ) : null}
       {message.body ? (
         <View
           style={[
             styles.bubble,
+            { borderRadius: theme.radius.lg },
             mine
               ? { backgroundColor: theme.color.primary }
-              : { backgroundColor: theme.color.backgroundElement },
+              : { backgroundColor: theme.color.surfaceMuted },
           ]}
         >
           <Text variant="body" color={mine ? "onPrimary" : undefined}>
@@ -116,16 +117,13 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   bubble: {
-    borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   image: {
     width: 220,
     height: 160,
-    borderRadius: 12,
-  },
-  metaRow: {
+  },  metaRow: {
     flexDirection: "row",
     alignItems: "center",
   },
