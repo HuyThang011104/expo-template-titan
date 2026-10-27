@@ -7,7 +7,7 @@
 
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { Text } from "@/shared/ui";
+import { Icon, Text } from "@/shared/ui";
 
 export type AudienceOption<T extends string> = {
   value: T;
@@ -34,7 +34,7 @@ export function AudienceOptionGroup<T extends string>({
 }: AudienceOptionGroupProps<T>) {
   return (
     <View style={styles.group} testID={testID}>
-      <Text variant="small" style={styles.title}>
+      <Text variant="labelStrong" color="textSecondary">
         {title}
       </Text>
       {options.map((option) => {
@@ -51,13 +51,11 @@ export function AudienceOptionGroup<T extends string>({
             }}
             style={styles.option}
           >
-            <Text variant="body" style={active ? styles.activeDot : styles.dot}>
-              {active ? "●" : "○"}
-            </Text>
+            <View style={styles.radio}>
+              {active ? <Icon name="check" size="sm" color="primary" /> : null}
+            </View>
             <View style={styles.texts}>
-              <Text variant="body" style={active ? styles.activeLabel : undefined}>
-                {option.label}
-              </Text>
+              <Text variant={active ? "labelStrong" : "body"}>{option.label}</Text>
               {option.description ? (
                 <Text variant="caption" color="textSecondary">
                   {option.description}
@@ -77,23 +75,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  title: {
-    fontWeight: "700",
-  },
   option: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     paddingVertical: 8,
   },
-  dot: {
-    fontWeight: "400",
-  },
-  activeDot: {
-    fontWeight: "700",
-  },
-  activeLabel: {
-    fontWeight: "700",
+  radio: {
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
   texts: {
     flex: 1,

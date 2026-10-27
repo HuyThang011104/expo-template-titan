@@ -36,7 +36,7 @@ import { AudienceOptionGroup } from "../components/audience-option-group";
 function Section({ title, children, testID }: { title: string; children: ReactNode; testID: string }) {
   return (
     <View style={styles.section} testID={testID}>
-      <Text variant="small" style={styles.sectionTitle}>
+      <Text variant="labelStrong" color="textSecondary">
         {title}
       </Text>
       {children}
@@ -56,7 +56,7 @@ function PasswordSection() {
     setError(null);
     setDone(false);
     if (next !== confirm) {
-      setError("Mật khẩu nhập lại chưa khớp.");
+      setError("Passwords don't match.");
       return;
     }
     change.mutate(
@@ -76,9 +76,9 @@ function PasswordSection() {
   };
 
   return (
-    <Section title="Đổi mật khẩu" testID="account-password-section">
+    <Section title="Change password" testID="account-password-section">
       <Input
-        label="Mật khẩu hiện tại"
+        label="Current password"
         value={current}
         onChangeText={(text) => {
           setCurrent(text);
@@ -90,7 +90,7 @@ function PasswordSection() {
         testID="account-current-password-input"
       />
       <Input
-        label="Mật khẩu mới (từ 6 ký tự)"
+        label="New password (at least 6 characters)"
         value={next}
         onChangeText={(text) => {
           setNext(text);
@@ -102,7 +102,7 @@ function PasswordSection() {
         testID="account-new-password-input"
       />
       <Input
-        label="Nhập lại mật khẩu mới"
+        label="Repeat new password"
         value={confirm}
         onChangeText={(text) => {
           setConfirm(text);
@@ -114,17 +114,17 @@ function PasswordSection() {
         testID="account-confirm-password-input"
       />
       {error ? (
-        <Text variant="caption" testID="account-password-error">
+        <Text variant="caption" color="danger" testID="account-password-error">
           {error}
         </Text>
       ) : null}
       {done ? (
-        <Text variant="caption" testID="account-password-success">
-          Đã đổi mật khẩu.
+        <Text variant="caption" color="success" testID="account-password-success">
+          Password changed.
         </Text>
       ) : null}
       <Button
-        title={change.isPending ? "Saving…" : "Đổi mật khẩu"}
+        title={change.isPending ? "Saving…" : "Change password"}
         size="sm"
         testID="account-password-save-button"
         disabled={current.length === 0 || next.length === 0 || change.isPending}
@@ -148,11 +148,11 @@ function SessionRow({
   return (
     <View style={styles.sessionRow} testID={`account-session-${session.id}`}>
       <View style={styles.sessionTexts}>
-        <Text variant="body" style={styles.sessionName}>
+        <Text variant="bodyStrong">
           {session.deviceName}{" "}
           {session.current ? (
             <Text variant="caption" color="textSecondary">
-              • Thiết bị này
+              • This device
             </Text>
           ) : null}
         </Text>
@@ -163,7 +163,7 @@ function SessionRow({
       {session.current ? (
         confirming ? (
           <Button
-            title="Xác nhận"
+            title="Confirm"
             variant="secondary"
             size="sm"
             testID={`account-session-revoke-confirm-${session.id}`}
@@ -173,7 +173,7 @@ function SessionRow({
           />
         ) : (
           <Button
-            title="Đăng xuất"
+            title="Sign out"
             variant="secondary"
             size="sm"
             testID={`account-session-revoke-${session.id}`}
@@ -185,7 +185,7 @@ function SessionRow({
         )
       ) : (
         <Button
-          title="Đăng xuất"
+          title="Sign out"
           variant="secondary"
           size="sm"
           testID={`account-session-revoke-${session.id}`}
@@ -207,16 +207,20 @@ function SessionsSection() {
 
   if (sessions.isPending) {
     return (
-      <Section title="Phiên đăng nhập" testID="account-sessions-section">
-        <Text variant="body">Loading sessions…</Text>
+      <Section title="Sessions" testID="account-sessions-section">
+        <Text variant="body" color="textSecondary">
+          Loading sessions…
+        </Text>
       </Section>
     );
   }
 
   if (sessions.isError || !sessions.data) {
     return (
-      <Section title="Phiên đăng nhập" testID="account-sessions-section">
-        <Text variant="body">Couldn&apos;t load sessions.</Text>
+      <Section title="Sessions" testID="account-sessions-section">
+        <Text variant="body" color="textSecondary">
+          Couldn&apos;t load sessions.
+        </Text>
         <Button
           title="Retry"
           size="sm"
@@ -248,7 +252,7 @@ function SessionsSection() {
   };
 
   return (
-    <Section title="Phiên đăng nhập" testID="account-sessions-section">
+    <Section title="Sessions" testID="account-sessions-section">
       {sessions.data.map((session) => (
         <SessionRow
           key={session.id}
@@ -260,7 +264,7 @@ function SessionsSection() {
         />
       ))}
       {error ? (
-        <Text variant="caption" testID="account-sessions-error">
+        <Text variant="caption" color="danger" testID="account-sessions-error">
           {error}
         </Text>
       ) : null}
@@ -271,9 +275,9 @@ function SessionsSection() {
 function LanguageSection() {
   const { locale, setOverride } = useLocale();
   return (
-    <Section title="Ngôn ngữ" testID="account-language-section">
+    <Section title="Language" testID="account-language-section">
       <AudienceOptionGroup<Locale>
-        title="Ngôn ngữ hiển thị"
+        title="Display language"
         options={[
           { value: "vi", label: "Tiếng Việt" },
           { value: "en", label: "English" },
@@ -292,13 +296,13 @@ function LanguageSection() {
 function ThemeSection() {
   const { preference, setPreference } = useThemePreference();
   return (
-    <Section title="Giao diện" testID="account-theme-section">
+    <Section title="Appearance" testID="account-theme-section">
       <AudienceOptionGroup<ThemePreference>
-        title="Sáng / tối"
+        title="Light / dark"
         options={[
-          { value: "system", label: "Theo hệ thống" },
-          { value: "light", label: "Sáng" },
-          { value: "dark", label: "Tối" },
+          { value: "system", label: "Follow system" },
+          { value: "light", label: "Light" },
+          { value: "dark", label: "Dark" },
         ]}
         selected={preference}
         pending={false}
@@ -316,23 +320,23 @@ function ExportSection() {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <Section title="Xuất dữ liệu của tôi" testID="account-export-section">
+    <Section title="Export my data" testID="account-export-section">
       <Text variant="caption" color="textSecondary">
-        Tải profile + bài viết của bạn (JSON).
+        Download your profile + posts (JSON).
       </Text>
       {exportData.data ? (
         <Text variant="body" testID="account-export-summary">
           {exportData.data.profile.displayName} (@{exportData.data.profile.handle}) •{" "}
-          {exportData.data.posts.length} bài viết • {formatRelative(exportData.data.exportedAt)}
+          {exportData.data.posts.length} posts • {formatRelative(exportData.data.exportedAt)}
         </Text>
       ) : null}
       {error ? (
-        <Text variant="caption" testID="account-export-error">
+        <Text variant="caption" color="danger" testID="account-export-error">
           {error}
         </Text>
       ) : null}
       <Button
-        title={exportData.isPending ? "Exporting…" : "Xuất JSON"}
+        title={exportData.isPending ? "Exporting…" : "Export JSON"}
         size="sm"
         variant="secondary"
         testID="account-export-button"
@@ -372,19 +376,19 @@ function DeactivateSection() {
   };
 
   return (
-    <Section title="Vô hiệu hóa" testID="account-deactivate-section">
+    <Section title="Deactivate" testID="account-deactivate-section">
       <Text variant="caption" color="textSecondary">
-        Ẩn tạm tài khoản. Đăng nhập lại sẽ mở.
+        Hide your account temporarily. Signing back in re-opens it.
       </Text>
       {error ? (
-        <Text variant="caption" testID="account-deactivate-error">
+        <Text variant="caption" color="danger" testID="account-deactivate-error">
           {error}
         </Text>
       ) : null}
       {confirming ? (
         <View style={styles.dangerRow}>
           <Button
-            title="Hủy"
+            title="Cancel"
             variant="secondary"
             size="sm"
             testID="account-deactivate-cancel-button"
@@ -394,7 +398,7 @@ function DeactivateSection() {
             }}
           />
           <Button
-            title={deactivate.isPending ? "Saving…" : "Xác nhận vô hiệu hóa"}
+            title={deactivate.isPending ? "Saving…" : "Confirm deactivation"}
             variant="primary"
             size="sm"
             testID="account-deactivate-confirm-button"
@@ -405,7 +409,7 @@ function DeactivateSection() {
         </View>
       ) : (
         <Button
-          title="Vô hiệu hóa tài khoản"
+          title="Deactivate account"
           variant="secondary"
           size="sm"
           testID="account-deactivate-button"
@@ -443,18 +447,18 @@ function DeleteSection({ handle }: { handle: string }) {
   };
 
   return (
-    <Section title="Xóa tài khoản" testID="account-delete-section">
+    <Section title="Delete account" testID="account-delete-section">
       <Text variant="caption" color="textSecondary">
-        Không thể hoàn tác. Cần xác nhận 2 bước.
+        This can&apos;t be undone. Two-step confirmation required.
       </Text>
       {error ? (
-        <Text variant="caption" testID="account-delete-error">
+        <Text variant="caption" color="danger" testID="account-delete-error">
           {error}
         </Text>
       ) : null}
       {step === 0 ? (
         <Button
-          title="Xóa tài khoản"
+          title="Delete account"
           variant="secondary"
           size="sm"
           testID="account-delete-button"
@@ -465,11 +469,11 @@ function DeleteSection({ handle }: { handle: string }) {
       ) : step === 1 ? (
         <View style={styles.dangerColumn}>
           <Text variant="body">
-            Tài khoản và dữ liệu local sẽ bị xóa. Bạn có chắc chắn?
+            Your account and local data will be deleted. Are you sure?
           </Text>
           <View style={styles.dangerRow}>
             <Button
-              title="Hủy"
+              title="Cancel"
               variant="secondary"
               size="sm"
               testID="account-delete-cancel-button"
@@ -478,7 +482,7 @@ function DeleteSection({ handle }: { handle: string }) {
               }}
             />
             <Button
-              title="Tôi hiểu, tiếp tục"
+              title="I understand, continue"
               variant="primary"
               size="sm"
               testID="account-delete-continue-button"
@@ -491,7 +495,7 @@ function DeleteSection({ handle }: { handle: string }) {
       ) : (
         <View style={styles.dangerColumn}>
           <Input
-            label={`Nhập @${handle} để xác nhận`}
+            label={`Type @${handle} to confirm`}
             value={confirmation}
             onChangeText={(text) => {
               setConfirmation(text);
@@ -503,7 +507,7 @@ function DeleteSection({ handle }: { handle: string }) {
           />
           <View style={styles.dangerRow}>
             <Button
-              title="Hủy"
+              title="Cancel"
               variant="secondary"
               size="sm"
               testID="account-delete-back-button"
@@ -513,7 +517,7 @@ function DeleteSection({ handle }: { handle: string }) {
               }}
             />
             <Button
-              title={remove.isPending ? "Deleting…" : "Xác nhận xóa"}
+              title={remove.isPending ? "Deleting…" : "Confirm delete"}
               variant="primary"
               size="sm"
               testID="account-delete-confirm-button"
@@ -538,7 +542,9 @@ export function AccountSettingsScreen() {
   if (me.isPending) {
     return (
       <Screen style={styles.center} testID="account-settings-screen">
-        <Text variant="body">Loading account settings…</Text>
+        <Text variant="body" color="textSecondary">
+          Loading account settings…
+        </Text>
       </Screen>
     );
   }
@@ -546,8 +552,10 @@ export function AccountSettingsScreen() {
   if (me.isError || !me.data) {
     return (
       <Screen style={styles.center} testID="account-settings-screen">
-        <Text variant="title">Tài khoản</Text>
-        <Text variant="body">Couldn&apos;t load your account.</Text>
+        <Text variant="h3">Account</Text>
+        <Text variant="body" color="textSecondary">
+          Couldn&apos;t load your account.
+        </Text>
         <Button
           title="Retry"
           testID="account-settings-retry-button"
@@ -586,9 +594,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  sectionTitle: {
-    fontWeight: "700",
-  },
   sessionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -598,9 +603,6 @@ const styles = StyleSheet.create({
   sessionTexts: {
     flex: 1,
     gap: 2,
-  },
-  sessionName: {
-    fontWeight: "700",
   },
   dangerRow: {
     flexDirection: "row",

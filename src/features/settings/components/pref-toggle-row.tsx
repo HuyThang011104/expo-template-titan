@@ -29,9 +29,7 @@ export function PrefToggleRow({
   return (
     <View style={styles.row} testID={testID}>
       <View style={styles.texts}>
-        <Text variant="small" style={styles.title}>
-          {title}
-        </Text>
+        <Text variant="labelStrong">{title}</Text>
         <Text variant="caption" color="textSecondary">
           {description}
         </Text>
@@ -58,8 +56,5 @@ const styles = StyleSheet.create({
   texts: {
     flex: 1,
     gap: 2,
-  },
-  title: {
-    fontWeight: "700",
   },
 });

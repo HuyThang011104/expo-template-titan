@@ -25,28 +25,28 @@ import { PrefToggleRow } from "../components/pref-toggle-row";
 const ROWS: { key: NotifPrefKey; title: string; description: string }[] = [
   {
     key: "like",
-    title: "Ai like bài tôi",
-    description: "Nhận thông báo khi ai đó thích bài của bạn",
+    title: "Likes on my posts",
+    description: "Notify me when someone likes one of my posts",
   },
   {
     key: "follow",
-    title: "Lượt follow mới",
-    description: "Khi có người bắt đầu theo dõi bạn",
+    title: "New followers",
+    description: "When someone starts following you",
   },
   {
     key: "comment",
-    title: "Bình luận mới",
-    description: "Khi có bình luận mới cho bạn",
+    title: "New comments",
+    description: "When someone comments on your activity",
   },
   {
     key: "mention",
-    title: "Nhắc đến tôi",
-    description: "Khi ai đó @nhắc đến bạn",
+    title: "Mentions",
+    description: "When someone @mentions you",
   },
   {
     key: "message",
-    title: "Tin nhắn mới",
-    description: "Khi có tin nhắn mới cho bạn",
+    title: "New messages",
+    description: "When someone sends you a message",
   },
 ];
 
@@ -63,7 +63,9 @@ export function NotifSettingsScreen() {
   if (prefs.isPending) {
     return (
       <Screen style={styles.center} testID="notif-settings-screen">
-        <Text variant="body">Loading notification settings…</Text>
+        <Text variant="body" color="textSecondary">
+          Loading notification settings…
+        </Text>
       </Screen>
     );
   }
@@ -71,8 +73,10 @@ export function NotifSettingsScreen() {
   if (prefs.isError || !prefs.data) {
     return (
       <Screen style={styles.center} testID="notif-settings-screen">
-        <Text variant="title">Thông báo</Text>
-        <Text variant="body">Couldn&apos;t load your notification settings.</Text>
+        <Text variant="h3">Notifications</Text>
+        <Text variant="body" color="textSecondary">
+          Couldn&apos;t load your notification settings.
+        </Text>
         <Button
           title="Retry"
           testID="notif-settings-retry-button"
@@ -119,7 +123,7 @@ export function NotifSettingsScreen() {
           />
         ))}
         {error ? (
-          <Text variant="caption" testID="notif-settings-error" style={styles.error}>
+          <Text variant="caption" color="danger" testID="notif-settings-error" style={styles.error}>
             {error}
           </Text>
         ) : null}

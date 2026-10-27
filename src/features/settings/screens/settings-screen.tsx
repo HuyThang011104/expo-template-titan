@@ -7,46 +7,12 @@
 
 import { router } from "expo-router";
 import { useEffect } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { hrefs } from "@/shared/navigation/hrefs";
-import { Screen, Text } from "@/shared/ui";
+import { Icon, ListItem, Screen } from "@/shared/ui";
 
 import { logSettingsOpen } from "../analytics";
-
-function SettingsRow({
-  title,
-  description,
-  testID,
-  onPress,
-}: {
-  title: string;
-  description: string;
-  testID: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      testID={testID}
-      accessibilityRole="button"
-      accessibilityLabel={title}
-      onPress={onPress}
-      style={styles.row}
-    >
-      <View style={styles.texts}>
-        <Text variant="body" style={styles.title}>
-          {title}
-        </Text>
-        <Text variant="caption" color="textSecondary">
-          {description}
-        </Text>
-      </View>
-      <Text variant="body" color="textSecondary">
-        ›
-      </Text>
-    </Pressable>
-  );
-}
 
 export function SettingsScreen() {
   useEffect(() => {
@@ -56,25 +22,28 @@ export function SettingsScreen() {
   return (
     <Screen testID="settings-screen">
       <View style={styles.root}>
-        <SettingsRow
-          title="Thông báo"
-          description="Bật/tắt từng loại thông báo"
+        <ListItem
+          title="Notifications"
+          subtitle="Choose which activity notifies you"
+          trailing={<Icon name="chevronRight" color="textTertiary" />}
           testID="settings-row-notifications"
           onPress={() => {
             router.push(hrefs.notifSettings());
           }}
         />
-        <SettingsRow
-          title="Quyền riêng tư"
-          description="Ai được nhắn tin, xem bài, tag bạn"
+        <ListItem
+          title="Privacy"
+          subtitle="Who can message, see your posts and tag you"
+          trailing={<Icon name="chevronRight" color="textTertiary" />}
           testID="settings-row-privacy"
           onPress={() => {
             router.push(hrefs.privacySettings());
           }}
         />
-        <SettingsRow
-          title="Tài khoản"
-          description="Mật khẩu, phiên đăng nhập, ngôn ngữ, giao diện, dữ liệu"
+        <ListItem
+          title="Account"
+          subtitle="Password, sessions, language, theme, data"
+          trailing={<Icon name="chevronRight" color="textTertiary" />}
           testID="settings-row-account"
           onPress={() => {
             router.push(hrefs.accountSettings());
@@ -88,19 +57,5 @@ export function SettingsScreen() {
 const styles = StyleSheet.create({
   root: {
     paddingVertical: 8,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  texts: {
-    flex: 1,
-    gap: 2,
-  },
-  title: {
-    fontWeight: "700",
   },
 });

@@ -24,9 +24,9 @@ import { logPrivacySettingsOpen } from "../analytics";
 import { AudienceOptionGroup } from "../components/audience-option-group";
 
 const AUDIENCE_OPTIONS: { value: MessageAudience; label: string; description: string }[] = [
-  { value: "everyone", label: "Mọi người", description: "Bất kỳ ai cũng được" },
-  { value: "following", label: "Người tôi theo dõi", description: "Chỉ người bạn follow" },
-  { value: "none", label: "Không ai", description: "Tắt hoàn toàn" },
+  { value: "everyone", label: "Everyone", description: "Anyone is allowed" },
+  { value: "following", label: "People I follow", description: "Only people you follow" },
+  { value: "none", label: "Nobody", description: "Turned off completely" },
 ];
 
 export function PrivacySettingsScreen() {
@@ -42,7 +42,9 @@ export function PrivacySettingsScreen() {
   if (me.isPending) {
     return (
       <Screen style={styles.center} testID="privacy-settings-screen">
-        <Text variant="body">Loading privacy settings…</Text>
+        <Text variant="body" color="textSecondary">
+          Loading privacy settings…
+        </Text>
       </Screen>
     );
   }
@@ -50,8 +52,10 @@ export function PrivacySettingsScreen() {
   if (me.isError || !me.data) {
     return (
       <Screen style={styles.center} testID="privacy-settings-screen">
-        <Text variant="title">Quyền riêng tư</Text>
-        <Text variant="body">Couldn&apos;t load your privacy settings.</Text>
+        <Text variant="h3">Privacy</Text>
+        <Text variant="body" color="textSecondary">
+          Couldn&apos;t load your privacy settings.
+        </Text>
         <Button
           title="Retry"
           testID="privacy-settings-retry-button"
@@ -82,7 +86,7 @@ export function PrivacySettingsScreen() {
     <Screen testID="privacy-settings-screen">
       <View style={styles.root}>
         <AudienceOptionGroup<MessageAudience>
-          title="Ai được nhắn tin"
+          title="Who can message you"
           options={AUDIENCE_OPTIONS}
           selected={privacy.messageAudience}
           pending={pending || update.isPending}
@@ -92,13 +96,13 @@ export function PrivacySettingsScreen() {
           }}
         />
         <AudienceOptionGroup<PostVisibility>
-          title="Ai xem bài"
+          title="Who can see your posts"
           options={[
-            { value: "public", label: "Mọi người", description: "Bài public cho tất cả" },
+            { value: "public", label: "Everyone", description: "Public posts for all" },
             {
               value: "followers",
-              label: "Người theo dõi",
-              description: "Chỉ follower mới thấy bài",
+              label: "Followers",
+              description: "Only followers can see your posts",
             },
           ]}
           selected={privacy.postVisibility}
@@ -109,7 +113,7 @@ export function PrivacySettingsScreen() {
           }}
         />
         <AudienceOptionGroup<TagAudience>
-          title="Ai tag tôi"
+          title="Who can tag you"
           options={AUDIENCE_OPTIONS}
           selected={privacy.tagAudience}
           pending={pending || update.isPending}
@@ -119,7 +123,7 @@ export function PrivacySettingsScreen() {
           }}
         />
         {error ? (
-          <Text variant="caption" testID="privacy-settings-error" style={styles.error}>
+          <Text variant="caption" color="danger" testID="privacy-settings-error" style={styles.error}>
             {error}
           </Text>
         ) : null}

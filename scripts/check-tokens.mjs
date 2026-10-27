@@ -24,11 +24,6 @@ const COLOR_ALLOWLIST = new Set([
 /** Files allowed to keep raw fontSize/fontWeight until their P3 migration. */
 const FONT_ALLOWLIST = new Set([
   "src/features/composer/components/composer-media-strip.tsx",
-  "src/features/settings/components/audience-option-group.tsx",
-  "src/features/settings/components/pref-toggle-row.tsx",
-  "src/features/settings/screens/account-settings-screen.tsx",
-  "src/features/settings/screens/settings-screen.tsx",
-  "src/entities/comment/ui/comment-row.tsx",
 ]);
 
 const STRICT_FONTS = true;
