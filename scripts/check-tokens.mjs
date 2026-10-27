@@ -3,11 +3,10 @@
  * Token guard (spec §12.4).
  *
  * Fails when `src/features/**` or `src/entities/**` hardcode raw color values
- * (hex / rgb() / rgba()). `fontSize` / `fontWeight` are warnings until P3 —
- * flip `STRICT_FONTS` to `true` when P3.1 lands.
+ * (hex / rgb() / rgba()) or `fontSize` / `fontWeight` (strict since P3.1).
  *
- * Excluded: `__tests__` folders and fixture files. Allow-list covers the two
- * pre-existing hardcoded files until they migrate.
+ * Excluded: `__tests__` folders and fixture files. Allow-lists cover the
+ * pre-existing offenders until their P3 screen migration removes them.
  */
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -23,7 +22,31 @@ const COLOR_ALLOWLIST = new Set([
   "src/features/showcase/components/animated-icon.tsx",
 ]);
 
-const STRICT_FONTS = false;
+/** Files allowed to keep raw fontSize/fontWeight until their P3 migration. */
+const FONT_ALLOWLIST = new Set([
+  "src/features/chat/components/conversation-row.tsx",
+  "src/features/chat/screens/chat-detail-screen.tsx",
+  "src/features/composer/components/composer-media-strip.tsx",
+  "src/features/inbox/components/notification-row.tsx",
+  "src/features/profile/components/profile-header.tsx",
+  "src/features/profile/screens/profile-screen.tsx",
+  "src/features/search/components/search-history-list.tsx",
+  "src/features/search/components/search-results.tsx",
+  "src/features/search/components/trending-list.tsx",
+  "src/features/settings/components/audience-option-group.tsx",
+  "src/features/settings/components/pref-toggle-row.tsx",
+  "src/features/settings/screens/account-settings-screen.tsx",
+  "src/features/settings/screens/settings-screen.tsx",
+  "src/entities/comment/ui/comment-row.tsx",
+  "src/entities/post/ui/post-actions.tsx",
+  "src/entities/post/ui/post-card.tsx",
+  "src/entities/post/ui/post-owner-menu.tsx",
+  "src/entities/post/ui/post-share-button.tsx",
+  "src/entities/post/ui/post-video.tsx",
+  "src/entities/user/ui/user-row.tsx",
+]);
+
+const STRICT_FONTS = true;
 
 const COLOR_PATTERNS = [
   /#[0-9a-fA-F]{3,8}\b/,
@@ -66,10 +89,10 @@ const fontFiles = [];
 
 for (const root of ROOTS) {
   for (const file of walk(root)) {
-    const isAllowed = COLOR_ALLOWLIST.has(file);
-    const colorHits = isAllowed ? [] : scan(file, COLOR_PATTERNS);
+    const isColorAllowed = COLOR_ALLOWLIST.has(file);
+    const colorHits = isColorAllowed ? [] : scan(file, COLOR_PATTERNS);
     if (colorHits.length > 0) colorFiles.push({ file, hits: colorHits });
-    const fontHits = scan(file, FONT_PATTERNS);
+    const fontHits = FONT_ALLOWLIST.has(file) ? [] : scan(file, FONT_PATTERNS);
     if (fontHits.length > 0) fontFiles.push({ file, hits: fontHits });
   }
 }
@@ -84,7 +107,7 @@ if (colorFiles.length > 0) {
   }
 }
 
-const fontLabel = STRICT_FONTS ? "failures" : "warnings (strict mode starts at P3.1)";
+const fontLabel = STRICT_FONTS ? "failures" : "warnings";
 if (fontFiles.length > 0) {
   if (STRICT_FONTS) failed = true;
   console.error(`check:tokens — hardcoded fontSize/fontWeight (${fontLabel}):`);

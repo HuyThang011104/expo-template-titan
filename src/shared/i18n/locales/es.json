@@ -9,7 +9,20 @@
   "auth": {
     "signIn": "Iniciar sesión",
     "signUp": "Registrarse",
-    "signOut": "Cerrar sesión"
+    "signOut": "Cerrar sesión",
+    "signInTitle": "Bienvenido de nuevo",
+    "signInSubtitle": "Inicia sesión para continuar",
+    "signUpTitle": "Crea tu cuenta",
+    "signUpSubtitle": "Unos pasos rápidos para empezar",
+    "email": "Correo electrónico",
+    "emailPlaceholder": "tu@ejemplo.com",
+    "password": "Contraseña",
+    "emailRequired": "Introduce tu correo",
+    "emailInvalid": "Ese correo no parece válido",
+    "passwordRequired": "Introduce tu contraseña",
+    "passwordTooShort": "La contraseña necesita al menos 8 caracteres",
+    "noAccount": "¿Aún no tienes cuenta?",
+    "haveAccount": "¿Ya tienes cuenta?"
   },
   "feed": {
     "title": "Inicio",

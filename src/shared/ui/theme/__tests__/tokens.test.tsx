@@ -45,10 +45,11 @@ describe("design tokens", () => {
     expect(typography.h2.fontSize).toBe(22);
     expect(typography.h3.fontSize).toBe(18);
     expect(typography.overline.letterSpacing).toBe(0.6);
-    // Legacy keys stay at their old metrics until the P3 screen migration.
+    // Legacy keys stay at their old metrics until the P4 alias removal;
+    // `body` moved to the spec weight 400 at P3.1 (decision Q1).
     expect(typography.title.fontSize).toBe(48);
     expect(typography.subtitle.fontSize).toBe(32);
-    expect(typography.body.fontWeight).toBe("500");
+    expect(typography.body.fontWeight).toBe("400");
   });
 
   it("exposes every scale on the theme context", async () => {

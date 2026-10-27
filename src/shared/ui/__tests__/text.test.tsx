@@ -32,7 +32,8 @@ describe("Text", () => {
 
     expect(screen.getByTestId("title")).toHaveStyle({ fontSize: 48, lineHeight: 52 });
     expect(screen.getByTestId("subtitle")).toHaveStyle({ fontSize: 32, lineHeight: 44 });
-    expect(screen.getByTestId("body")).toHaveStyle({ fontSize: 16, fontWeight: "500" });
+    // `body` moved to the spec weight 400 at P3.1 (decision Q1).
+    expect(screen.getByTestId("body")).toHaveStyle({ fontSize: 16, fontWeight: "400" });
     expect(screen.getByTestId("small")).toHaveStyle({ fontSize: 14, lineHeight: 20 });
   });
 

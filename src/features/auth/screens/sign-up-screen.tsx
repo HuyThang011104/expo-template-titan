@@ -1,46 +1,27 @@
 import { router } from "expo-router";
-import { StyleSheet } from "react-native";
 
 import { useSession } from "@/shared/auth";
-import { t } from "@/shared/i18n";
-import { Button, Screen, Text, useTheme } from "@/shared/ui";
+
+import { AuthForm } from "../components/auth-form";
 
 /**
  * Mock sign-up screen mirroring sign-in; creating an account signs in directly.
- * TODO: add a form plus a real API replacing `signIn()`.
+ * TODO: add a real API replacing `signIn()` and server-side validation.
  */
 export function SignUpScreen() {
   const { signIn } = useSession();
-  const theme = useTheme();
 
   return (
-    <Screen
-      header={false}
-      style={[styles.screen, { paddingHorizontal: theme.space.lg, gap: theme.space.md }]}
-    >
-      <Text variant="title">{t("auth.signUp")}</Text>
-      <Button
-        title={t("auth.signUp")}
-        testID="sign-up-button"
-        onPress={() => {
-          signIn();
-          router.replace("/");
-        }}
-      />
-      <Button
-        title={t("auth.signIn")}
-        variant="ghost"
-        onPress={() => {
-          router.push("../sign-in");
-        }}
-      />
-    </Screen>
+    <AuthForm
+      mode="signUp"
+      submitTestID="sign-up-button"
+      onSubmit={() => {
+        signIn();
+        router.replace("/");
+      }}
+      onSwitch={() => {
+        router.push("../sign-in");
+      }}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  screen: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

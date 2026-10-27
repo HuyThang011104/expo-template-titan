@@ -79,15 +79,15 @@ export const radius = {
 } as const;
 
 /**
- * `body` keeps the legacy 500 weight until the screen migration (P3) so P1
- * does not change typography app-wide. The spec target for `body` is 400.
+ * `body` moves to the spec weight 400 at P3.1 (decision Q1); `bodyStrong`
+ * covers the emphasized cases the 500 weight used to serve.
  */
 export const typography = {
   display: { fontSize: 34, lineHeight: 40, fontWeight: "700" },
   h1: { fontSize: 28, lineHeight: 34, fontWeight: "700" },
   h2: { fontSize: 22, lineHeight: 28, fontWeight: "600" },
   h3: { fontSize: 18, lineHeight: 24, fontWeight: "600" },
-  body: { fontSize: 16, lineHeight: 24, fontWeight: "500" },
+  body: { fontSize: 16, lineHeight: 24, fontWeight: "400" },
   bodyStrong: { fontSize: 16, lineHeight: 24, fontWeight: "600" },
   label: { fontSize: 14, lineHeight: 20, fontWeight: "500" },
   labelStrong: { fontSize: 14, lineHeight: 20, fontWeight: "600" },

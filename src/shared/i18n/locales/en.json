@@ -9,7 +9,20 @@
   "auth": {
     "signIn": "Sign in",
     "signUp": "Sign up",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "signInTitle": "Welcome back",
+    "signInSubtitle": "Sign in to continue",
+    "signUpTitle": "Create your account",
+    "signUpSubtitle": "A few quick steps to get started",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "emailRequired": "Please enter your email",
+    "emailInvalid": "That email address doesn't look right",
+    "passwordRequired": "Please enter your password",
+    "passwordTooShort": "Password needs at least 8 characters",
+    "noAccount": "No account yet?",
+    "haveAccount": "Already have an account?"
   },
   "feed": {
     "title": "Home",

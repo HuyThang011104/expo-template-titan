@@ -12,6 +12,7 @@ import {
   type KeyboardTypeOptions,
   type ReturnKeyTypeOptions,
   type StyleProp,
+  type TextInputProps,
   type TextStyle,
 } from "react-native";
 
@@ -33,6 +34,8 @@ export type InputProps = {
   keyboardType?: KeyboardTypeOptions;
   returnKeyType?: ReturnKeyTypeOptions;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
+  autoComplete?: TextInputProps["autoComplete"];
+  textContentType?: TextInputProps["textContentType"];
   multiline?: boolean;
   maxLength?: number;
   editable?: boolean;
@@ -57,6 +60,8 @@ export function Input({
   keyboardType = "default",
   returnKeyType,
   autoCapitalize = "sentences",
+  autoComplete,
+  textContentType,
   multiline = false,
   maxLength,
   editable = true,
@@ -112,6 +117,8 @@ export function Input({
           keyboardType={keyboardType}
           returnKeyType={returnKeyType}
           autoCapitalize={autoCapitalize}
+          autoComplete={autoComplete}
+          textContentType={textContentType}
           multiline={multiline}
           maxLength={maxLength}
           editable={editable}
