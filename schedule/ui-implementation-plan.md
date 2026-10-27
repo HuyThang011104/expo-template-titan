@@ -442,7 +442,7 @@ Tham chiếu thêm: `schedule/device-run-checklist.md`.
 | P1.3 — Primitives + Text | [x] | `primitives/` + semantic `Text`; jest resolver cho Reanimated |
 | P1.4 — Components A | [x] | `components/` + compat re-exports; typecheck/lint/test pass |
 | P1.5 — Components B + States | [x] | 7 components + tests; typecheck/lint/test pass |
-| P1.6 — Design Lab + guard | [ ] | Song song P1.2–P1.5 được, chốt cuối P1 |
+| P1.6 — Design Lab + guard | [x] | `lab/design-lab-screen.tsx` + `scripts/check-tokens.mjs` + CI step; `check:tokens` exit 0 |
 | P2.1 — Nav theme + header factory | [x] | `navigation-theme.ts` + `header-options.ts`; pure factory tests pass |
 | P2.2 — Shared header | [x] | Shared/tab headers + profile settings `headerRight`; device matrix QA pending |
 | P2.3 — Screen edges | [x] | `Screen header` prop + headerless auth/not-found/media; before/after images pending |
@@ -450,5 +450,12 @@ Tham chiếu thêm: `schedule/device-run-checklist.md`.
 | P2.5 — States adoption | [x] | Loading/empty/error across lists + `OfflineBanner`; device QA pending |
 | P2.6 — Templates | [x] | `ListPage` + `DetailPage` with state tests |
 | P2.7 — Settings/back QA | [x] | Header factory + deep-link anchors; manual back-stack QA pending |
-| P3.1–P3.8 — Redesign | [ ] | Theo bảng §5 |
-| P4 — Polish | [ ] | Sau P3 |
+| P3.1 — Auth redesign | [x] | `AuthForm` mock form + inline validation + `display`; `body` → 400 (Q1); `check:tokens` strict fonts ON (allow-list thu dần theo PR) |
+| P3.2 — Home + PostCard | [x] | PostCard/Actions/Share/OwnerMenu token + Icon `more`/`heart`; FeedSkeleton trên `Skeleton` |
+| P3.3 — Post detail + comments | [x] | `DetailPage` + composer pinned; comment row token; sửa trộn VI/EN |
+| P3.4 — Profile + edit-profile | [x] | `h2` tên profile, shared `Tabs` underline, edit-profile copy EN + validation EN |
+| P3.5 — Search + hashtag | [x] | Token search/trending/hashtag/`UserRow`; copy EN; segmented filter Tabs chưa làm (chưa có màn dùng — just-in-time) |
+| P3.6 — Inbox + chats | [x] | `ListItem`-style rows + shared `Badge`; bubble token; presence-dot dùng `success`; copy EN |
+| P3.7 — Settings | [x] | Hub dùng `ListItem`; radio dùng Icon `check`; copy EN toàn bộ settings |
+| P3.8 — Modals | [x] | Composer/edit-post/report/media-viewer: `h1`/`h3`, glyph `…`/`×`/`✕` → Icon, copy EN |
+| P4 — Polish | [ ] | Sau P3; còn: video glyphs `▶`/`🔇` → Icon (cần thêm icon play/pause/volume vào map), Maestro device QA |
