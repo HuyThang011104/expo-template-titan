@@ -28,15 +28,11 @@ const FONT_ALLOWLIST = new Set([
   "src/features/chat/screens/chat-detail-screen.tsx",
   "src/features/composer/components/composer-media-strip.tsx",
   "src/features/inbox/components/notification-row.tsx",
-  "src/features/search/components/search-history-list.tsx",
-  "src/features/search/components/search-results.tsx",
-  "src/features/search/components/trending-list.tsx",
   "src/features/settings/components/audience-option-group.tsx",
   "src/features/settings/components/pref-toggle-row.tsx",
   "src/features/settings/screens/account-settings-screen.tsx",
   "src/features/settings/screens/settings-screen.tsx",
   "src/entities/comment/ui/comment-row.tsx",
-  "src/entities/user/ui/user-row.tsx",
 ]);
 
 const STRICT_FONTS = true;

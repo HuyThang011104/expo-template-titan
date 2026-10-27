@@ -35,11 +35,9 @@ function TrendingTagRow({ info, onPress }: { info: HashtagInfo; onPress?: (tag: 
       }}
       style={styles.tagRow}
     >
-      <Text variant="small" style={styles.tagName}>
-        #{info.tag}
-      </Text>
+      <Text variant="labelStrong">#{info.tag}</Text>
       <Text variant="caption" color="textSecondary">
-        {info.postCount} bài viết
+        {info.postCount} posts
       </Text>
     </Pressable>
   );
@@ -95,7 +93,7 @@ export function TrendingList({ tags, userIds, isPending, isError, onRetry, onTag
     <View testID="trending-list">
       {tags.length > 0 ? (
         <View style={styles.section}>
-          <Text variant="small" style={styles.title}>
+          <Text variant="labelStrong" color="textSecondary">
             Trending
           </Text>
           {tags.map((info) => (
@@ -105,8 +103,8 @@ export function TrendingList({ tags, userIds, isPending, isError, onRetry, onTag
       ) : null}
       {userIds.length > 0 ? (
         <View style={styles.section}>
-          <Text variant="small" style={styles.title}>
-            Gợi ý
+          <Text variant="labelStrong" color="textSecondary">
+            Suggested
           </Text>
           {userIds.map((id) => (
             <SuggestedUserRow key={id} userId={id} />
@@ -123,14 +121,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  title: {
-    fontWeight: "700",
-  },
   tagRow: {
     gap: 2,
     paddingVertical: 4,
-  },
-  tagName: {
-    fontWeight: "700",
   },
 });

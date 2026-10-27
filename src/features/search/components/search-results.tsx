@@ -84,13 +84,13 @@ function SearchHeader({ userIds }: { userIds: string[] }) {
   if (userIds.length === 0) return null;
   return (
     <View style={styles.users}>
-      <Text variant="small" style={styles.usersTitle}>
+      <Text variant="labelStrong" color="textSecondary">
         People
       </Text>
       {userIds.map((id) => (
         <SearchUserLink key={id} userId={id} />
       ))}
-      <Text variant="small" style={styles.usersTitle}>
+      <Text variant="labelStrong" color="textSecondary">
         Posts
       </Text>
     </View>
@@ -144,9 +144,6 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
-  },
-  usersTitle: {
-    fontWeight: "700",
   },
   footer: {
     paddingVertical: 16,

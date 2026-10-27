@@ -2,13 +2,13 @@
  * Search history list (G2.2).
  *
  * Local per-user history: tap refills the query, per-row ✕ deletes one,
- * "Xóa hết" clears all. Pure presentational — state lives in
+ * "Clear all" clears all. Pure presentational — state lives in
  * `useSearchHistory`, persistence in the kv-backed store.
  */
 
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { Button, Text } from "@/shared/ui";
+import { Button, Icon, Text } from "@/shared/ui";
 
 export type SearchHistoryListProps = {
   history: string[];
@@ -22,11 +22,11 @@ export function SearchHistoryList({ history, onSelect, onRemoveOne, onClearAll }
   return (
     <View style={styles.root} testID="search-history-list">
       <View style={styles.header}>
-        <Text variant="small" style={styles.title}>
-          Lịch sử
+        <Text variant="labelStrong" color="textSecondary">
+          History
         </Text>
         <Button
-          title="Xóa hết"
+          title="Clear all"
           variant="ghost"
           size="sm"
           testID="search-history-clear-button"
@@ -56,9 +56,7 @@ export function SearchHistoryList({ history, onSelect, onRemoveOne, onClearAll }
             }}
             style={styles.removeTouch}
           >
-            <Text variant="small" color="textSecondary">
-              ✕
-            </Text>
+            <Icon name="close" size="sm" color="textSecondary" />
           </Pressable>
         </View>
       ))}
@@ -76,9 +74,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-  },
-  title: {
-    fontWeight: "700",
   },
   row: {
     flexDirection: "row",

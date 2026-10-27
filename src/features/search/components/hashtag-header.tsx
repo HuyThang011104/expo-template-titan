@@ -19,11 +19,11 @@ export function HashtagHeader({ tag, postCount, testID = "hashtag-header" }: Has
   const count = postCount ?? 0;
   return (
     <View style={styles.root} testID={testID}>
-      <Text variant="title" testID="hashtag-title">
+      <Text variant="h2" testID="hashtag-title">
         #{tag}
       </Text>
-      <Text variant="small" color="textSecondary" testID="hashtag-count">
-        {count === 1 ? "1 bài viết" : `${count} bài viết`}
+      <Text variant="label" color="textSecondary" testID="hashtag-count">
+        {count === 1 ? "1 post" : `${count} posts`}
       </Text>
     </View>
   );
