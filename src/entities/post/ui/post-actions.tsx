@@ -5,10 +5,10 @@
  * to reduce double-taps.
  */
 
-import { Pressable, StyleSheet } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { formatCompact } from "@/shared/lib/number";
-import { Text } from "@/shared/ui/text";
+import { Icon, Text } from "@/shared/ui";
 
 import { useLikePost, usePost } from "../queries";
 
@@ -37,9 +37,20 @@ export function PostActions({ postId, testID }: PostActionsProps) {
       onPress={() => likeMutation.mutate()}
       style={styles.touch}
     >
-      <Text variant="small" color={liked ? "primary" : "textSecondary"} style={styles.label}>
-        ♥ {formatCompact(post.likeCount)}
-      </Text>
+      <View style={styles.row}>
+        <Icon
+          name={liked ? "heartFill" : "heart"}
+          size="md"
+          color={liked ? "danger" : "textSecondary"}
+        />
+        <Text
+          variant="label"
+          color={liked ? "danger" : "textSecondary"}
+          style={styles.count}
+        >
+          {formatCompact(post.likeCount)}
+        </Text>
+      </View>
     </Pressable>
   );
 }
@@ -48,7 +59,12 @@ const styles = StyleSheet.create({
   touch: {
     alignSelf: "flex-start",
   },
-  label: {
-    fontWeight: "700",
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  count: {
+    fontVariant: ["tabular-nums"],
   },
 });

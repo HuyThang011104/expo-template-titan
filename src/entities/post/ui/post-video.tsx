@@ -49,7 +49,7 @@ export function PostVideo({ postId, mediaUrl, isActive = true, testID }: PostVid
           }}
           style={styles.toggle}
         >
-          <Text variant="small" color="textSecondary" style={styles.toggleLabel}>
+          <Text variant="label" color="textSecondary">
             {shouldPlay ? "❚❚" : "▶"}
           </Text>
         </Pressable>
@@ -63,7 +63,7 @@ export function PostVideo({ postId, mediaUrl, isActive = true, testID }: PostVid
           }}
           style={styles.toggle}
         >
-          <Text variant="small" color="textSecondary" style={styles.toggleLabel}>
+          <Text variant="label" color="textSecondary">
             {muted ? "🔇" : "🔊"}
           </Text>
         </Pressable>
@@ -81,8 +81,5 @@ const styles = StyleSheet.create({
   },
   toggle: {
     padding: 8,
-  },
-  toggleLabel: {
-    fontWeight: "700",
   },
 });

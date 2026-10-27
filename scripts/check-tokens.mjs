@@ -38,11 +38,6 @@ const FONT_ALLOWLIST = new Set([
   "src/features/settings/screens/account-settings-screen.tsx",
   "src/features/settings/screens/settings-screen.tsx",
   "src/entities/comment/ui/comment-row.tsx",
-  "src/entities/post/ui/post-actions.tsx",
-  "src/entities/post/ui/post-card.tsx",
-  "src/entities/post/ui/post-owner-menu.tsx",
-  "src/entities/post/ui/post-share-button.tsx",
-  "src/entities/post/ui/post-video.tsx",
   "src/entities/user/ui/user-row.tsx",
 ]);
 

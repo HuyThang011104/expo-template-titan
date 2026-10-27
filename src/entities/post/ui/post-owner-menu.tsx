@@ -11,7 +11,7 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { Button, Sheet, Text } from "@/shared/ui";
+import { Button, Icon, Sheet, Text } from "@/shared/ui";
 
 import { useDeletePost, usePost } from "../queries";
 
@@ -48,9 +48,7 @@ export function PostOwnerMenu({ postId, onEditPress, testID, fetchImpl }: PostOw
         }}
         style={styles.touch}
       >
-        <Text variant="small" color="textSecondary" style={styles.label}>
-          …
-        </Text>
+        <Icon name="more" size="md" color="textSecondary" />
       </Pressable>
       <Sheet
         visible={menuOpen}
@@ -137,9 +135,6 @@ export function PostOwnerMenu({ postId, onEditPress, testID, fetchImpl }: PostOw
 const styles = StyleSheet.create({
   touch: {
     padding: 4,
-  },
-  label: {
-    fontWeight: "700",
   },
   rows: {
     gap: 4,

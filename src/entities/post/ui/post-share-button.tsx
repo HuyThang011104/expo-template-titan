@@ -13,7 +13,7 @@ import { Pressable, Share, StyleSheet, View } from "react-native";
 import * as Linking from "expo-linking";
 
 import { buildPostDeepLink } from "@/shared/navigation";
-import { Text } from "@/shared/ui/text";
+import { Icon, Text } from "@/shared/ui";
 
 export type ShareFn = (content: { message: string }) => Promise<unknown>;
 
@@ -63,9 +63,12 @@ export function PostShareButton({ postId, testID, schemeOverride, shareFn }: Pos
         }}
         style={styles.touch}
       >
-        <Text variant="small" color="textSecondary" style={styles.label}>
-          Share
-        </Text>
+        <View style={styles.row}>
+          <Icon name="share" size="sm" color="textSecondary" />
+          <Text variant="label" color="textSecondary">
+            Share
+          </Text>
+        </View>
       </Pressable>
       {failed ? (
         <Text variant="caption" color="textSecondary" testID={`share-error-${postId}`}>
@@ -83,7 +86,9 @@ const styles = StyleSheet.create({
   touch: {
     paddingVertical: 4,
   },
-  label: {
-    fontWeight: "700",
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
 });
