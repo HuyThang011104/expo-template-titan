@@ -41,6 +41,10 @@ export default function SharedGroupLayout() {
         options={headerOptions(theme, { title: "Follow requests" })}
       />
       <Stack.Screen name="dev-crash" options={headerOptions(theme, { title: "Dev crash" })} />
+      <Stack.Screen
+        name="design-lab"
+        options={headerOptions(theme, { title: "Design Lab" })}
+      />
       <Stack.Screen name="showcase" options={headerOptions(theme, { title: "Showcase" })} />
       {/* Settings is its own stack with its own headers. */}
       <Stack.Screen name="settings" options={{ headerShown: false }} />

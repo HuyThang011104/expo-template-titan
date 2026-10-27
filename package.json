@@ -72,6 +72,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "lint:boundaries": "eslint .",
+    "check:tokens": "node scripts/check-tokens.mjs",
     "test": "jest --watchman=false --passWithNoTests",
     "prebuild": "expo prebuild",
     "sentry:sourcemaps": "sentry-expo-upload-sourcemaps dist",
