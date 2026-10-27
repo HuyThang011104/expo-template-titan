@@ -18,7 +18,6 @@ import { parseRichText } from "@/entities/post";
 import { canTagUser, getUserByHandleData, useMe } from "@/entities/user";
 import { findBlockedMentionHandles } from "@/shared/lib/mention-gate";
 import { Button, Input, Screen, Text } from "@/shared/ui";
-import { useTheme } from "@/shared/ui/theme/use-theme";
 
 /**
  * Keyboard scope mirroring `KeyboardScope` in `app-providers.tsx`: the
@@ -52,7 +51,6 @@ function ComposerKeyboardAvoidingView({ children }: { children: ReactNode }) {
  *   on route change) plus `logComposerOpen` for the feature event.
  */
 export function ComposerScreen() {
-  const theme = useTheme();
   const qc = useQueryClient();
   const me = useMe();
   const { body, setBody, localUris, setLocalUris, loaded, clear } = useComposerDraft();
@@ -87,7 +85,7 @@ export function ComposerScreen() {
     setError(null);
     setQueued(false);
     if (media.items.length > COMPOSER_MAX_MEDIA) {
-      setError(`Chỉ đính kèm tối đa ${COMPOSER_MAX_MEDIA} ảnh.`);
+      setError(`Attach at most ${COMPOSER_MAX_MEDIA} photos.`);
       return;
     }
     const textCheck = validateComposerBody(body);
@@ -106,7 +104,7 @@ export function ComposerScreen() {
       (targetId) => canTagUser(qc, targetId, viewerId),
     );
     if (blocked.length > 0) {
-      setError(`@${blocked[0]} không cho phép tag.`);
+      setError(`@${blocked[0]} doesn't allow tags.`);
       return;
     }
     logComposerPost();
@@ -119,7 +117,7 @@ export function ComposerScreen() {
       await clear();
       handleDismiss();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không đăng được. Thử lại.");
+      setError(err instanceof Error ? err.message : "Couldn't post. Try again.");
     }
   }
 
@@ -148,7 +146,7 @@ export function ComposerScreen() {
             />
           </View>
 
-          <Text variant="title" accessibilityRole="header">
+          <Text variant="h1" accessibilityRole="header">
             New post
           </Text>
 
@@ -175,9 +173,10 @@ export function ComposerScreen() {
 
           <View style={styles.mediaRow}>
             <Button
-              title={media.items.length === 0 ? "+ Photo" : `+ Photo (${media.count}/${COMPOSER_MAX_MEDIA})`}
+              title={media.items.length === 0 ? "Add photo" : `Add photo (${media.count}/${COMPOSER_MAX_MEDIA})`}
               variant="ghost"
               size="sm"
+              icon="image"
               testID="composer-media-add"
               disabled={!media.canAddMore || busy}
               onPress={() => {
@@ -186,7 +185,7 @@ export function ComposerScreen() {
             />
             <Text
               variant="caption"
-              style={{ color: overLimit ? theme.color.danger : theme.color.textSecondary }}
+              color={overLimit ? "danger" : "textSecondary"}
               testID="composer-counter"
               accessibilityLabel={`${trimmed.length} of ${COMPOSER_MAX_LENGTH} characters`}
             >
@@ -195,21 +194,13 @@ export function ComposerScreen() {
           </View>
 
           {isUploading ? (
-            <Text
-              variant="caption"
-              style={{ color: theme.color.textSecondary }}
-              testID="composer-uploading"
-            >
+            <Text variant="caption" color="textSecondary" testID="composer-uploading">
               Uploading…
             </Text>
           ) : null}
 
           {showRepickNote ? (
-            <Text
-              variant="caption"
-              style={{ color: theme.color.textSecondary }}
-              testID="composer-repick-note"
-            >
+            <Text variant="caption" color="textSecondary" testID="composer-repick-note">
               Photos from last time may need re-picking (tmp files don&apos;t survive restart).
             </Text>
           ) : null}
@@ -217,7 +208,7 @@ export function ComposerScreen() {
           {error ? (
             <Text
               variant="caption"
-              style={{ color: theme.color.danger }}
+              color="danger"
               testID="composer-error"
               accessibilityRole="alert"
             >
@@ -226,17 +217,13 @@ export function ComposerScreen() {
           ) : null}
 
           {queued ? (
-            <Text
-              variant="caption"
-              style={{ color: theme.color.textSecondary }}
-              testID="composer-queued-badge"
-            >
+            <Text variant="caption" color="textSecondary" testID="composer-queued-badge">
               Queued — will send when online.
             </Text>
           ) : null}
 
           {!loaded ? (
-            <Text variant="caption" style={{ color: theme.color.textSecondary }}>
+            <Text variant="caption" color="textSecondary">
               Loading draft…
             </Text>
           ) : null}

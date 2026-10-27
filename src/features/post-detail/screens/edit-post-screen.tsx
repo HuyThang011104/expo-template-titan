@@ -59,7 +59,9 @@ function EditPostBody({ postId }: { postId: string }) {
   if (post.isPending) {
     return (
       <Screen style={styles.center} testID="edit-post-screen">
-        <Text variant="body">Loading post…</Text>
+        <Text variant="body" color="textSecondary">
+          Loading post…
+        </Text>
       </Screen>
     );
   }
@@ -67,8 +69,10 @@ function EditPostBody({ postId }: { postId: string }) {
   if (post.isError || !post.data) {
     return (
       <Screen style={styles.center} testID="edit-post-screen">
-        <Text variant="title">Bài viết không còn</Text>
-        <Text variant="body">It may have been deleted.</Text>
+        <Text variant="h3">This post is gone</Text>
+        <Text variant="body" color="textSecondary">
+          It may have been deleted.
+        </Text>
         <Button
           title="Dismiss"
           variant="secondary"
@@ -83,7 +87,7 @@ function EditPostBody({ postId }: { postId: string }) {
   const save = (): void => {
     setError(null);
     if (!parseUpdatePostInput({ body: value })) {
-      setError("Bài viết từ 1–280 ký tự.");
+      setError("Posts are 1–280 characters.");
       return;
     }
     update.mutate(trimmed, {
@@ -118,7 +122,7 @@ function EditPostBody({ postId }: { postId: string }) {
           {`${trimmed.length}/280`}
         </Text>
         {error ? (
-          <Text variant="caption" color="textSecondary" testID="edit-post-error">
+          <Text variant="caption" color="danger" testID="edit-post-error">
             {error}
           </Text>
         ) : null}

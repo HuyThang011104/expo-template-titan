@@ -9,7 +9,7 @@
 import { Image } from "expo-image";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
-import { Text } from "@/shared/ui/text";
+import { Icon } from "@/shared/ui";
 import { useTheme } from "@/shared/ui/theme/use-theme";
 
 export type ComposerMediaStripProps = {
@@ -48,11 +48,9 @@ export function ComposerMediaStrip({ uris, onRemove, editable = true }: Composer
               accessibilityRole="button"
               accessibilityLabel={`Remove photo ${index + 1}`}
               onPress={() => onRemove(index)}
-              style={[styles.remove, { backgroundColor: theme.color.backgroundElement }]}
+              style={[styles.remove, { backgroundColor: theme.color.surfaceMuted }]}
             >
-              <Text variant="small" style={styles.removeGlyph}>
-                ×
-              </Text>
+              <Icon name="close" size="sm" color="textPrimary" />
             </Pressable>
           ) : null}
         </View>
@@ -84,9 +82,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-  },
-  removeGlyph: {
-    fontWeight: "700",
-    lineHeight: 20,
   },
 });

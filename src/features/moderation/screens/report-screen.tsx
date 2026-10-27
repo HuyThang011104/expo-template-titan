@@ -101,7 +101,7 @@ export function ReportScreen() {
           />
         </View>
 
-        <Text variant="title" accessibilityRole="header">
+        <Text variant="h1" accessibilityRole="header">
           Report
         </Text>
 
@@ -131,7 +131,7 @@ export function ReportScreen() {
         </Text>
 
         {error ? (
-          <Text variant="small" color="danger" testID="report-error">
+          <Text variant="label" color="danger" testID="report-error">
             {error}
           </Text>
         ) : null}

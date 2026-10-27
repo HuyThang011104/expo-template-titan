@@ -22,9 +22,7 @@ const COLOR_ALLOWLIST = new Set([
 ]);
 
 /** Files allowed to keep raw fontSize/fontWeight until their P3 migration. */
-const FONT_ALLOWLIST = new Set([
-  "src/features/composer/components/composer-media-strip.tsx",
-]);
+const FONT_ALLOWLIST = new Set([]);
 
 const STRICT_FONTS = true;
 
