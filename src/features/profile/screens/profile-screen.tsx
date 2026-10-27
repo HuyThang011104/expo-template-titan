@@ -18,7 +18,14 @@ import { useUserPosts } from "@/entities/post";
 import { useSavedPosts } from "@/entities/saved";
 import { useSession } from "@/shared/auth";
 import { hrefs } from "@/shared/navigation/hrefs";
-import { Button, ErrorState, LoadingState, Screen, Text } from "@/shared/ui";
+import {
+  Button,
+  ErrorState,
+  LoadingState,
+  Screen,
+  Tabs,
+  Text,
+} from "@/shared/ui";
 
 import { logProfileOpen } from "../analytics";
 import { ProfileHeader } from "../components/profile-header";
@@ -99,40 +106,24 @@ export function ProfileScreen() {
       {requests.isSuccess && requests.userIds.length > 0 ? (
         <Link href={hrefs.followRequests()} asChild>
           <Pressable testID="profile-requests-button">
-            <Text variant="small" style={styles.requestsLink}>
+            <Text variant="labelStrong" style={styles.requestsLink}>
               Follow requests ({requests.userIds.length})
             </Text>
           </Pressable>
         </Link>
       ) : null}
-      <View style={styles.tabs}>
-        <Pressable
-          testID="profile-tab-posts"
-          accessibilityRole="tab"
-          accessibilityState={{ selected: tab === "posts" }}
-          onPress={() => {
-            setTab("posts");
-          }}
-          style={styles.tab}
-        >
-          <Text variant="small" style={tab === "posts" ? styles.tabActive : undefined}>
-            Posts
-          </Text>
-        </Pressable>
-        <Pressable
-          testID="profile-tab-saved"
-          accessibilityRole="tab"
-          accessibilityState={{ selected: tab === "saved" }}
-          onPress={() => {
-            setTab("saved");
-          }}
-          style={styles.tab}
-        >
-          <Text variant="small" style={tab === "saved" ? styles.tabActive : undefined}>
-            Saved
-          </Text>
-        </Pressable>
-      </View>
+      <Tabs
+        variant="underline"
+        items={[
+          { key: "posts", label: "Posts", testID: "profile-tab-posts" },
+          { key: "saved", label: "Saved", testID: "profile-tab-saved" },
+        ]}
+        value={tab}
+        onChange={(key) => {
+          setTab(key as "posts" | "saved");
+        }}
+        testID="profile-tabs"
+      />
       {tab === "saved" ? (
         <SavedTab saved={saved} />
       ) : posts.isPending ? (
@@ -189,19 +180,6 @@ const styles = StyleSheet.create({
   requestsLink: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    fontWeight: "700",
-  },
-  tabs: {
-    flexDirection: "row",
-    gap: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  tab: {
-    paddingVertical: 4,
-  },
-  tabActive: {
-    fontWeight: "700",
   },
   listFlex: {
     flex: 1,

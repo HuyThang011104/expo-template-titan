@@ -39,11 +39,8 @@ function CountLink({
   return (
     <Link href={href} asChild>
       <Pressable testID={testID}>
-        <Text variant="small">
-          <Text variant="small" style={styles.countNumber}>
-            {count}
-          </Text>{" "}
-          {kind}
+        <Text variant="label" color="textSecondary">
+          <Text variant="labelStrong">{count}</Text> {kind}
         </Text>
       </Pressable>
     </Link>
@@ -64,7 +61,7 @@ export function ProfileHeader({
       {user.coverUrl ? (
         <Image
           source={{ uri: user.coverUrl }}
-          style={[styles.cover, { backgroundColor: theme.color.backgroundElement }]}
+          style={[styles.cover, { backgroundColor: theme.color.surfaceMuted }]}
           contentFit="cover"
           transition={200}
           accessibilityLabel={`${user.displayName} cover`}
@@ -72,9 +69,9 @@ export function ProfileHeader({
         />
       ) : null}
       <View style={styles.root}>
-        <Avatar displayName={user.displayName} avatarUrl={user.avatarUrl} size={48} />
+        <Avatar displayName={user.displayName} avatarUrl={user.avatarUrl} size={64} />
         <View style={styles.names}>
-          <Text variant="title">{user.displayName}</Text>
+          <Text variant="h2">{user.displayName}</Text>
           <Text variant="body" color="textSecondary">
             @{user.handle}
           </Text>
@@ -85,7 +82,7 @@ export function ProfileHeader({
           ) : null}
           {user.link ? (
             <Text
-              variant="small"
+              variant="label"
               color="textSecondary"
               testID={testID ? `${testID}-link` : undefined}
             >
@@ -134,9 +131,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     marginTop: 4,
-  },
-  countNumber: {
-    fontWeight: "700",
   },
   action: {
     justifyContent: "center",

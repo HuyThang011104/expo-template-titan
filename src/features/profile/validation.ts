@@ -3,7 +3,7 @@
  *
  * Wraps `parseUpdateProfileInput` from `entities/user` so the screen only
  * deals with display strings. Zod failure → `null` + `logger.warn` inside
- * the entity; here we map to Vietnamese inline messages (no throw).
+ * the entity; here we map to inline messages (no throw).
  * Image file checks (format/size) keep the old image on failure.
  */
 
@@ -37,17 +37,17 @@ export function validateProfileImage(asset: ProfileImageCandidate): string | nul
   const mime = (asset.mimeType ?? "").toLowerCase().trim();
   if (mime.length > 0) {
     if (!ALLOWED_IMAGE_MIMES.has(mime)) {
-      return "Định dạng ảnh không hỗ trợ. Chọn JPG, PNG hoặc WebP.";
+      return "Unsupported image format. Use JPG, PNG or WebP.";
     }
   } else {
     const uri = asset.uri ?? "";
     const ext = uri.split("?")[0]?.split(".").pop()?.toLowerCase() ?? "";
     if (!ALLOWED_IMAGE_EXTS.has(ext)) {
-      return "Định dạng ảnh không hỗ trợ. Chọn JPG, PNG hoặc WebP.";
+      return "Unsupported image format. Use JPG, PNG or WebP.";
     }
   }
   if (typeof asset.fileSize === "number" && asset.fileSize > PROFILE_IMAGE_MAX_BYTES) {
-    return "Ảnh quá nặng (tối đa 5MB). Chọn ảnh nhẹ hơn.";
+    return "Image is too large (max 5MB). Pick a lighter one.";
   }
   return null;
 }
@@ -69,12 +69,12 @@ export function validateProfileForm(values: ProfileFormValues): ProfileFormError
   const errors: ProfileFormErrors = {};
   const name = values.displayName.trim();
   if (name.length === 0) {
-    errors.displayName = "Tên không được để trống.";
+    errors.displayName = "Name can't be empty.";
   } else if (name.length > PROFILE_DISPLAY_NAME_MAX) {
-    errors.displayName = `Tên tối đa ${PROFILE_DISPLAY_NAME_MAX} ký tự.`;
+    errors.displayName = `Name is limited to ${PROFILE_DISPLAY_NAME_MAX} characters.`;
   }
   if (values.bio.trim().length > PROFILE_BIO_MAX) {
-    errors.bio = `Bio tối đa ${PROFILE_BIO_MAX} ký tự.`;
+    errors.bio = `Bio is limited to ${PROFILE_BIO_MAX} characters.`;
   }
   if (!parseUpdateProfileInput(values)) {
     // Map the generic failure to the most likely field for inline display.
@@ -84,17 +84,17 @@ export function validateProfileForm(values: ProfileFormValues): ProfileFormError
         try {
           const url = new URL(link);
           if (url.protocol !== "http:" && url.protocol !== "https:") {
-            errors.link = "Link phải bắt đầu bằng http(s).";
+            errors.link = "Link must start with http(s).";
           } else {
-            errors.displayName = "Thông tin chưa hợp lệ. Kiểm tra lại tên, bio và link.";
+            errors.displayName = "Some details are invalid. Check name, bio and link.";
           }
         } catch {
-          errors.link = "Link chưa đúng định dạng URL.";
+          errors.link = "Link is not a valid URL.";
         }
       } else {
-        if (values.avatarUrl !== null) errors.avatarUrl = "Avatar URL chưa đúng.";
-        else if (values.coverUrl !== null) errors.coverUrl = "Cover URL chưa đúng.";
-        else errors.displayName = "Thông tin chưa hợp lệ. Kiểm tra lại tên, bio và link.";
+        if (values.avatarUrl !== null) errors.avatarUrl = "Avatar URL is invalid.";
+        else if (values.coverUrl !== null) errors.coverUrl = "Cover URL is invalid.";
+        else errors.displayName = "Some details are invalid. Check name, bio and link.";
       }
     }
   }

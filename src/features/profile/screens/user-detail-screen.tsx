@@ -71,7 +71,7 @@ function UserDetailBody({ handle }: { handle: string }) {
       <Screen testID="user-detail-screen">
         <ErrorState
           title={`@${handle}`}
-          message="User không tồn tại."
+          message="This user doesn't exist."
           testID="user-not-found"
           retryTestID="user-detail-retry-button"
           onRetry={() => {
@@ -128,17 +128,21 @@ function UserDetailBody({ handle }: { handle: string }) {
         <View style={styles.center}>
           {blockReason === "private" ? (
             <>
-              <Text variant="title" testID="private-empty-state">
+              <Text variant="h3" testID="private-empty-state">
                 Private account
               </Text>
-              <Text variant="body">Follow @{user.handle} to see their posts.</Text>
+              <Text variant="body" color="textSecondary">
+                Follow @{user.handle} to see their posts.
+              </Text>
             </>
           ) : (
             <>
-              <Text variant="title" testID="blocked-empty-state">
+              <Text variant="h3" testID="blocked-empty-state">
                 Not available
               </Text>
-              <Text variant="body">You can&apos;t see @{user.handle}&apos;s posts.</Text>
+              <Text variant="body" color="textSecondary">
+                You can&apos;t see @{user.handle}&apos;s posts.
+              </Text>
             </>
           )}
         </View>

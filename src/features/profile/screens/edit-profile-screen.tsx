@@ -16,7 +16,7 @@ import { StyleSheet, View } from "react-native";
 
 import { useMe, useUpdateProfile } from "@/entities/user";
 import { pickFromLibrary } from "@/shared/media/picker";
-import { Button, Input, Screen, Text } from "@/shared/ui";
+import { Button, Input, LoadingState, Screen, Text } from "@/shared/ui";
 
 import {
   validateProfileForm,
@@ -38,7 +38,7 @@ export function EditProfileScreen() {
   if (me.isPending) {
     return (
       <Screen style={styles.center} testID="edit-profile-screen">
-        <Text variant="body">Loading profile…</Text>
+        <LoadingState label="Loading profile" testID="edit-profile-loading" />
       </Screen>
     );
   }
@@ -46,8 +46,10 @@ export function EditProfileScreen() {
   if (me.isError || !me.data) {
     return (
       <Screen style={styles.center} testID="edit-profile-screen">
-        <Text variant="title">Profile</Text>
-        <Text variant="body">Couldn&apos;t load your profile.</Text>
+        <Text variant="h3">Profile</Text>
+        <Text variant="body" color="textSecondary">
+          Couldn&apos;t load your profile.
+        </Text>
         <Button
           title="Retry"
           testID="edit-profile-retry-button"
@@ -147,14 +149,14 @@ function EditProfileBody({
     <Screen testID="edit-profile-screen">
       <View style={styles.root}>
         <Input
-          label="Tên"
+          label="Name"
           value={displayName}
           onChangeText={(next) => {
             setDisplayName(next);
             if (errors.displayName) setErrors((p) => ({ ...p, displayName: undefined }));
             if (update.isError) update.reset();
           }}
-          placeholder="Tên hiển thị"
+          placeholder="Display name"
           maxLength={50}
           editable={!update.isPending}
           testID="edit-profile-name-input"
@@ -168,7 +170,7 @@ function EditProfileBody({
             if (errors.bio) setErrors((p) => ({ ...p, bio: undefined }));
             if (update.isError) update.reset();
           }}
-          placeholder="Giới thiệu ngắn (tối đa 160 ký tự)"
+          placeholder="Short bio (max 160 characters)"
           multiline
           maxLength={160}
           editable={!update.isPending}
@@ -206,7 +208,7 @@ function EditProfileBody({
             />
           </View>
           <Button
-            title={picking === "avatar" ? "…" : "Chọn"}
+            title={picking === "avatar" ? "…" : "Pick"}
             variant="secondary"
             size="sm"
             testID="edit-profile-avatar-pick-button"
@@ -233,7 +235,7 @@ function EditProfileBody({
             />
           </View>
           <Button
-            title={picking === "cover" ? "…" : "Chọn"}
+            title={picking === "cover" ? "…" : "Pick"}
             variant="secondary"
             size="sm"
             testID="edit-profile-cover-pick-button"
@@ -244,7 +246,7 @@ function EditProfileBody({
           />
         </View>
         {submitError ? (
-          <Text variant="caption" testID="edit-profile-error">
+          <Text variant="caption" color="danger" testID="edit-profile-error">
             {submitError}
           </Text>
         ) : null}

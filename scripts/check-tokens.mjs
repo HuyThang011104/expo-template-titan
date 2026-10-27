@@ -28,8 +28,6 @@ const FONT_ALLOWLIST = new Set([
   "src/features/chat/screens/chat-detail-screen.tsx",
   "src/features/composer/components/composer-media-strip.tsx",
   "src/features/inbox/components/notification-row.tsx",
-  "src/features/profile/components/profile-header.tsx",
-  "src/features/profile/screens/profile-screen.tsx",
   "src/features/search/components/search-history-list.tsx",
   "src/features/search/components/search-results.tsx",
   "src/features/search/components/trending-list.tsx",

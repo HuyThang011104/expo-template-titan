@@ -8,7 +8,7 @@ describe("validateProfileImage", () => {
   it("rejects unsupported formats", () => {
     expect(
       validateProfileImage({ uri: "file:///a.gif", mimeType: "image/gif" }),
-    ).toMatch(/Định dạng/);
+    ).toMatch(/Unsupported image format/);
   });
 
   it("rejects oversized images", () => {
@@ -18,7 +18,7 @@ describe("validateProfileImage", () => {
         mimeType: "image/jpeg",
         fileSize: 6 * 1024 * 1024,
       }),
-    ).toMatch(/quá nặng/);
+    ).toMatch(/too large/);
   });
 
   it("accepts jpg/png/webp under 5MB", () => {
