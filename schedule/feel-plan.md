@@ -28,7 +28,7 @@
 | `expo-haptics` | Chưa cài — cần thêm (F7) + **rebuild dev client 1 lần** |
 | `@expo/ui`, `expo-glass-effect` | Đã cài, **0 import** — để yên (F9) |
 | Camera capture | Kernel **đã có**: `takePhoto()` + `ensureCameraAccess()` + plugin native (`shared/media/picker.ts:91`, `plugins/with-titan-permissions.js`) — chỉ chưa wire vào composer/chat |
-| FlashList 2.0.2 | Không expose `stickyHeaderIndices` (chỉ internal) → profile tabs không sticky (D6) |
+| FlashList 2.0.2 | Không expose `stickyHeaderIndices` → sticky tabs dựng bằng overlay `scrollY` (PF4.3) |
 | Reanimated / gesture-handler | Reanimated chỉ dùng cho skeleton; gesture-handler chỉ có RootView — feel wave dùng cả hai |
 | Maestro | 13 flow trong `e2e/flows/` — xem Phụ lục A |
 | Href `post` | Chỉ nhận `id`; cần thêm param focus cho comment affordance (PF3.1) |
@@ -79,7 +79,7 @@ PF0.5 MediaGrid (entities/post) ─────> PF2.1 PostCard
 PF1.1 Composer header+body ─> PF1.2 Composer toolbar
 PF2.1 PostCard+Feed ─> PF3.1 Comments
                    └─> PF4.1 Profile (list dùng PostCard)
-PF4.1 Profile anatomy ─> PF4.2 Q7 title
+PF4.1 Profile anatomy ─> PF4.2 Q7 title ─> PF4.3 Sticky tabs overlay
 PF5.1 Inbox anatomy ─> PF5.2 Q8 thumbnail
 PF6.1 Chat chrome ─> PF6.2 Bubbles/composer
 PF8.1 Modals header actions (độc lập, cần PF0.2)
@@ -204,8 +204,8 @@ src/entities/post/index.ts
 **Contract**
 
 - Props: `media: PostMedia[]`, `onPress?: (index) => void`, `maxHeight`.
-- 1 ảnh: aspect thật; thiếu metadata → 4:5, `maxHeight 420`. 2: 2 cột vuông. 3: 1 lớn + 2 nhỏ. 4: lưới 2×2. Gap `space[1]`, `radius.md`.
-- Video: poster + badge `play` (PF0.4).
+- **API không có `width/height`** → 1 ảnh `aspectRatio 4/5`, `maxHeight 420`; 2: 2 cột vuông; 3: 1 lớn + 2 nhỏ; 4: lưới 2×2. Gap `space[1]`, `radius.md`.
+- Video trong grid: tile tối + badge `play` (không có poster URL). 1 video đơn → PostCard dùng `PostVideo`, không qua MediaGrid.
 - Không fetch; chỉ render; không navigation (callback do feature).
 
 **Xong khi**
@@ -252,7 +252,7 @@ src/features/composer/hooks/use-composer-media.ts
 **Contract**
 
 - Toolbar pin đáy (trên keyboard): `IconButton image` (giữ `composer-media-add`), `IconButton camera` → `takePhoto()` (kernel đã có; **không** phải feature mới) → append vào media list.
-- `CounterRing` hiển thị bên phải toolbar từ `260/280`; testID `composer-counter` chuyển sang ring; `<260` ẩn hoàn toàn.
+- `CounterRing` bên phải toolbar từ `260/280`, giữa ring = **số còn lại** (âm khi vượt); testID `composer-counter` chuyển sang ring; `<260` ẩn hoàn toàn, reserve chỗ (không layout shift).
 - Media strip giữ 72px/remove button; `Uploading…/Queued/error` thành dòng `caption` trên toolbar.
 - Không đổi upload pipeline, outbox, `COMPOSER_MAX_MEDIA`.
 
@@ -284,8 +284,8 @@ src/features/profile/components/profile-posts-list.tsx
 - Flat row trên `background`, divider hairline `border` giữa item (bỏ gap 8px); PostCard không còn `Card` ở feed (giữ khả năng dùng Card nếu prop `surface` nếu cần — mặc định flat).
 - Header row: Avatar 40 + (name / `@handle · time`) + `more`; timestamp **rời đáy card**.
 - Body: clamp 8 dòng + "more" mở rộng tại chỗ (tap không bubble navigation — chặn bằng `onPress` trên span/row).
-- Media: `MediaGrid` (PF0.5); bỏ `POST_IMAGE_HEIGHT = 200`.
-- Action row **duy nhất**: comment · like · (giãn) · share · save. Thêm prop `onCommentPress?`; item comment mở detail (autofocus để PF3.1).
+- Media: `MediaGrid` (PF0.5); bỏ `POST_IMAGE_HEIGHT = 200`; 1 video → `PostVideo`.
+- Action row **duy nhất**: comment (icon-only) · like (ẩn count khi `0`) · (giãn) · share · save. Thêm prop `onCommentPress?`; comment mở detail kèm `focus=comment` (autofocus ở PF3.1).
 - Like: `PressableScale` + `hapticLight()` + spring heart (reduce motion → opacity); unlike không haptic.
 - Long-press card → mở overflow (cùng handler với `more`).
 - Giữ API/testID: `post-card-<id>`, `like-button-<id>`, callback pattern, canonical `usePost`.
@@ -373,7 +373,7 @@ src/features/profile/screens/edit-profile-screen.tsx    # chỉ nếu bị ảnh
 - Me: `headerRight` `IconButton more` → Sheet (Follow requests badge N, Settings, Sign out danger). Giữ `profile-sign-out-button` trên item trong Sheet → **Maestro `profile.yaml` mở menu trước**.
 - User: `FollowButton`/Edit trong action; overflow = report/block/share.
 - Private/blocked → `EmptyState` lock.
-- Tabs không sticky (D6) — chấp nhận trong wave; giữ testID tabs/list.
+- Tabs trong list (chưa sticky ở PR này); overlay sticky ở PF4.3; giữ testID tabs/list.
 - Không đổi `useUserPosts`/`useSavedPosts`/canonical ids.
 
 **Xong khi**
@@ -417,6 +417,36 @@ src/features/profile/components/profile-header.tsx    # onLayout khối identity
 - [ ] Header title không nhấp nháy khi pull-to-refresh overscroll.
 
 **Rủi ro**: FlashList v2 Android không nhận worklet handler → fallback JS write đã định nghĩa trong spec; **không** đổi approach mà không ghi §14.
+
+---
+
+### PF4.3 Sticky tabs overlay
+
+**Tạo**
+```text
+src/features/profile/components/profile-sticky-tabs.tsx
+```
+
+**Sửa**
+```text
+src/features/profile/screens/profile-screen.tsx
+src/features/profile/screens/user-detail-screen.tsx
+```
+
+**Contract**
+
+- Overlay `Tabs` dính ngay dưới native header (absolute top 0 trong Screen body), nền `surface` + hairline `border` dưới; fade-in theo `scrollY` khi tabs trong list cuộn qua — đo `tabsBottom` bằng `onLayout` (dùng lại cơ chế PF4.2).
+- Tap tab → đổi tab + `scrollToOffset({ offset: 0 })` (reset scroll khi đổi tab).
+- `pointerEvents="none"` khi opacity 0 (không chặn tap list); không bắt scroll.
+- Reduce motion → hiện/ẩn tức thời tại ngưỡng.
+- a11y: `role=tab` + `selected`; chỉ bản đang hiện được screen reader đọc (ẩn bản kia) — tránh đọc trùng.
+
+**Xong khi**
+- [ ] Cuộn qua tabs → overlay hiện không nháy; tap switch đúng tab + list về đầu.
+- [ ] Không layout shift; overlay ẩn không chặn tap.
+- [ ] QA iOS + Android, reduced motion, light/dark.
+
+**Rủi ro**: `pointerEvents`/đo `tabsBottom` sai → overlay che list hoặc không hiện; QA bằng tap ở vùng tabs.
 
 ---
 
@@ -576,8 +606,8 @@ Route modal giữ thin (không sửa); screen đọc params.
 
 **Contract**
 
-- Full-screen `modal`, nền đen; `expo-image` + gesture-handler (pinch, pan, double-tap zoom); close `IconButton` overlay top-trailing; video dùng `expo-video` fullscreen controls.
-- Không swipe-to-dismiss custom (dùng gesture native của modal) — PD6.
+- Full-screen `modal`, nền đen; params `{ postId, index }`; đọc canonical cache, thiếu → `usePost`; `expo-image` + gesture-handler (pinch, pan, double-tap zoom); close `IconButton` overlay; video `expo-video` fullscreen controls.
+- Không swipe-to-dismiss custom; route đặt `gestureEnabled: false` (PD6/F16) để pinch/pan không đóng nhầm.
 - Giữ route/testID; a11y label cho close; reduce motion → bỏ zoom animation (vẫn cho zoom tĩnh).
 
 **Xong khi**
@@ -675,19 +705,23 @@ rg "expo-haptics" src/features                         # = 0 (chỉ shared/lib)
 
 ---
 
-## 14. Quyết định cần chốt trước PF0.1
+## 14. Quyết định đã chốt (không còn mở)
 
-| # | Câu hỏi | Đề xuất | Ảnh hưởng |
-|---|---|---|---|
-| PD1 | `CounterRing` đặt ở đâu? Spec §4.2 diagram đặt ở toolbar, rule 6 lại ghi "quanh nút Post" | **Toolbar** (phải media icons); sửa spec §4.2 rule 6 ở PR docs riêng | PF1.2 |
-| PD2 | Camera ở composer/chat: có phải feature mới? | **Không** — kernel đã có `takePhoto()` + permission + plugin; chỉ wire | PF1.2, PF6.2 |
-| PD3 | Profile tabs không sticky (D6) trong wave này? | **Chấp nhận** tabs cuộn theo header; nếu QA thấy khó dùng → SectionList ở PR riêng | PF4.1 |
-| PD4 | Comment affordance mở detail có autofocus ngay? | **Không** ở PF2.1 (chỉ navigate); PF3.1 thêm `?focus=comment` + autoFocus | PF2.1, PF3.1 |
-| PD5 | Settings group: hub 1 group (Notifications/Privacy/Account), notifications 1 group "Activity"? | **Có** | PF9.1 |
-| PD6 | Media viewer v1 có swipe-to-dismiss custom? | **Không** — dùng gesture native của modal; chỉ pinch/pan/double-tap zoom | PF8.2 |
-| PD7 | Rebuild dev client sau khi thêm `expo-haptics`? | **Có, 1 lần** sau PF0.1 (AGENTS: chỉ rebuild khi thêm native lib) | PF0.1 |
+> Đã cập nhật vào `docs/feel-spec.md` (F6, F14–F16, §4.1, §4.2, §4.4, §4.10, §5.3, §7.1).
+> Không PR nào được đổi các giá trị này; nếu buộc đổi, sửa spec trước ở PR docs riêng.
 
-> PD1 phải chốt trước PF1.2; các mục còn lại chốt trước PR tương ứng.
+| # | Quyết định | Chốt | Nơi ghi | PR |
+|---|---|---|---|---|
+| PD1 | Vị trí + nội dung CounterRing | **Toolbar phải**, giữa ring = **số còn lại**, ngưỡng 260/280, ẩn < 260 (reserve chỗ) | §4.2 r6, §5.3 | PF1.2 |
+| PD2 | Camera composer/chat | **Có** — wire `takePhoto()` (kernel đã có); denied → im lặng | §4.2, §4.6 | PF1.2, PF6.2 |
+| PD3 | Sticky profile tabs | **Có** — overlay `Tabs` dựng bằng `scrollY`, không dùng `stickyHeaderIndices` | F15, §4.4 | PF4.3 |
+| PD4 | Comment → detail | Luôn kèm `focus=comment`; autofocus ở PF3.1 | §4.1 | PF2.1, PF3.1 |
+| PD5 | Settings grouping | Hub 1 group; notifications 1 group "Activity" | §4.9 | PF9.1 |
+| PD6 | Media viewer gesture | Không swipe-dismiss custom; `gestureEnabled: false`; close button | F16, §4.10, §7.1 | PF8.2 |
+| PD7 | Rebuild dev client | **Có, 1 lần** sau PF0.1 | AGENTS | PF0.1 |
+| PD8 | Tỉ lệ media | 1 ảnh **4:5** maxH 420; grid **ô vuông**; video grid = tile + play (API không có width/height) | F6, §4.1 | PF0.5, PF2.1 |
+| PD9 | Counts action row | Like ẩn count khi `0`; comment/share/save icon-only (model không có count) | F14, §4.1 | PF2.1 |
+| PD10 | Media viewer dữ liệu | Params `{ postId, index }`, cache-first, thiếu → `usePost` | F16, §4.10 | PF8.2 |
 
 ---
 
@@ -707,6 +741,7 @@ rg "expo-haptics" src/features                         # = 0 (chỉ shared/lib)
 | PF3.1 — Comment row + composer | [ ] | M | focus param |
 | PF4.1 — Profile anatomy | [ ] | L | Sign out vào Sheet |
 | PF4.2 — Q7 title transition | [ ] | M | QA matrix bắt buộc |
+| PF4.3 — Sticky tabs overlay | [ ] | S–M | Dùng `scrollY`/`tabsBottom` của PF4.2 |
 | PF5.1 — Inbox anatomy | [ ] | M | |
 | PF5.2 — Q8 notif thumbnail | [ ] | S | Cache-only |
 | PF6.1 — Chat chrome + keyboard + list | [ ] | M | Bỏ RN KAV |
@@ -742,7 +777,7 @@ rg "expo-haptics" src/features                         # = 0 (chỉ shared/lib)
 
 ## Phụ lục B — Việc làm ngay
 
-1. Chốt PD1 (+ PD2–PD7 nếu muốn).
+1. Không còn quyết định mở — PD1–PD10 đã chốt ở §14, spec đã cập nhật.
 2. PF0.1 → rebuild dev client 1 lần.
 3. PF0.2–PF0.5 (có thể song song theo phụ thuộc §2).
 4. Bắt đầu surface đầu tiên: PF1.1.

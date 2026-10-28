@@ -39,7 +39,7 @@
 | F3 | Nguyên lý số 3 | **Feedback everywhere**: mọi interaction lặp lại (like, post, send, follow) có press feedback + haptic theo bảng §6 | Thêm `expo-haptics` (infra dep — Q2 đã chốt) |
 | F4 | Motion engine | Reanimated 4 + token `motion` hiện có; navigation vẫn dùng animation native của Stack | Không thêm lib animation |
 | F5 | Feed row style | **Flat row + hairline divider** (X/Threads), không Card viền ở feed; Card giữ cho chỗ khác nếu cần | PostCard đổi vỏ, giữ API và testID |
-| F6 | Media | Ảnh render theo **aspect-ratio thật**, grid 1–4 ảnh pattern X; hết fixed 200px | `MediaGrid` mới trong `entities/post/ui` |
+| F6 | Media | Tỉ lệ **cố định** (API chỉ có `url`, không có `width/height`): 1 ảnh 4:5 + `maxHeight 420`; grid ô vuông 1–4 ảnh; hết fixed 200px. Video trong grid = tile tối + icon `play` | `MediaGrid` mới trong `entities/post/ui` |
 | F7 | `expo-haptics` | Thêm (dep duy nhất của wave này) | Q2 (§11) |
 | F8 | `expo-blur` | **Chưa thêm** ở wave này; cân nhắc ở wave sau cho media-viewer/overlay | Giữ scope gọn |
 | F9 | `@expo/ui` / `expo-glass-effect` | **Không dùng ở wave này** (đã cài nhưng chưa import; @expo/ui phân mảnh iOS/Android, glass chỉ iOS 26). Revisit sau | Không xoá dep, chỉ để yên |
@@ -47,6 +47,9 @@
 | F11 | testID & Maestro | Không đổi testID hiện có; phần tử mới thêm testID mới; Maestro sửa cùng PR | Feed/composer flows không vỡ |
 | F12 | Profile header title transition (Q7 cũ) | **Trong wave** — title native crossfade `@handle` → displayName khi khối identity cuộn qua header; scroll-driven, không setState mỗi frame | Đổi cấu trúc profile: header vào `ListHeaderComponent` |
 | F13 | Notification media thumbnail (Q8 cũ) | **Trong wave** — thumbnail 44px lấy từ canonical post cache, không fetch thêm | Row inbox thêm trailing thumbnail |
+| F14 | Action row counts | Like hiện count khi `> 0` (ẩn `0`); comment/share/save **icon-only** — model không có `commentCount`/share/save count | §4.1 |
+| F15 | Sticky profile tabs | Overlay tabs dựng bằng `scrollY` (dùng chung cơ chế Q7), fade-in khi tabs trong list cuộn qua — không dựa `stickyHeaderIndices` | §4.4, PF4.3 |
+| F16 | Media viewer dữ liệu + gesture | Params `{ postId, index }`; đọc canonical cache, thiếu thì `usePost`; route `gestureEnabled: false` để pinch/pan không xung đột dismiss | §4.10, §7.1 |
 
 ---
 
@@ -118,10 +121,10 @@ Vị trí dùng: Home feed, Search results, Hashtag, Profile lists. Một vỏ d
 ```text
 ┌─ PostCard (flat row, nền background, ngang cách padding 4) ─────┐
 │ [Avatar 40] DisplayName        @handle · 2h              [more] │  ← header row, 1 dòng
-│ body text (body variant, clamp §4.1.4)                          │
-│ media (MediaGrid, aspect-ratio thật, radius.md)                 │
+│ body text (body variant, clamp 8 dòng)                          │
+│ media (MediaGrid, tỉ lệ cố định, radius.md)                     │
 │ ─────────────────────────────────────────────────────────────── │
-│ [comment] N      [like] N                    [share]  [save]    │  ← action row, duy nhất
+│ [comment]       [like] N                     [share]  [save]    │  ← action row, duy nhất
 └─────────────────────────────────────────────────────────────────┘
   ← hairline divider `border` giữa 2 card (thay separator 8px)
 ```
@@ -130,11 +133,12 @@ Quy tắc:
 
 1. **Header row**: `Avatar 40` + cột (displayName `labelStrong`, `@handle · time` `caption textSecondary`) + `IconButton more` (owner menu / safety menu — giữ logic hiện có). Timestamp **chuyển lên header** (không còn ở đáy card).
 2. **Body**: `Text body`; feed **clamp 8 dòng** + affordance "more" mở rộng tại chỗ.
-3. **Media** (MediaGrid — `entities/post/ui`, contract mới):
-   - 1 ảnh: full width, `aspectRatio` từ metadata media; không có metadata → 4:5, `maxHeight` 420.
+3. **Media** (MediaGrid — `entities/post/ui`):
+   - `PostMedia` chỉ có `{ kind, url }` → **không có aspect thật**. 1 ảnh: `aspectRatio 4/5`, `maxHeight 420`, `contentFit="cover"`. Grid: ô vuông.
    - 2 ảnh: 2 cột vuông. 3 ảnh: 1 lớn + 2 nhỏ. 4 ảnh: lưới 2×2. Gap `space[1]`, `radius.md`.
-   - Bấm ảnh → media-viewer (§4.10).
-4. **Action row — duy nhất 1 hàng**, 4 slot: `comment` (mở detail + focus composer), `like`, phải là `share`, `save`. Mỗi slot = icon `lg` + count `label tabular-nums`, hit area 44.
+   - Video: 1 video → giữ `PostVideo`; video nằm trong grid → tile tối + icon `play` (không có poster URL).
+   - Bấm media → media-viewer (§4.10) với `{ postId, index }`.
+4. **Action row — duy nhất 1 hàng**: `comment` (icon-only; mở detail + focus composer), `like` (icon + count, **ẩn khi `0`**), spacer, `share` (icon-only), `save` (icon-only, `saveAffordance`). Hit area 44.
 5. **Like**: fill `danger` + haptic light + spring pop (§6.2). Unlike: không haptic.
 6. Video: giữ `PostVideo` + `activeVideoId`; overlay control dùng icon mới (§8), hết glyph `▶/🔇`.
 7. Long-press card → mở cùng overflow menu với `more` (§7.3).
@@ -166,7 +170,7 @@ Quy tắc:
 3. Thân bài = `ComposerInput` mới (§5.2): borderless, auto-grow, min 2 dòng max ~12 dòng, `body` variant.
 4. Hàng đầu thân: `Avatar me 40` + `ComposerInput` — người đăng tự nhận diện bằng avatar, không cần label.
 5. **Toolbar đáy** (pin, nền `surface` + border top): `IconButton image` (giữ testID `composer-media-add`), `IconButton camera` (picker camera). Trạng thái `Uploading…/Queued/error` hiển thị dạng dòng `caption` ngay trên toolbar — giữ testID cũ.
-6. **Counter-ring** (§5.3): vòng tiến trình quanh nút Post, hiện khi `length ≥ 260/280`, đỏ khi vượt; `accessibilityLabel` đếm ký tự giữ ở ring (testID `composer-counter` chuyển sang ring). Khi `< 260` không hiện gì — màn sạch.
+6. **Counter-ring** (§5.3): đặt **bên phải toolbar** (không quanh nút Post); hiện khi `length ≥ 260/280`; giữa ring hiển thị **số ký tự còn lại** (20→0, âm khi vượt), màu `primary → warning → danger`; `accessibilityLabel` đếm ký tự (testID `composer-counter` chuyển sang ring). `< 260` ẩn hoàn toàn; toolbar reserve chỗ để không layout shift.
 7. Keyboard: keyboard-controller `KeyboardAvoidingView` (như hiện tại), toolbar tự nhấc theo keyboard.
 8. Draft/outbox/mention-gate/upload pipeline: **giữ nguyên hành vi**, chỉ đổi vỏ.
 
@@ -201,7 +205,7 @@ AppList (mỗi tab)
 └─ PostCard ids
 ```
 
-1. Header **nằm trong list**: cuộn là cover/avatar/names trôi đi; tabs cuộn theo (sticky tabs = D6, FlashList 2.0.2 không hỗ trợ).
+1. Header **nằm trong list**: cuộn là cover/avatar/names trôi đi. Tabs trong list cuộn theo; **overlay tabs dính** (nền `surface` + hairline dưới, fade-in khi tabs cuộn qua) dựng bằng `scrollY` ở PF4.3 — không dựa `stickyHeaderIndices`.
 2. **Action pill** (fullWidth): follow = `Button primary radius full`; đã follow → `secondary` "Following"; me → `secondary` "Edit profile". Hết 2 nút `secondary sm` dồn cột (A7).
 3. **Me-profile overflow**: `IconButton more` ở `headerRight` → Sheet: Follow requests (badge N), Settings, Sign out (danger). Giữ testID `profile-sign-out-button` trên item trong Sheet — Maestro phải mở menu trước (sửa cùng PR).
 4. **User-profile** (khác viewer): action slot = `FollowButton` hoặc Edit (self); overflow `more` = report / block / share.
@@ -291,7 +295,7 @@ Giữ nguyên anatomy hiện tại (display + Field + error inline) — đã đ�
 1. **Report**: headerLeft `Dismiss` (IconButton close hoặc text-button theo platform), headerRight pill `Submit`; bỏ hàng nút + h1 trong body (A5). Radio list giữ; có thể đổi row sang `ListItem` với trailing `check`. TestID giữ.
 2. **Edit-post**: headerLeft `Cancel`, headerRight pill `Save`; body chỉ còn `ComposerInput` + counter (ring không cần, giữ caption). Bỏ hàng nút dưới (A5).
 3. **Edit-profile**: đồng bộ pattern trên.
-4. **Media-viewer**: hết placeholder (A6) — full-screen `modal`, nền đen, ảnh zoom pan (gesture-handler pinch + double-tap), `IconButton close` top-trailing, video nếu kind video dùng `expo-video` fullscreen controls. Giữ tên route + testID.
+4. **Media-viewer**: hết placeholder (A6) — full-screen `modal`, nền đen; params `{ postId, index }`, đọc canonical post cache, thiếu thì `usePost`; ảnh zoom/pan (pinch + pan + double-tap), `IconButton close` overlay; video dùng `expo-video` fullscreen controls. Route đặt `gestureEnabled: false` để pinch/pan không xung đột với dismiss. Giữ tên route + testID.
 
 ### 4.11 Home shell
 
@@ -316,7 +320,7 @@ Giữ nguyên anatomy hiện tại (display + Field + error inline) — đã đ�
 
 ### 5.3 `CounterRing` (`components/`)
 
-Vòng tiến trình SVG-free (Reanimated + `strokeDashoffset`), đường kính 28, quanh nút Post. Props: `value`, `max`, `warnFrom` (mặc định 0.9). Màu `primary` → `warning` → `danger`. Ẩn khi `< warnFrom`. Dùng: composer (hiện tại 1 nơi — là nền tảng cho edit-post/comment sau nên cho phép).
+Vòng tiến trình **không SVG** (2 nửa cung View + rotation), đường kính 28, đặt **trong toolbar** (cạnh các tool). Props: `value`, `max`, `warnFrom` (mặc định 0.9). Khi hiện, giữa ring có **số còn lại** (`max − value`, âm khi vượt). Màu `primary → warning → danger`. Ẩn khi dưới ngưỡng; chỗ được reserve để không layout shift. Dùng: composer (1 nơi hiện tại — là nền tảng cho edit-post/comment sau nên cho phép).
 
 ### 5.4 Haptics util (`shared/lib/haptics.ts`)
 
@@ -366,7 +370,7 @@ Mở rộng passthrough `onScroll` + `scrollEventThrottle` để profile đo off
 
 ### 7.1 Modal presentation
 
-Giữ `(modals)/_layout` như hiện tại (composer/report/edit-post/edit-profile = `formSheet`, media-viewer = `modal`). Thay đổi chỉ nằm ở **header options** từng screen: `headerLeft`/`headerRight` nhận Button/IconButton từ feature qua `Stack.Screen options` (pattern `headerRight` settings đã có ở P2.2). Không thêm `detents` ở wave này (D5).
+Giữ `(modals)/_layout` như hiện tại (composer/report/edit-post/edit-profile = `formSheet`, media-viewer = `modal`). Thay đổi chỉ nằm ở **header options** từng screen: `headerLeft`/`headerRight` nhận Button/IconButton từ feature qua `Stack.Screen options` (pattern `headerRight` settings đã có ở P2.2). Không thêm `detents` ở wave này (D5). Riêng media-viewer đặt `gestureEnabled: false` (F16) và có close button overlay.
 
 ### 7.2 Keyboard
 
@@ -496,4 +500,3 @@ Không còn câu hỏi mở. Mapping để tra cứu:
 | D3 | Notif group Today/This week (Q6) | Cần bucket thời gian + sticky section; giá trị thẩm mỹ nhỏ hơn row anatomy | Khi list > ~50 rows hoặc có yêu cầu scan theo ngày | M |
 | D4 | New-posts pill (Q9) | `features/feed/realtime/` trống, chưa có tín hiệu bài mới; theo AGENTS: để gap | Khi realtime có event | S — spec §4.11 sẵn |
 | D5 | formSheet detents (Q10) | Hành vi detents lệch iOS/Android; form hiện đủ ngắn cho full sheet | Khi có form ngắn cần thao tác nhanh 1 tay | S |
-| D6 | Sticky profile tabs (phát sinh từ Q7) | FlashList 2.0.2 không expose `stickyHeaderIndices` (chỉ internal) → tabs cuộn theo header | Khi nâng FlashList có hỗ trợ, hoặc chuyển SectionList | M |
