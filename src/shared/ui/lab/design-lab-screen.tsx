@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import { useReducedMotion } from "react-native-reanimated";
 
 import {
   Avatar,
   Badge,
   Button,
   Card,
+  ComposerInput,
+  CounterRing,
   Divider,
   EmptyState,
   ErrorState,
@@ -15,6 +18,7 @@ import {
   Input,
   ListItem,
   LoadingState,
+  PressableScale,
   Screen,
   Skeleton,
   Spinner,
@@ -97,6 +101,7 @@ export function DesignLabScreen() {
         <ButtonSection />
         <IconButtonSection />
         <InputSection />
+        <FeelPrimitivesSection />
         <AvatarSection />
         <BadgeSection />
         <ListItemSection />
@@ -354,6 +359,48 @@ function InputSection() {
       <Field label="Bio" counter={`${bio.length}/160`}>
         <TextArea value={bio} onChangeText={setBio} maxLength={160} placeholder="Tell us…" />
       </Field>
+    </Section>
+  );
+}
+
+function FeelPrimitivesSection() {
+  const theme = useTheme();
+  const reduceMotion = useReducedMotion();
+  const [draft, setDraft] = useState("");
+  const warnFrom = 260 / 280;
+
+  return (
+    <Section title="Feel primitives">
+      <Text variant="caption" color="textSecondary">
+        Reduce motion: {reduceMotion ? "on" : "off"}
+      </Text>
+      <PressableScale
+        onPress={() => undefined}
+        testID="lab-pressable-scale"
+        style={{
+          alignSelf: "flex-start",
+          backgroundColor: theme.color.primary,
+          borderRadius: theme.radius.full,
+          paddingHorizontal: theme.space[4],
+          paddingVertical: theme.space[2],
+        }}
+      >
+        <Text variant="labelStrong" color="onPrimary">
+          Press and hold
+        </Text>
+      </PressableScale>
+      <ComposerInput
+        value={draft}
+        onChangeText={setDraft}
+        placeholder="What's happening?"
+        testID="lab-composer-input"
+      />
+      <View style={styles.buttonRow}>
+        <CounterRing value={0} max={280} warnFrom={warnFrom} testID="lab-counter-ring-hidden" />
+        <CounterRing value={260} max={280} warnFrom={warnFrom} testID="lab-counter-ring-primary" />
+        <CounterRing value={280} max={280} warnFrom={warnFrom} testID="lab-counter-ring-warning" />
+        <CounterRing value={285} max={280} warnFrom={warnFrom} testID="lab-counter-ring-danger" />
+      </View>
     </Section>
   );
 }

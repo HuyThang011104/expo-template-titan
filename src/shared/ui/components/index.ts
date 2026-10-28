@@ -12,6 +12,8 @@ export {
   type ButtonVariant,
 } from "./button";
 export { Card, type CardProps } from "./card";
+export { ComposerInput, type ComposerInputProps } from "./composer-input";
+export { CounterRing, type CounterRingProps } from "./counter-ring";
 export { EmptyState, type EmptyStateProps } from "./empty-state";
 export { ErrorState, type ErrorStateProps } from "./error-state";
 export { Field, type FieldProps } from "./field";
