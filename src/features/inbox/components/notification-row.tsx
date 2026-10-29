@@ -1,5 +1,5 @@
 /**
- * Notification row (F5 + PF5.1).
+ * Notification row (F5 + PF5.1 + PF5.2).
  *
  * Reads the canonical `useNotification` + actor `useUser`; marking read
  * goes through the entity mutation (optimistic + rollback). Tapping a row
@@ -7,11 +7,15 @@
  * resolvable target stay in the list and only mark read.
  *
  * Anatomy follows the list-item pattern: avatar 40, actor + verb title,
- * relative time caption, trailing cluster (unread dot, thumbnail in PF5.2).
+ * relative time caption, trailing cluster (thumbnail + unread dot).
  * Unread tint fades out with `motion.base` once the row is read.
+ *
+ * The 44×44 thumbnail is cache-only (`getPostData`): no fetch, no skeleton,
+ * no query per row. Missing post cache simply renders no thumbnail.
  */
 
 import { useEffect } from "react";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -27,9 +31,10 @@ import {
   useMarkNotificationRead,
   useNotification,
 } from "@/entities/notification";
+import { getPostData, type PostMedia } from "@/entities/post";
 import { Avatar, useUser } from "@/entities/user";
 import { formatRelative } from "@/shared/lib/date";
-import { Badge, Skeleton, Text, useTheme } from "@/shared/ui";
+import { Badge, Icon, Skeleton, Text, useTheme } from "@/shared/ui";
 
 import { logNotificationTap } from "../analytics";
 import type { NotificationKind } from "@/entities/notification";
@@ -50,6 +55,52 @@ function verbFor(kind: NotificationKind): string {
     case "mention":
       return "mentioned you";
   }
+}
+
+function wantsThumbnail(kind: NotificationKind): boolean {
+  return kind === "like" || kind === "post" || kind === "mention";
+}
+
+function NotificationThumbnail({
+  notificationId,
+  media,
+}: {
+  notificationId: string;
+  media: PostMedia | undefined;
+}) {
+  const theme = useTheme();
+
+  if (!media) return null;
+
+  const video = media.kind === "video";
+
+  return (
+    <View
+      testID={`notification-thumb-${notificationId}`}
+      accessible={false}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={[styles.thumb, { borderRadius: theme.radius.sm }]}
+    >
+      {video ? (
+        <View
+          style={[styles.thumbFill, styles.videoThumb, { backgroundColor: theme.color.overlay }]}
+        >
+          <View style={[styles.playBadge, { backgroundColor: theme.color.primary }]}>
+            <Icon name="play" size="sm" color="onPrimary" decorative />
+          </View>
+        </View>
+      ) : (
+        <Image
+          source={{ uri: media.url }}
+          style={styles.thumbFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={theme.motion.fast}
+        />
+      )}
+    </View>
+  );
 }
 
 function RowBody({
@@ -106,6 +157,11 @@ function RowBody({
   }
 
   const actorName = actorQuery.data?.displayName ?? "Someone";
+  const postId = notification.postId;
+  const thumbMedia =
+    postId !== null && wantsThumbnail(notification.kind)
+      ? getPostData(qc, postId)?.media[0]
+      : undefined;
 
   return (
     <Pressable
@@ -147,6 +203,7 @@ function RowBody({
         </Text>
       </View>
       <View style={styles.trailing}>
+        <NotificationThumbnail notificationId={notificationId} media={thumbMedia} />
         {!notification.read ? (
           <Badge
             variant="dot"
@@ -185,5 +242,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  thumb: {
+    width: 44,
+    height: 44,
+    overflow: "hidden",
+  },
+  thumbFill: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  videoThumb: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  playBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
