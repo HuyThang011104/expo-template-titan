@@ -2,7 +2,7 @@
  * Tests for post share links (G1.4, pure builders).
  */
 
-import { buildPostDeepLink, parsePostDeepLink } from "../share";
+import { buildPostDeepLink, buildUserDeepLink, parsePostDeepLink } from "../share";
 
 describe("buildPostDeepLink", () => {
   it("builds a scheme link per variant", () => {
@@ -12,6 +12,11 @@ describe("buildPostDeepLink", () => {
 
   it("encodes ids and trims scheme noise", () => {
     expect(buildPostDeepLink("a b", "titan-dev://")).toBe("titan-dev://post/a%20b");
+  });
+
+  it("builds profile links", () => {
+    expect(buildUserDeepLink("ava", "titan-dev")).toBe("titan-dev://user/ava");
+    expect(buildUserDeepLink("a b", "titan://")).toBe("titan://user/a%20b");
   });
 
   it("round-trips through the parser", () => {

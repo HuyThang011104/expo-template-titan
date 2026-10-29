@@ -1,5 +1,5 @@
 /**
- * User detail screen (`/user/[handle]`, G2.1).
+ * User detail screen (`/user/[handle]`, G2.1, PF4.1).
  *
  * Resolves `handle → user` via `useUserByHandle`, reads the canonical
  * `useRelationship` for follow state + counts, then reads that user's
@@ -8,26 +8,38 @@
  * state instead of posts (G1.1 fail-closed: posts wait for the
  * relationship to resolve). Edit affordance shows only for self;
  * other viewers see Follow (never Edit).
+ *
+ * One scroll container: the identity block is the list header; the overflow
+ * (`more`) holds report / block / share.
  */
 
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useUserPosts } from "@/entities/post";
 import {
   FollowButton,
   getViewBlockReason,
+  isBlockedByMe,
   useMe,
   useRelationship,
   useUserByHandle,
 } from "@/entities/user";
 import { hrefs } from "@/shared/navigation/hrefs";
-import { Button, ErrorState, LoadingState, Screen, Text } from "@/shared/ui";
+import {
+  Button,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  Screen,
+  useTheme,
+} from "@/shared/ui";
 
 import { logUserOpen } from "../analytics";
 import { ProfileHeader } from "../components/profile-header";
+import { UserOverflowMenu } from "../components/profile-overflow-sheet";
 import { ProfilePostsFooter, ProfilePostsList } from "../components/profile-posts-list";
 
 export function UserDetailScreen() {
@@ -36,7 +48,12 @@ export function UserDetailScreen() {
   if (!handle) {
     return (
       <Screen style={styles.center} testID="user-detail-screen">
-        <Text variant="body">Missing user handle.</Text>
+        <EmptyState
+          icon="alert"
+          title="Missing user handle"
+          description="Open a profile from the feed to view it here."
+          testID="user-missing-handle"
+        />
       </Screen>
     );
   }
@@ -46,6 +63,7 @@ export function UserDetailScreen() {
 
 function UserDetailBody({ handle }: { handle: string }) {
   const qc = useQueryClient();
+  const theme = useTheme();
   const userQuery = useUserByHandle(handle);
   const userId = userQuery.data?.id ?? "";
   const me = useMe();
@@ -84,98 +102,100 @@ function UserDetailBody({ handle }: { handle: string }) {
 
   const user = userQuery.data;
   const isSelf = me.data?.id === user.id;
-  const blockReason = rel.data
-    ? getViewBlockReason(qc, user.id, me.data?.id ?? "")
-    : null;
+  const blocked = isBlockedByMe(qc, user.id);
+  const blockReason = rel.data ? getViewBlockReason(qc, user.id, me.data?.id ?? "") : null;
+
+  const header = (
+    <ProfileHeader
+      user={user}
+      testID={`profile-header-${user.handle}`}
+      postsCount={blockReason === null ? posts.postIds.length : 0}
+      countsVisible={rel.isSuccess}
+      followersCount={rel.data?.followersCount}
+      followingCount={rel.data?.followingCount}
+      action={
+        isSelf ? (
+          <Button
+            title="Edit profile"
+            variant="secondary"
+            size="md"
+            fullWidth
+            style={{ borderRadius: theme.radius.full }}
+            testID="user-detail-edit-button"
+            onPress={() => {
+              router.push(hrefs.editProfile());
+            }}
+          />
+        ) : (
+          <FollowButton userId={user.id} size="md" fullWidth pill />
+        )
+      }
+    />
+  );
+
+  const gated =
+    rel.isPending ? (
+      <LoadingState label="Loading posts" testID="user-relationship-loading" />
+    ) : rel.isError || !rel.data ? (
+      <ErrorState
+        title="Couldn't load follow status"
+        message="Check your connection and try again."
+        testID="user-relationship-error"
+        retryTestID="user-relationship-retry-button"
+        onRetry={() => {
+          void rel.refetch();
+        }}
+      />
+    ) : blockReason !== null ? (
+      <EmptyState
+        icon="lock"
+        title={blockReason === "private" ? "Private account" : "Not available"}
+        description={
+          blockReason === "private"
+            ? `Follow @${user.handle} to see their posts.`
+            : `You can't see @${user.handle}'s posts.`
+        }
+        testID={blockReason === "private" ? "private-empty-state" : "blocked-empty-state"}
+      />
+    ) : posts.isPending ? (
+      <LoadingState label="Loading posts" testID="user-posts-loading" />
+    ) : posts.isError ? (
+      <ErrorState
+        title="Couldn't load posts"
+        message="Check your connection and try again."
+        testID="user-posts-error"
+        retryTestID="user-posts-retry-button"
+        onRetry={() => {
+          void posts.refetch();
+        }}
+      />
+    ) : undefined;
 
   return (
     <Screen testID="user-detail-screen">
-      <ProfileHeader
-        user={user}
-        testID={`profile-header-${user.handle}`}
-        countsVisible={rel.isSuccess}
-        followersCount={rel.data?.followersCount}
-        followingCount={rel.data?.followingCount}
-        action={
-          isSelf ? (
-            <Button
-              title="Edit"
-              variant="secondary"
-              size="sm"
-              testID="user-detail-edit-button"
-              onPress={() => {
-                router.push(hrefs.editProfile());
-              }}
-            />
-          ) : (
-            <FollowButton userId={user.id} />
-          )
-        }
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <UserOverflowMenu userId={user.id} handle={user.handle} isBlocked={blocked} />
+          ),
+        }}
       />
-      {rel.isPending ? (
-        <LoadingState label="Loading posts" testID="user-relationship-loading" />
-      ) : rel.isError || !rel.data ? (
-        <ErrorState
-          title="Couldn't load follow status"
-          message="Check your connection and try again."
-          testID="user-relationship-error"
-          retryTestID="user-relationship-retry-button"
-          onRetry={() => {
-            void rel.refetch();
-          }}
-        />
-      ) : blockReason !== null ? (
-        <View style={styles.center}>
-          {blockReason === "private" ? (
-            <>
-              <Text variant="h3" testID="private-empty-state">
-                Private account
-              </Text>
-              <Text variant="body" color="textSecondary">
-                Follow @{user.handle} to see their posts.
-              </Text>
-            </>
-          ) : (
-            <>
-              <Text variant="h3" testID="blocked-empty-state">
-                Not available
-              </Text>
-              <Text variant="body" color="textSecondary">
-                You can&apos;t see @{user.handle}&apos;s posts.
-              </Text>
-            </>
-          )}
-        </View>
-      ) : posts.isPending ? (
-        <LoadingState label="Loading posts" testID="user-posts-loading" />
-      ) : posts.isError ? (
-        <ErrorState
-          title="Couldn't load posts"
-          message="Check your connection and try again."
-          testID="user-posts-error"
-          retryTestID="user-posts-retry-button"
-          onRetry={() => {
-            void posts.refetch();
-          }}
-        />
-      ) : (
-        <View style={styles.listFlex}>
-          <ProfilePostsList
-            postIds={posts.postIds}
-            isFetchingNextPage={posts.isFetchingNextPage}
-            isRefetching={posts.isRefetching}
-            hasNextPage={posts.hasNextPage}
-            onEndReached={() => {
-              void posts.fetchNextPage();
-            }}
-            onRefresh={() => {
-              void posts.refetch();
-            }}
-            prefetchPost={posts.prefetchPost}
-          />
-          <ProfilePostsFooter visible={posts.isFetchingNextPage} />
-        </View>
-      )}
+      <ProfilePostsList
+        postIds={blockReason === null ? posts.postIds : []}
+        isFetchingNextPage={posts.isFetchingNextPage}
+        isRefetching={posts.isRefetching}
+        hasNextPage={blockReason === null && posts.hasNextPage}
+        onEndReached={() => {
+          void posts.fetchNextPage();
+        }}
+        onRefresh={() => {
+          void posts.refetch();
+        }}
+        prefetchPost={posts.prefetchPost}
+        header={header}
+        emptyComponent={gated}
+      />
+      <ProfilePostsFooter visible={blockReason === null && posts.isFetchingNextPage} />
     </Screen>
   );
 }
@@ -185,8 +205,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-  },
-  listFlex: {
-    flex: 1,
   },
 });

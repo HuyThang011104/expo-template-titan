@@ -42,6 +42,24 @@ describe("ProfileHeader", () => {
     expect(screen.getByTestId("profile-header-ava-cover")).toBeTruthy();
   });
 
+  it("renders the one-line stats row (PF4.1)", async () => {
+    await render(
+      <ProfileHeader
+        user={stubUser}
+        testID="profile-header-ava"
+        postsCount={3}
+        countsVisible
+        followersCount={10}
+        followingCount={4}
+      />,
+      { wrapper },
+    );
+
+    expect(screen.getByText(/3 posts/)).toBeTruthy();
+    expect(screen.getByTestId("profile-followers-count-ava")).toBeTruthy();
+    expect(screen.getByTestId("profile-following-count-ava")).toBeTruthy();
+  });
+
   it("omits bio/link/cover when null (G2.1)", async () => {
     const minimal = { ...stubUser, bio: null, coverUrl: null, link: null };
     await render(<ProfileHeader user={minimal} testID="profile-header-min" />, { wrapper });

@@ -1,38 +1,35 @@
 /**
- * "Me" profile screen (`/(profile)` tab, G2.1).
+ * "Me" profile screen (`/(profile)` tab, G2.1, PF4.1).
  *
  * - `useMe` for the header (`GET /users/me`, mock `u-1`).
- * - `useUserPosts(me.id)` for the infinite posts list (own FlashList,
- *   canonical `PostCard`, like works cross-cache with no extra patching).
- * - Own profile only, so the Edit button always shows here;
- *   `UserDetailScreen` never shows it to other viewers.
- * - Keeps the sign-out button so logout stays testable.
+ * - `useUserPosts(me.id)` for the infinite posts list (canonical `PostCard`,
+ *   like works cross-cache with no extra patching).
+ * - One scroll container: the identity block + follow-requests row + tabs are
+ *   the list header, so cover/avatar/names scroll away (PF4.3 adds the sticky
+ *   tabs overlay).
+ * - Overflow (`more`) replaces the old header buttons: Follow requests,
+ *   Settings, Sign out (testID preserved on the sheet item).
  */
 
-import { Link, router } from "expo-router";
+import { router, Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { useFollowRequests, useMe, useRelationship } from "@/entities/user";
 import { useUserPosts } from "@/entities/post";
 import { useSavedPosts } from "@/entities/saved";
+import { useFollowRequests, useMe, useRelationship } from "@/entities/user";
 import { useSession } from "@/shared/auth";
 import { hrefs } from "@/shared/navigation/hrefs";
-import {
-  Button,
-  ErrorState,
-  LoadingState,
-  Screen,
-  Tabs,
-  Text,
-} from "@/shared/ui";
+import { Button, ErrorState, LoadingState, Screen, Tabs, Text, useTheme } from "@/shared/ui";
 
 import { logProfileOpen } from "../analytics";
 import { ProfileHeader } from "../components/profile-header";
+import { ProfileOverflowMenu } from "../components/profile-overflow-sheet";
 import { ProfilePostsFooter, ProfilePostsList } from "../components/profile-posts-list";
 
 export function ProfileScreen() {
   const { signOut } = useSession();
+  const theme = useTheme();
   const me = useMe();
   const userId = me.data?.id ?? "";
   const rel = useRelationship(userId);
@@ -71,46 +68,43 @@ export function ProfileScreen() {
   }
 
   const user = me.data;
+  const requestCount = requests.userIds.length;
+  const active = tab === "saved" ? saved : posts;
 
-  return (
-    <Screen testID="profile-screen">
-      <View style={styles.headerRow}>
-        <View style={styles.headerFlex}>
-          <ProfileHeader
-            user={user}
-            testID={`profile-header-${user.handle}`}
-            countsVisible={rel.isSuccess}
-            followersCount={rel.data?.followersCount}
-            followingCount={rel.data?.followingCount}
-          />
-        </View>
-        <View style={styles.headerActions}>
+  const header = (
+    <View>
+      <ProfileHeader
+        user={user}
+        testID={`profile-header-${user.handle}`}
+        postsCount={posts.postIds.length}
+        countsVisible={rel.isSuccess}
+        followersCount={rel.data?.followersCount}
+        followingCount={rel.data?.followingCount}
+        action={
           <Button
-            title="Edit"
+            title="Edit profile"
             variant="secondary"
-            size="sm"
+            size="md"
+            fullWidth
+            style={{ borderRadius: theme.radius.full }}
             testID="profile-edit-button"
             onPress={() => {
               router.push(hrefs.editProfile());
             }}
           />
-          <Button
-            title="Sign out"
-            variant="secondary"
-            size="sm"
-            testID="profile-sign-out-button"
-            onPress={signOut}
-          />
-        </View>
-      </View>
-      {requests.isSuccess && requests.userIds.length > 0 ? (
-        <Link href={hrefs.followRequests()} asChild>
-          <Pressable testID="profile-requests-button">
-            <Text variant="labelStrong" style={styles.requestsLink}>
-              Follow requests ({requests.userIds.length})
-            </Text>
-          </Pressable>
-        </Link>
+        }
+      />
+      {requestCount > 0 ? (
+        <Pressable
+          testID="profile-requests-button"
+          accessibilityRole="button"
+          onPress={() => {
+            router.push(hrefs.followRequests());
+          }}
+          style={[styles.requestsRow, { borderColor: theme.color.border }]}
+        >
+          <Text variant="labelStrong">Follow requests ({requestCount})</Text>
+        </Pressable>
       ) : null}
       <Tabs
         variant="underline"
@@ -124,38 +118,46 @@ export function ProfileScreen() {
         }}
         testID="profile-tabs"
       />
-      {tab === "saved" ? (
-        <SavedTab saved={saved} />
-      ) : posts.isPending ? (
-        <LoadingState label="Loading posts" testID="profile-posts-loading" />
-      ) : posts.isError ? (
-        <ErrorState
-          title="Couldn't load posts"
-          message="Check your connection and try again."
-          testID="profile-posts-error"
-          retryTestID="profile-posts-retry-button"
-          onRetry={() => {
-            void posts.refetch();
-          }}
-        />
-      ) : (
-        <View style={styles.listFlex}>
-          <ProfilePostsList
-            postIds={posts.postIds}
-            isFetchingNextPage={posts.isFetchingNextPage}
-            isRefetching={posts.isRefetching}
-            hasNextPage={posts.hasNextPage}
-            onEndReached={() => {
-              void posts.fetchNextPage();
-            }}
-            onRefresh={() => {
-              void posts.refetch();
-            }}
-            prefetchPost={posts.prefetchPost}
-          />
-          <ProfilePostsFooter visible={posts.isFetchingNextPage} />
-        </View>
-      )}
+    </View>
+  );
+
+  return (
+    <Screen testID="profile-screen">
+      <Stack.Screen options={{ headerRight: () => <ProfileOverflowMenu /> }} />
+      <ProfilePostsList
+        postIds={active.postIds}
+        isFetchingNextPage={active.isFetchingNextPage}
+        isRefetching={active.isRefetching}
+        hasNextPage={active.hasNextPage}
+        onEndReached={() => {
+          void active.fetchNextPage();
+        }}
+        onRefresh={() => {
+          void active.refetch();
+        }}
+        prefetchPost={tab === "saved" ? () => {} : posts.prefetchPost}
+        header={header}
+        emptyComponent={
+          active.isPending ? (
+            <LoadingState
+              label={tab === "saved" ? "Loading saved posts" : "Loading posts"}
+              testID={tab === "saved" ? "saved-loading" : "profile-posts-loading"}
+            />
+          ) : active.isError ? (
+            <ErrorState
+              title={tab === "saved" ? "Couldn't load saved posts" : "Couldn't load posts"}
+              message="Check your connection and try again."
+              testID={tab === "saved" ? "saved-error" : "profile-posts-error"}
+              retryTestID={tab === "saved" ? "saved-retry-button" : "profile-posts-retry-button"}
+              onRetry={() => {
+                void active.refetch();
+              }}
+            />
+          ) : undefined
+        }
+        testID={tab === "saved" ? "saved-list" : "profile-list"}
+      />
+      <ProfilePostsFooter visible={active.isFetchingNextPage} />
     </Screen>
   );
 }
@@ -166,60 +168,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingRight: 16,
-  },
-  headerFlex: {
-    flex: 1,
-  },
-  headerActions: {
-    gap: 8,
-  },
-  requestsLink: {
+  requestsRow: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  listFlex: {
-    flex: 1,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
 });
-
-function SavedTab({ saved }: { saved: ReturnType<typeof useSavedPosts> }) {
-  if (saved.isPending) {
-    return <LoadingState label="Loading saved posts" testID="saved-loading" />;
-  }
-  if (saved.isError) {
-    return (
-      <ErrorState
-        title="Couldn't load saved posts"
-        message="Check your connection and try again."
-        testID="saved-error"
-        retryTestID="saved-retry-button"
-        onRetry={() => {
-          void saved.refetch();
-        }}
-      />
-    );
-  }
-  return (
-    <View style={styles.listFlex}>
-      <ProfilePostsList
-        postIds={saved.postIds}
-        isFetchingNextPage={saved.isFetchingNextPage}
-        isRefetching={saved.isRefetching}
-        hasNextPage={saved.hasNextPage}
-        onEndReached={() => {
-          void saved.fetchNextPage();
-        }}
-        onRefresh={() => {
-          void saved.refetch();
-        }}
-        prefetchPost={() => {}}
-        testID="saved-list"
-      />
-      <ProfilePostsFooter visible={saved.isFetchingNextPage} />
-    </View>
-  );
-}

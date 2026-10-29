@@ -10,9 +10,8 @@
 
 import { useState } from "react";
 import { Pressable, Share, StyleSheet, View } from "react-native";
-import * as Linking from "expo-linking";
 
-import { buildPostDeepLink } from "@/shared/navigation";
+import { buildPostDeepLink, resolveAppScheme } from "@/shared/navigation";
 import { Icon, Text } from "@/shared/ui";
 
 export type ShareFn = (content: { message: string }) => Promise<unknown>;
@@ -26,24 +25,13 @@ export type PostShareButtonProps = {
   shareFn?: ShareFn;
 };
 
-function resolveScheme(): string {
-  try {
-    const base = Linking.createURL("");
-    const scheme = base.split("://")[0];
-    if (scheme) return scheme;
-  } catch {
-    // Fall through to the dev default below.
-  }
-  return "titan-dev";
-}
-
 export function PostShareButton({ postId, testID, schemeOverride, shareFn }: PostShareButtonProps) {
   const [failed, setFailed] = useState(false);
   const id = testID ?? `share-button-${postId}`;
 
   const share = async (): Promise<void> => {
     setFailed(false);
-    const url = buildPostDeepLink(postId, schemeOverride ?? resolveScheme());
+    const url = buildPostDeepLink(postId, schemeOverride ?? resolveAppScheme());
     try {
       await (shareFn ?? ((content) => Share.share(content)))({ message: url });
     } catch {

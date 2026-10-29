@@ -7,6 +7,7 @@
  */
 
 import { router } from "expo-router";
+import type { ReactElement } from "react";
 import { StyleSheet } from "react-native";
 
 import { PostCard } from "@/entities/post";
@@ -24,6 +25,10 @@ export type ProfilePostsListProps = {
   onEndReached: () => void;
   onRefresh: () => void;
   prefetchPost: (id: string) => void;
+  /** Header block (cover/avatar/identity/action/tabs) inside the same list. */
+  header?: ReactElement | null;
+  /** Overrides the default empty state (pending/error/private body). */
+  emptyComponent?: ReactElement | null;
   testID?: string;
 };
 
@@ -84,6 +89,8 @@ export function ProfilePostsList({
   onEndReached,
   onRefresh,
   prefetchPost,
+  header,
+  emptyComponent,
   testID = "profile-list",
 }: ProfilePostsListProps) {
   return (
@@ -97,7 +104,8 @@ export function ProfilePostsList({
       }}
       onRefresh={onRefresh}
       refreshing={isRefetching}
-      ListEmptyComponent={<ProfilePostsEmpty />}
+      ListHeaderComponent={header ?? null}
+      ListEmptyComponent={emptyComponent ?? <ProfilePostsEmpty />}
     />
   );
 }

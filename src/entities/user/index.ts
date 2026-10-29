@@ -51,6 +51,13 @@ export {
   updatePrivacy,
 } from "./privacy-cache";
 export {
+  useBlockUser,
+  useMuteUser,
+  useUnblockUser,
+  useUnmuteUser,
+  type SafetyMutationOptions,
+} from "./queries-safety";
+export {
   useApproveFollowRequest,
   useFollowers,
   useFollowing,
