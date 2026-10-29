@@ -18,7 +18,7 @@ import {
   type PostVisibility,
   type TagAudience,
 } from "@/entities/user";
-import { Button, Screen, Text } from "@/shared/ui";
+import { ErrorState, LoadingState, Screen, Text } from "@/shared/ui";
 
 import { logPrivacySettingsOpen } from "../analytics";
 import { AudienceOptionGroup } from "../components/audience-option-group";
@@ -41,25 +41,21 @@ export function PrivacySettingsScreen() {
 
   if (me.isPending) {
     return (
-      <Screen style={styles.center} testID="privacy-settings-screen">
-        <Text variant="body" color="textSecondary">
-          Loading privacy settings…
-        </Text>
+      <Screen testID="privacy-settings-screen">
+        <LoadingState label="Loading privacy settings" testID="privacy-settings-loading" />
       </Screen>
     );
   }
 
   if (me.isError || !me.data) {
     return (
-      <Screen style={styles.center} testID="privacy-settings-screen">
-        <Text variant="h3">Privacy</Text>
-        <Text variant="body" color="textSecondary">
-          Couldn&apos;t load your privacy settings.
-        </Text>
-        <Button
-          title="Retry"
-          testID="privacy-settings-retry-button"
-          onPress={() => {
+      <Screen testID="privacy-settings-screen">
+        <ErrorState
+          title="Couldn't load privacy settings"
+          message="Check your connection and try again."
+          testID="privacy-settings-error-state"
+          retryTestID="privacy-settings-retry-button"
+          onRetry={() => {
             void me.refetch();
           }}
         />
@@ -133,11 +129,6 @@ export function PrivacySettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
   root: {
     paddingVertical: 8,
     gap: 8,

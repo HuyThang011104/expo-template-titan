@@ -27,7 +27,7 @@ import { setDeactivated } from "@/shared/account/deactivation";
 import type { Locale } from "@/shared/i18n";
 import { useLocale } from "@/shared/i18n/locale-provider";
 import { formatRelative } from "@/shared/lib/date";
-import { Button, Input, Screen, Text } from "@/shared/ui";
+import { Button, ErrorState, Input, LoadingState, Screen, Text } from "@/shared/ui";
 import { useThemePreference, type ThemePreference } from "@/shared/ui/theme/theme-preference";
 
 import { logAccountSettingsOpen } from "../analytics";
@@ -541,25 +541,21 @@ export function AccountSettingsScreen() {
 
   if (me.isPending) {
     return (
-      <Screen style={styles.center} testID="account-settings-screen">
-        <Text variant="body" color="textSecondary">
-          Loading account settings…
-        </Text>
+      <Screen testID="account-settings-screen">
+        <LoadingState label="Loading account settings" testID="account-settings-loading" />
       </Screen>
     );
   }
 
   if (me.isError || !me.data) {
     return (
-      <Screen style={styles.center} testID="account-settings-screen">
-        <Text variant="h3">Account</Text>
-        <Text variant="body" color="textSecondary">
-          Couldn&apos;t load your account.
-        </Text>
-        <Button
-          title="Retry"
-          testID="account-settings-retry-button"
-          onPress={() => {
+      <Screen testID="account-settings-screen">
+        <ErrorState
+          title="Couldn't load your account"
+          message="Check your connection and try again."
+          testID="account-settings-error-state"
+          retryTestID="account-settings-retry-button"
+          onRetry={() => {
             void me.refetch();
           }}
         />
@@ -584,11 +580,6 @@ export function AccountSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
   section: {
     gap: 8,
     paddingHorizontal: 16,

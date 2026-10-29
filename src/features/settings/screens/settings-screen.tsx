@@ -10,9 +10,10 @@ import { useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { hrefs } from "@/shared/navigation/hrefs";
-import { Icon, ListItem, Screen } from "@/shared/ui";
+import { Divider, Icon, ListItem, Screen } from "@/shared/ui";
 
 import { logSettingsOpen } from "../analytics";
+import { SettingsGroup } from "../components/settings-group";
 
 export function SettingsScreen() {
   useEffect(() => {
@@ -22,33 +23,37 @@ export function SettingsScreen() {
   return (
     <Screen testID="settings-screen">
       <View style={styles.root}>
-        <ListItem
-          title="Notifications"
-          subtitle="Choose which activity notifies you"
-          trailing={<Icon name="chevronRight" color="textTertiary" />}
-          testID="settings-row-notifications"
-          onPress={() => {
-            router.push(hrefs.notifSettings());
-          }}
-        />
-        <ListItem
-          title="Privacy"
-          subtitle="Who can message, see your posts and tag you"
-          trailing={<Icon name="chevronRight" color="textTertiary" />}
-          testID="settings-row-privacy"
-          onPress={() => {
-            router.push(hrefs.privacySettings());
-          }}
-        />
-        <ListItem
-          title="Account"
-          subtitle="Password, sessions, language, theme, data"
-          trailing={<Icon name="chevronRight" color="textTertiary" />}
-          testID="settings-row-account"
-          onPress={() => {
-            router.push(hrefs.accountSettings());
-          }}
-        />
+        <SettingsGroup label="Preferences" testID="settings-group">
+          <ListItem
+            title="Notifications"
+            subtitle="Choose which activity notifies you"
+            trailing={<Icon name="chevronRight" color="textTertiary" />}
+            testID="settings-row-notifications"
+            onPress={() => {
+              router.push(hrefs.notifSettings());
+            }}
+          />
+          <Divider inset={4} />
+          <ListItem
+            title="Privacy"
+            subtitle="Who can message, see your posts and tag you"
+            trailing={<Icon name="chevronRight" color="textTertiary" />}
+            testID="settings-row-privacy"
+            onPress={() => {
+              router.push(hrefs.privacySettings());
+            }}
+          />
+          <Divider inset={4} />
+          <ListItem
+            title="Account"
+            subtitle="Password, sessions, language, theme, data"
+            trailing={<Icon name="chevronRight" color="textTertiary" />}
+            testID="settings-row-account"
+            onPress={() => {
+              router.push(hrefs.accountSettings());
+            }}
+          />
+        </SettingsGroup>
       </View>
     </Screen>
   );
@@ -56,6 +61,8 @@ export function SettingsScreen() {
 
 const styles = StyleSheet.create({
   root: {
-    paddingVertical: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
   },
 });

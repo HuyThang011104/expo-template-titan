@@ -9,7 +9,7 @@
  *   switch itself reverts via rollback, tapping again retries).
  */
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import {
@@ -17,10 +17,11 @@ import {
   useUpdateNotifPref,
   type NotifPrefKey,
 } from "@/entities/notification";
-import { Button, Screen, Text } from "@/shared/ui";
+import { Divider, ErrorState, LoadingState, Screen, Text } from "@/shared/ui";
 
 import { logNotifSettingsOpen } from "../analytics";
 import { PrefToggleRow } from "../components/pref-toggle-row";
+import { SettingsGroup } from "../components/settings-group";
 
 const ROWS: { key: NotifPrefKey; title: string; description: string }[] = [
   {
@@ -62,25 +63,21 @@ export function NotifSettingsScreen() {
 
   if (prefs.isPending) {
     return (
-      <Screen style={styles.center} testID="notif-settings-screen">
-        <Text variant="body" color="textSecondary">
-          Loading notification settings…
-        </Text>
+      <Screen testID="notif-settings-screen">
+        <LoadingState label="Loading notification settings" testID="notif-settings-loading" />
       </Screen>
     );
   }
 
   if (prefs.isError || !prefs.data) {
     return (
-      <Screen style={styles.center} testID="notif-settings-screen">
-        <Text variant="h3">Notifications</Text>
-        <Text variant="body" color="textSecondary">
-          Couldn&apos;t load your notification settings.
-        </Text>
-        <Button
-          title="Retry"
-          testID="notif-settings-retry-button"
-          onPress={() => {
+      <Screen testID="notif-settings-screen">
+        <ErrorState
+          title="Couldn't load notification settings"
+          message="Check your connection and try again."
+          testID="notif-settings-error-state"
+          retryTestID="notif-settings-retry-button"
+          onRetry={() => {
             void prefs.refetch();
           }}
         />
@@ -109,21 +106,25 @@ export function NotifSettingsScreen() {
   return (
     <Screen testID="notif-settings-screen">
       <View style={styles.root}>
-        {ROWS.map((row) => (
-          <PrefToggleRow
-            key={row.key}
-            title={row.title}
-            description={row.description}
-            value={values[row.key]}
-            pending={pendingKey === row.key}
-            testID={`notif-pref-${row.key}`}
-            onToggle={(next) => {
-              toggle(row.key, next);
-            }}
-          />
-        ))}
+        <SettingsGroup label="Activity" testID="notif-settings-group">
+          {ROWS.map((row, index) => (
+            <Fragment key={row.key}>
+              {index > 0 ? <Divider inset={4} /> : null}
+              <PrefToggleRow
+                title={row.title}
+                description={row.description}
+                value={values[row.key]}
+                pending={pendingKey === row.key}
+                testID={`notif-pref-${row.key}`}
+                onToggle={(next) => {
+                  toggle(row.key, next);
+                }}
+              />
+            </Fragment>
+          ))}
+        </SettingsGroup>
         {error ? (
-          <Text variant="caption" color="danger" testID="notif-settings-error" style={styles.error}>
+          <Text variant="caption" color="danger" testID="notif-settings-error">
             {error}
           </Text>
         ) : null}
@@ -133,15 +134,10 @@ export function NotifSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
   root: {
-    paddingVertical: 8,
-  },
-  error: {
     paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
+    gap: 12,
   },
 });

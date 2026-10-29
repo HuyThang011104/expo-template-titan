@@ -1,13 +1,13 @@
 /**
- * Notification pref toggle row (G2.3).
+ * Notification pref toggle row (G2.3, PF9.1).
  *
- * Presentational: label + description + platform `Switch`. The screen owns
- * the mutation; a pending toggle locks only its own row.
+ * ListItem anatomy with a native trailing `Switch`. The screen owns the
+ * mutation; a pending toggle locks only its own row.
  */
 
-import { StyleSheet, Switch, View } from "react-native";
+import { Switch } from "react-native";
 
-import { Text } from "@/shared/ui";
+import { ListItem } from "@/shared/ui";
 
 export type PrefToggleRowProps = {
   title: string;
@@ -27,34 +27,19 @@ export function PrefToggleRow({
   onToggle,
 }: PrefToggleRowProps) {
   return (
-    <View style={styles.row} testID={testID}>
-      <View style={styles.texts}>
-        <Text variant="labelStrong">{title}</Text>
-        <Text variant="caption" color="textSecondary">
-          {description}
-        </Text>
-      </View>
-      <Switch
-        testID={`${testID}-switch`}
-        accessibilityLabel={title}
-        value={value}
-        disabled={pending}
-        onValueChange={onToggle}
-      />
-    </View>
+    <ListItem
+      title={title}
+      subtitle={description}
+      testID={testID}
+      trailing={
+        <Switch
+          testID={`${testID}-switch`}
+          accessibilityLabel={title}
+          value={value}
+          disabled={pending}
+          onValueChange={onToggle}
+        />
+      }
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  texts: {
-    flex: 1,
-    gap: 2,
-  },
-});
