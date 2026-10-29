@@ -89,6 +89,53 @@ describe("useComposerMedia", () => {
     expect(mockLaunchImageLibraryAsync).not.toHaveBeenCalled();
   });
 
+  it("addAsset appends a captured image and reports the new list", async () => {
+    const { result } = await renderHook(() => useComposerMedia());
+    let next: { uri: string }[] = [];
+    await act(async () => {
+      next = result.current.addAsset({
+        uri: "file:///cam.jpg",
+        width: 100,
+        height: 100,
+        kind: "image",
+        mimeType: "image/jpeg",
+      });
+    });
+    expect(next.map((asset) => asset.uri)).toEqual(["file:///cam.jpg"]);
+    expect(result.current.items).toHaveLength(1);
+  });
+
+  it("addAsset ignores null and videos", async () => {
+    const { result } = await renderHook(() => useComposerMedia());
+    await act(async () => {
+      result.current.addAsset(null);
+      result.current.addAsset({
+        uri: "file:///v.mp4",
+        width: 0,
+        height: 0,
+        kind: "video",
+        mimeType: "video/mp4",
+      });
+    });
+    expect(result.current.count).toBe(0);
+  });
+
+  it("addAsset respects the cap of 4", async () => {
+    const { result } = await renderHook(() => useComposerMedia());
+    await act(async () => {
+      for (let i = 0; i < 5; i += 1) {
+        result.current.addAsset({
+          uri: `file:///cam-${i}.jpg`,
+          width: 100,
+          height: 100,
+          kind: "image",
+          mimeType: "image/jpeg",
+        });
+      }
+    });
+    expect(result.current.count).toBe(4);
+  });
+
   it("removeAt drops one thumb and reports the new list", async () => {
     mockLaunchImageLibraryAsync.mockResolvedValue({
       canceled: false,

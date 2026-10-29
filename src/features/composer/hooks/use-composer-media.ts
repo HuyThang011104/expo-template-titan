@@ -7,6 +7,7 @@
  *
  * - `pickFromLibrary("images", allowsMultiple, quality 0.8)`; denial/cancel
  *   resolves `[]` silently per `shared/media/picker` (no error shown).
+ * - `takePhoto()` captures append through `addAsset` (same cap/filter rules).
  * - Images only; caps at `COMPOSER_MAX_MEDIA` (extra picks are dropped).
  * - Uploading happens in `useComposerCreatePost.submitWithMedia`, not here.
  */
@@ -43,6 +44,18 @@ export function useComposerMedia() {
   }, []);
 
   /**
+   * Appends one captured asset (camera). Ignored when denied/cancelled, when
+   * the asset is not an image, or when the cap is already reached. Resolves
+   * the new full list for draft sync.
+   */
+  const addAsset = useCallback((asset: PickedMedia | null): PickedMedia[] => {
+    if (!asset || asset.kind !== "image" || itemsRef.current.length >= COMPOSER_MAX_MEDIA) {
+      return itemsRef.current;
+    }
+    return commit([...itemsRef.current, asset]);
+  }, []);
+
+  /**
    * Removes one thumb. Resolves the new full list for draft sync.
    */
   const removeAt = useCallback((index: number): PickedMedia[] => {
@@ -50,5 +63,5 @@ export function useComposerMedia() {
     return commit(next);
   }, []);
 
-  return { items, canAddMore, pickMore, removeAt, count: items.length };
+  return { items, canAddMore, pickMore, addAsset, removeAt, count: items.length };
 }

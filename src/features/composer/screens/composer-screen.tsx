@@ -17,7 +17,17 @@ import {
 import { parseRichText } from "@/entities/post";
 import { canTagUser, getUserByHandleData, useMe } from "@/entities/user";
 import { findBlockedMentionHandles } from "@/shared/lib/mention-gate";
-import { Avatar, Button, ComposerInput, IconButton, Screen, Text, useTheme } from "@/shared/ui";
+import { takePhoto } from "@/shared/media/picker";
+import {
+  Avatar,
+  Button,
+  ComposerInput,
+  CounterRing,
+  IconButton,
+  Screen,
+  Text,
+  useTheme,
+} from "@/shared/ui";
 
 /**
  * Keyboard scope mirroring `KeyboardScope` in `app-providers.tsx`: the
@@ -39,6 +49,8 @@ function ComposerKeyboardAvoidingView({ children }: { children: ReactNode }) {
  * Composer screen (F1.4 polish).
  *
  * - Chrome lives in the native header: `close` left, pill `Post` right (F1/F2).
+ * - Pinned toolbar: library + camera icon buttons; `CounterRing` reserves a
+ *   slot on the right and appears from 260/280 (F1/F2, PD1/PD2).
  * - Text 1–280 chars + 0–4 images (`images` only, `allowsMultiple`, `quality 0.8`).
  * - Pick → preview strip → upload each via `uploadMedia` → `POST /posts` →
  *   prepend feed page 0 → clear draft → dismiss.
@@ -75,6 +87,12 @@ export function ComposerScreen() {
   async function handleAddPhoto(): Promise<void> {
     setError(null);
     const next = await media.pickMore();
+    setLocalUris(next.map((asset) => asset.uri));
+  }
+
+  async function handleTakePhoto(): Promise<void> {
+    setError(null);
+    const next = media.addAsset(await takePhoto());
     setLocalUris(next.map((asset) => asset.uri));
   }
 
@@ -155,91 +173,111 @@ export function ComposerScreen() {
       />
       <ComposerKeyboardAvoidingView>
         <View style={styles.root}>
-          <View style={styles.bodyRow}>
-            <Avatar
-              displayName={me.data?.displayName ?? "You"}
-              avatarUrl={me.data?.avatarUrl ?? null}
-              size={40}
-              testID="composer-avatar"
-            />
-            <ComposerInput
-              value={body}
-              onChangeText={(next) => {
-                setBody(next);
-                if (error) setError(null);
-              }}
-              placeholder="What's happening?"
-              maxLength={COMPOSER_MAX_LENGTH}
+          <View style={styles.content}>
+            <View style={styles.bodyRow}>
+              <Avatar
+                displayName={me.data?.displayName ?? "You"}
+                avatarUrl={me.data?.avatarUrl ?? null}
+                size={40}
+                testID="composer-avatar"
+              />
+              <ComposerInput
+                value={body}
+                onChangeText={(next) => {
+                  setBody(next);
+                  if (error) setError(null);
+                }}
+                placeholder="What's happening?"
+                maxLength={COMPOSER_MAX_LENGTH}
+                editable={!busy}
+                autoFocus
+                testID="composer-input"
+                accessibilityLabel="Post body"
+                style={styles.input}
+              />
+            </View>
+
+            <ComposerMediaStrip
+              uris={media.items.map((asset) => asset.uri)}
+              onRemove={handleRemovePhoto}
               editable={!busy}
-              autoFocus
-              testID="composer-input"
-              accessibilityLabel="Post body"
-              style={styles.input}
             />
+
+            {isUploading ? (
+              <Text variant="caption" color="textSecondary" testID="composer-uploading">
+                Uploading…
+              </Text>
+            ) : null}
+
+            {showRepickNote ? (
+              <Text variant="caption" color="textSecondary" testID="composer-repick-note">
+                Photos from last time may need re-picking (tmp files don&apos;t survive restart).
+              </Text>
+            ) : null}
+
+            {error ? (
+              <Text
+                variant="caption"
+                color="danger"
+                testID="composer-error"
+                accessibilityRole="alert"
+              >
+                {error}
+              </Text>
+            ) : null}
+
+            {queued ? (
+              <Text variant="caption" color="textSecondary" testID="composer-queued-badge">
+                Queued — will send when online.
+              </Text>
+            ) : null}
+
+            {!loaded ? (
+              <Text variant="caption" color="textSecondary">
+                Loading draft…
+              </Text>
+            ) : null}
           </View>
 
-          <ComposerMediaStrip
-            uris={media.items.map((asset) => asset.uri)}
-            onRemove={handleRemovePhoto}
-            editable={!busy}
-          />
-
-          <View style={styles.mediaRow}>
-            <Button
-              title={media.items.length === 0 ? "Add photo" : `Add photo (${media.count}/${COMPOSER_MAX_MEDIA})`}
-              variant="ghost"
-              size="sm"
+          <View
+            testID="composer-toolbar"
+            style={[
+              styles.toolbar,
+              {
+                backgroundColor: theme.color.surface,
+                borderTopColor: theme.color.border,
+              },
+            ]}
+          >
+            <IconButton
               icon="image"
+              accessibilityLabel="Add photo"
               testID="composer-media-add"
               disabled={!media.canAddMore || busy}
               onPress={() => {
                 void handleAddPhoto();
               }}
             />
-            <Text
-              variant="caption"
-              color={overLimit ? "danger" : "textSecondary"}
-              testID="composer-counter"
-              accessibilityLabel={`${trimmed.length} of ${COMPOSER_MAX_LENGTH} characters`}
-            >
-              {`${trimmed.length}/${COMPOSER_MAX_LENGTH}`}
-            </Text>
+            <IconButton
+              icon="camera"
+              accessibilityLabel="Take photo"
+              testID="composer-camera"
+              disabled={!media.canAddMore || busy}
+              onPress={() => {
+                void handleTakePhoto();
+              }}
+            />
+            <View style={styles.toolbarSpacer} />
+            <View style={styles.counterSlot}>
+              <CounterRing
+                value={trimmed.length}
+                max={COMPOSER_MAX_LENGTH}
+                warnFrom={260 / 280}
+                testID="composer-counter"
+                accessibilityLabel={`${COMPOSER_MAX_LENGTH - trimmed.length} characters remaining`}
+              />
+            </View>
           </View>
-
-          {isUploading ? (
-            <Text variant="caption" color="textSecondary" testID="composer-uploading">
-              Uploading…
-            </Text>
-          ) : null}
-
-          {showRepickNote ? (
-            <Text variant="caption" color="textSecondary" testID="composer-repick-note">
-              Photos from last time may need re-picking (tmp files don&apos;t survive restart).
-            </Text>
-          ) : null}
-
-          {error ? (
-            <Text
-              variant="caption"
-              color="danger"
-              testID="composer-error"
-              accessibilityRole="alert"
-            >
-              {error}
-            </Text>
-          ) : null}
-
-          {queued ? (
-            <Text variant="caption" color="textSecondary" testID="composer-queued-badge">
-              Queued — will send when online.
-            </Text>
-          ) : null}
-
-          {!loaded ? (
-            <Text variant="caption" color="textSecondary">
-              Loading draft…
-            </Text>
-          ) : null}
         </View>
       </ComposerKeyboardAvoidingView>
     </Screen>
@@ -260,6 +298,9 @@ const styles = StyleSheet.create({
   },
   root: {
     flex: 1,
+  },
+  content: {
+    flex: 1,
     gap: 12,
     padding: 16,
   },
@@ -271,9 +312,21 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
   },
-  mediaRow: {
+  toolbar: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  toolbarSpacer: {
+    flex: 1,
+  },
+  counterSlot: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
