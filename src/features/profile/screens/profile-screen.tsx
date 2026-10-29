@@ -26,6 +26,7 @@ import { logProfileOpen } from "../analytics";
 import { ProfileHeader } from "../components/profile-header";
 import { ProfileOverflowMenu } from "../components/profile-overflow-sheet";
 import { ProfilePostsFooter, ProfilePostsList } from "../components/profile-posts-list";
+import { useProfileTitleTransition } from "../hooks/use-profile-title-transition";
 
 export function ProfileScreen() {
   const { signOut } = useSession();
@@ -41,6 +42,13 @@ export function ProfileScreen() {
   useEffect(() => {
     if (me.data) logProfileOpen(me.data.id);
   }, [me.data]);
+
+  const titleTransition = useProfileTitleTransition({
+    handle: me.data?.handle ?? "",
+    displayName: me.data?.displayName ?? "",
+    fallbackTitle: "Profile",
+    ready: me.isSuccess,
+  });
 
   if (me.isPending) {
     return (
@@ -80,6 +88,7 @@ export function ProfileScreen() {
         countsVisible={rel.isSuccess}
         followersCount={rel.data?.followersCount}
         followingCount={rel.data?.followingCount}
+        onIdentityLayout={titleTransition.onIdentityLayout}
         action={
           <Button
             title="Edit profile"
@@ -136,6 +145,8 @@ export function ProfileScreen() {
           void active.refetch();
         }}
         prefetchPost={tab === "saved" ? () => {} : posts.prefetchPost}
+        onScroll={titleTransition.onScroll}
+        scrollEventThrottle={16}
         header={header}
         emptyComponent={
           active.isPending ? (

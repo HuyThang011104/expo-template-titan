@@ -41,6 +41,7 @@ import { logUserOpen } from "../analytics";
 import { ProfileHeader } from "../components/profile-header";
 import { UserOverflowMenu } from "../components/profile-overflow-sheet";
 import { ProfilePostsFooter, ProfilePostsList } from "../components/profile-posts-list";
+import { useProfileTitleTransition } from "../hooks/use-profile-title-transition";
 
 export function UserDetailScreen() {
   const { handle } = useLocalSearchParams<{ handle?: string }>();
@@ -75,6 +76,13 @@ function UserDetailBody({ handle }: { handle: string }) {
   useEffect(() => {
     logUserOpen(handle);
   }, [handle]);
+
+  const titleTransition = useProfileTitleTransition({
+    handle: userQuery.data?.handle ?? "",
+    displayName: userQuery.data?.displayName ?? "",
+    fallbackTitle: `@${handle}`,
+    ready: userQuery.isSuccess,
+  });
 
   if (userQuery.isPending) {
     return (
@@ -113,6 +121,7 @@ function UserDetailBody({ handle }: { handle: string }) {
       countsVisible={rel.isSuccess}
       followersCount={rel.data?.followersCount}
       followingCount={rel.data?.followingCount}
+      onIdentityLayout={titleTransition.onIdentityLayout}
       action={
         isSelf ? (
           <Button
@@ -192,6 +201,8 @@ function UserDetailBody({ handle }: { handle: string }) {
           void posts.refetch();
         }}
         prefetchPost={posts.prefetchPost}
+        onScroll={titleTransition.onScroll}
+        scrollEventThrottle={16}
         header={header}
         emptyComponent={gated}
       />

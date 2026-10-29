@@ -8,6 +8,7 @@
 
 import type { NativeStackNavigationOptions } from "expo-router";
 import type { ReactNode } from "react";
+import type { TextStyle } from "react-native";
 
 import type { Theme, ThemeColorName } from "../theme/tokens";
 
@@ -18,6 +19,18 @@ export type HeaderOptionsArgs = {
   tint?: ThemeColorName;
 };
 
+/**
+ * Native header title metrics, also used by custom animated titles so the
+ * crossfade lands on the same glyph box as the static header.
+ */
+export function headerTitleStyle(theme: Theme): TextStyle {
+  return {
+    color: theme.color.textPrimary,
+    fontSize: 17,
+    fontWeight: "600",
+  };
+}
+
 export function headerOptions(
   theme: Theme,
   options: HeaderOptionsArgs = {},
@@ -27,11 +40,7 @@ export function headerOptions(
     headerLargeTitleEnabled: options.large ?? false,
     headerTintColor: theme.color[options.tint ?? "primary"],
     headerStyle: { backgroundColor: theme.color.surface },
-    headerTitleStyle: {
-      color: theme.color.textPrimary,
-      fontSize: 17,
-      fontWeight: "600",
-    },
+    headerTitleStyle: headerTitleStyle(theme),
     headerShadowVisible: false,
     headerBackButtonDisplayMode: "minimal",
     headerRight: options.right,

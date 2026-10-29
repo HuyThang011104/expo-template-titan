@@ -13,7 +13,7 @@
 import { Image } from "expo-image";
 import { Link } from "expo-router";
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View, type LayoutChangeEvent } from "react-native";
 
 import { Avatar, type User } from "@/entities/user";
 import { hrefs } from "@/shared/navigation/hrefs";
@@ -28,6 +28,8 @@ export type ProfileHeaderProps = {
   followingCount?: number;
   countsVisible?: boolean;
   action?: ReactNode;
+  /** Measures the identity block for the Q7 title threshold (PF4.2). */
+  onIdentityLayout?: (event: LayoutChangeEvent) => void;
   testID?: string;
 };
 
@@ -61,6 +63,7 @@ export function ProfileHeader({
   followingCount,
   countsVisible = false,
   action,
+  onIdentityLayout,
   testID,
 }: ProfileHeaderProps) {
   const theme = useTheme();
@@ -71,7 +74,7 @@ export function ProfileHeader({
   const statsVisible = postsCount !== undefined || followStats !== null;
 
   return (
-    <View testID={testID}>
+    <View testID={testID} onLayout={onIdentityLayout}>
       <View style={[styles.cover, { backgroundColor: theme.color.surfaceMuted }]}>
         {user.coverUrl ? (
           <Image

@@ -8,7 +8,7 @@
 
 import { router } from "expo-router";
 import type { ReactElement } from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 
 import { PostCard } from "@/entities/post";
 import { SaveButton } from "@/entities/saved";
@@ -29,6 +29,9 @@ export type ProfilePostsListProps = {
   header?: ReactElement | null;
   /** Overrides the default empty state (pending/error/private body). */
   emptyComponent?: ReactElement | null;
+  /** Q7 (PF4.2): one shared-value write per scroll frame. */
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  scrollEventThrottle?: number;
   testID?: string;
 };
 
@@ -91,6 +94,8 @@ export function ProfilePostsList({
   prefetchPost,
   header,
   emptyComponent,
+  onScroll,
+  scrollEventThrottle,
   testID = "profile-list",
 }: ProfilePostsListProps) {
   return (
@@ -104,6 +109,8 @@ export function ProfilePostsList({
       }}
       onRefresh={onRefresh}
       refreshing={isRefetching}
+      onScroll={onScroll}
+      scrollEventThrottle={scrollEventThrottle}
       ListHeaderComponent={header ?? null}
       ListEmptyComponent={emptyComponent ?? <ProfilePostsEmpty />}
     />
