@@ -23,7 +23,7 @@ import { CommentsList } from "../components/comments-list";
  * authors are gated behind the relationship (G1.1 fail-closed).
  */
 export function PostDetailScreen() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, focus } = useLocalSearchParams<{ id?: string; focus?: string }>();
 
   if (!id) {
     return (
@@ -38,10 +38,11 @@ export function PostDetailScreen() {
     );
   }
 
-  return <PostDetailBody postId={id} />;
+  // PF3.1: the feed's comment affordance opens `/post/[id]?focus=comment`.
+  return <PostDetailBody postId={id} focusComment={focus === "comment"} />;
 }
 
-function PostDetailBody({ postId }: { postId: string }) {
+function PostDetailBody({ postId, focusComment }: { postId: string; focusComment: boolean }) {
   const qc = useQueryClient();
   const post = usePost(postId);
   const authorId = post.data?.authorId ?? "";
@@ -107,6 +108,7 @@ function PostDetailBody({ postId }: { postId: string }) {
         <CommentComposer
           postId={postId}
           replyTo={replyTo}
+          autoFocus={focusComment}
           onClearReply={() => {
             setReplyTo(null);
           }}

@@ -1,12 +1,3 @@
-/**
- * Tests for `CommentComposer` (G1.2 feature UI).
- *
- * - Send posts once, clears the input, and clears the reply target.
- * - Empty input keeps Send disabled (no empty post, no throw).
- * - Missing session shows an inline error and never crashes (the route is
- *   `Stack.Protected`, so this is a defensive path).
- */
-
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -71,6 +62,8 @@ describe("CommentComposer", () => {
       { wrapper },
     );
 
+    expect(screen.getByTestId("comment-input").props.placeholder).toBe("Add a comment…");
+
     fireEvent.changeText(screen.getByTestId("comment-input"), "Nice post!");
     // State flushes async in this env (React 19 without act); settle first.
     await waitFor(() => {
@@ -84,15 +77,21 @@ describe("CommentComposer", () => {
     expect(cleared).toEqual(["cleared"]);
   });
 
-  it("keeps Send disabled for empty input", async () => {
+  it("shows Send only once there is text", async () => {
     const { fetchImpl, wrapper } = setup(signedIn);
     await render(
       <CommentComposer postId="p-2" replyTo={null} onClearReply={() => {}} fetchImpl={fetchImpl} />,
       { wrapper },
     );
 
+    expect(screen.queryByTestId("comment-send-button")).toBeNull();
+
+    fireEvent.changeText(screen.getByTestId("comment-input"), "Hi");
+    await waitFor(() => {
+      expect(screen.getByTestId("comment-send-button")).toBeTruthy();
+    });
     expect(screen.getByTestId("comment-send-button").props.accessibilityState.disabled).toBe(
-      true,
+      false,
     );
   });
 
@@ -132,5 +131,21 @@ describe("CommentComposer", () => {
     expect(screen.getByTestId("comment-reply-banner")).toBeTruthy();
     fireEvent.press(screen.getByTestId("comment-reply-cancel"));
     expect(cleared).toBe(1);
+  });
+
+  it("forwards autoFocus for focus=comment", async () => {
+    const { fetchImpl, wrapper } = setup(signedIn);
+    await render(
+      <CommentComposer
+        postId="p-2"
+        replyTo={null}
+        autoFocus
+        onClearReply={() => {}}
+        fetchImpl={fetchImpl}
+      />,
+      { wrapper },
+    );
+
+    expect(screen.getByTestId("comment-input").props.autoFocus).toBe(true);
   });
 });

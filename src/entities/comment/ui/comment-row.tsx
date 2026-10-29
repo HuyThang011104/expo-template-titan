@@ -1,10 +1,14 @@
 /**
- * Dumb comment row (G1.2).
+ * Dumb comment row (G1.2, PF3.1).
  *
  * Takes `commentId` and reads the canonical `useComment`. The author preview
  * comes from the canonical user entry written by `hydrateCommentItem`,
  * using a local structural type — never an `entities/user` import.
  * Reply navigation is injected via `onReplyPress` (feature-owned).
+ *
+ * Spec: docs/feel-spec.md §4.3. Anatomy is `Avatar 32` leading + a column
+ * (name/handle/time, body, small like + Reply actions); replies indent one
+ * level by `32 + 8`.
  */
 
 import { Pressable, StyleSheet, View } from "react-native";
@@ -12,7 +16,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { formatRelative } from "@/shared/lib/date";
 import { queryKeys } from "@/shared/query";
-import { Icon, Skeleton, Text } from "@/shared/ui";
+import { Avatar, Icon, Skeleton, Text } from "@/shared/ui";
 
 import { useComment, useLikeComment } from "../queries";
 
@@ -27,9 +31,16 @@ export type CommentRowProps = {
 type AuthorPreview = {
   handle?: unknown;
   displayName?: unknown;
+  avatarUrl?: unknown;
 };
 
-function useCommentAuthorSnapshot(authorId: string): { displayName: string; handle: string } {
+type AuthorSnapshot = {
+  displayName: string;
+  handle: string;
+  avatarUrl: string | null;
+};
+
+function useCommentAuthorSnapshot(authorId: string): AuthorSnapshot {
   const qc = useQueryClient();
   // Reactive read of the canonical user entry (G2.1): subscribes to
   // `queryKeys.user(authorId)` so profile edits propagate to comments.
@@ -52,7 +63,8 @@ function useCommentAuthorSnapshot(authorId: string): { displayName: string; hand
       : "Unknown user";
   const handle =
     typeof data?.handle === "string" && data.handle.length > 0 ? data.handle : "unknown";
-  return { displayName, handle };
+  const avatarUrl = typeof data?.avatarUrl === "string" ? data.avatarUrl : null;
+  return { displayName, handle, avatarUrl };
 }
 
 export function CommentRow({ commentId, depth = 0, onReplyPress, testID }: CommentRowProps) {
@@ -62,8 +74,17 @@ export function CommentRow({ commentId, depth = 0, onReplyPress, testID }: Comme
 
   if (query.isPending) {
     return (
-      <View style={[styles.row, depth === 1 && styles.reply]} testID={testID}>
-        <Skeleton width={160} height={14} />
+      <View
+        testID={testID}
+        style={[styles.row, depth === 1 && styles.replyIndent]}
+        accessible
+        accessibilityLabel="Loading comment"
+      >
+        <Skeleton width={32} height={32} radius="full" />
+        <View style={styles.body}>
+          <Skeleton width={140} height={12} />
+          <Skeleton height={14} width="80%" />
+        </View>
       </View>
     );
   }
@@ -78,9 +99,17 @@ export function CommentRow({ commentId, depth = 0, onReplyPress, testID }: Comme
 
   const comment = query.data;
   return (
-    <View style={[styles.row, depth === 1 && styles.reply]} testID={testID ?? `comment-row-${commentId}`}>
+    <View
+      style={[styles.row, depth === 1 && styles.replyIndent]}
+      testID={testID ?? `comment-row-${commentId}`}
+    >
+      <Avatar
+        displayName={snapshot.displayName}
+        avatarUrl={snapshot.avatarUrl}
+        size={32}
+      />
       <View style={styles.body}>
-        <Text variant="labelStrong">
+        <Text variant="labelStrong" numberOfLines={1}>
           {snapshot.displayName}{" "}
           <Text variant="caption" color="textSecondary">
             @{snapshot.handle} · {formatRelative(comment.createdAt)}
@@ -105,6 +134,7 @@ export function CommentRow({ commentId, depth = 0, onReplyPress, testID }: Comme
                 name={comment.likedByMe ? "heartFill" : "heart"}
                 size="sm"
                 color={comment.likedByMe ? "danger" : "textSecondary"}
+                decorative
               />
               <Text
                 variant="label"
@@ -137,15 +167,21 @@ export function CommentRow({ commentId, depth = 0, onReplyPress, testID }: Comme
   );
 }
 
+const REPLY_INDENT = 32 + 8;
+
 const styles = StyleSheet.create({
   row: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  reply: {
-    paddingLeft: 40,
+  replyIndent: {
+    paddingLeft: REPLY_INDENT,
   },
   body: {
+    flex: 1,
     gap: 4,
   },
   actions: {
