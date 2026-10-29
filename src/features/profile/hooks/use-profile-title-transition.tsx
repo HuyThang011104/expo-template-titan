@@ -12,7 +12,7 @@
 import { useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo } from "react";
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from "react-native";
-import { useSharedValue } from "react-native-reanimated";
+import { useSharedValue, type SharedValue } from "react-native-reanimated";
 
 import { ProfileHeaderTitle } from "../components/profile-title";
 import type { TitleSwitchRange } from "../lib/title-progress";
@@ -30,8 +30,13 @@ export type UseProfileTitleTransitionArgs = {
 };
 
 export type ProfileTitleTransition = {
+  /** Reused by the sticky tabs overlay (PF4.3). */
+  scrollY: SharedValue<number>;
+  /** Bottom edge of the in-list tabs, in list content coordinates. */
+  tabsBottom: SharedValue<number>;
   onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onIdentityLayout: (event: LayoutChangeEvent) => void;
+  onTabsLayout: (event: LayoutChangeEvent) => void;
 };
 
 export function useProfileTitleTransition({
@@ -46,6 +51,8 @@ export function useProfileTitleTransition({
     start: Number.POSITIVE_INFINITY,
     end: Number.POSITIVE_INFINITY,
   });
+  // 0 = not measured yet (the sticky overlay stays hidden).
+  const tabsBottom = useSharedValue(0);
 
   // Stable element: the options effect must not re-run on scroll/renders.
   const title = useMemo(
@@ -89,5 +96,13 @@ export function useProfileTitleTransition({
     [switchRange],
   );
 
-  return { onScroll, onIdentityLayout };
+  const onTabsLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const { y, height } = event.nativeEvent.layout;
+      tabsBottom.set(y + height);
+    },
+    [tabsBottom],
+  );
+
+  return { scrollY, tabsBottom, onScroll, onIdentityLayout, onTabsLayout };
 }

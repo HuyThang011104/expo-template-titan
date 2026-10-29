@@ -11,8 +11,9 @@
  *   Settings, Sign out (testID preserved on the sheet item).
  */
 
+import type { FlashListRef } from "@shopify/flash-list";
 import { router, Stack } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { useUserPosts } from "@/entities/post";
@@ -26,6 +27,7 @@ import { logProfileOpen } from "../analytics";
 import { ProfileHeader } from "../components/profile-header";
 import { ProfileOverflowMenu } from "../components/profile-overflow-sheet";
 import { ProfilePostsFooter, ProfilePostsList } from "../components/profile-posts-list";
+import { ProfileStickyTabs } from "../components/profile-sticky-tabs";
 import { useProfileTitleTransition } from "../hooks/use-profile-title-transition";
 
 export function ProfileScreen() {
@@ -38,6 +40,8 @@ export function ProfileScreen() {
   const posts = useUserPosts(userId);
   const saved = useSavedPosts();
   const [tab, setTab] = useState<"posts" | "saved">("posts");
+  const [stickyShown, setStickyShown] = useState(false);
+  const listRef = useRef<FlashListRef<string>>(null);
 
   useEffect(() => {
     if (me.data) logProfileOpen(me.data.id);
@@ -79,6 +83,13 @@ export function ProfileScreen() {
   const requestCount = requests.userIds.length;
   const active = tab === "saved" ? saved : posts;
 
+  const handleTabChange = (key: string): void => {
+    setTab(key as "posts" | "saved");
+    // PF4.3: reset scroll when switching tabs (sticky overlay included).
+    titleTransition.scrollY.set(0);
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  };
+
   const header = (
     <View>
       <ProfileHeader
@@ -115,18 +126,22 @@ export function ProfileScreen() {
           <Text variant="labelStrong">Follow requests ({requestCount})</Text>
         </Pressable>
       ) : null}
-      <Tabs
-        variant="underline"
-        items={[
-          { key: "posts", label: "Posts", testID: "profile-tab-posts" },
-          { key: "saved", label: "Saved", testID: "profile-tab-saved" },
-        ]}
-        value={tab}
-        onChange={(key) => {
-          setTab(key as "posts" | "saved");
-        }}
-        testID="profile-tabs"
-      />
+      <View
+        onLayout={titleTransition.onTabsLayout}
+        accessibilityElementsHidden={stickyShown}
+        importantForAccessibility={stickyShown ? "no-hide-descendants" : "auto"}
+      >
+        <Tabs
+          variant="underline"
+          items={[
+            { key: "posts", label: "Posts", testID: "profile-tab-posts" },
+            { key: "saved", label: "Saved", testID: "profile-tab-saved" },
+          ]}
+          value={tab}
+          onChange={handleTabChange}
+          testID="profile-tabs"
+        />
+      </View>
     </View>
   );
 
@@ -145,6 +160,7 @@ export function ProfileScreen() {
           void active.refetch();
         }}
         prefetchPost={tab === "saved" ? () => {} : posts.prefetchPost}
+        listRef={listRef}
         onScroll={titleTransition.onScroll}
         scrollEventThrottle={16}
         header={header}
@@ -169,6 +185,13 @@ export function ProfileScreen() {
         testID={tab === "saved" ? "saved-list" : "profile-list"}
       />
       <ProfilePostsFooter visible={active.isFetchingNextPage} />
+      <ProfileStickyTabs
+        scrollY={titleTransition.scrollY}
+        tabsBottom={titleTransition.tabsBottom}
+        value={tab}
+        onChange={handleTabChange}
+        onShownChange={setStickyShown}
+      />
     </Screen>
   );
 }

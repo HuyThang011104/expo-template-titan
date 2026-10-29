@@ -6,8 +6,9 @@
  * mirroring `features/feed/components/feed-list`.
  */
 
+import type { FlashListRef } from "@shopify/flash-list";
 import { router } from "expo-router";
-import type { ReactElement } from "react";
+import type { ReactElement, Ref } from "react";
 import { StyleSheet, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 
 import { PostCard } from "@/entities/post";
@@ -32,6 +33,8 @@ export type ProfilePostsListProps = {
   /** Q7 (PF4.2): one shared-value write per scroll frame. */
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   scrollEventThrottle?: number;
+  /** PF4.3: screen-owned handle for tab-switch scroll resets. */
+  listRef?: Ref<FlashListRef<string>>;
   testID?: string;
 };
 
@@ -96,10 +99,12 @@ export function ProfilePostsList({
   emptyComponent,
   onScroll,
   scrollEventThrottle,
+  listRef,
   testID = "profile-list",
 }: ProfilePostsListProps) {
   return (
     <AppList
+      ref={listRef}
       testID={testID}
       data={postIds}
       renderItem={({ item }) => <ProfilePostItem postId={item} prefetchPost={prefetchPost} />}

@@ -4,11 +4,13 @@
  * (FlashList v2 measures rows itself; there is no `estimatedItemSize`.)
  */
 
-import { FlashList, type FlashListProps } from "@shopify/flash-list";
-import type { ComponentType, ReactElement } from "react";
+import { FlashList, type FlashListProps, type FlashListRef } from "@shopify/flash-list";
+import type { ComponentType, ReactElement, Ref } from "react";
 import { StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 
 export type AppListProps<T> = {
+  /** Imperative handle for screen-owned scroll resets (PF4.3). */
+  ref?: Ref<FlashListRef<T>>;
   data: T[];
   renderItem: FlashListProps<T>["renderItem"];
   keyExtractor?: (item: T, index: number) => string;
@@ -29,6 +31,7 @@ export type AppListProps<T> = {
 };
 
 export function AppList<T>({
+  ref,
   data,
   renderItem,
   keyExtractor,
@@ -47,6 +50,7 @@ export function AppList<T>({
 }: AppListProps<T>) {
   return (
     <FlashList
+      ref={ref}
       data={data}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
