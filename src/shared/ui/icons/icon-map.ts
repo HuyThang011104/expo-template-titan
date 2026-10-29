@@ -33,6 +33,11 @@ export const iconNames = [
   "lock",
   "eye",
   "eyeOff",
+  "play",
+  "pause",
+  "volume",
+  "volumeOff",
+  "flag",
   "chevronRight",
 ] as const;
 
@@ -70,5 +75,10 @@ export const iconMap = {
   lock: { ios: "lock", android: "lock", web: "lock" },
   eye: { ios: "eye", android: "visibility", web: "visibility" },
   eyeOff: { ios: "eye.slash", android: "visibility_off", web: "visibility_off" },
+  play: { ios: "play.fill", android: "play_arrow", web: "play_arrow" },
+  pause: { ios: "pause.fill", android: "pause", web: "pause" },
+  volume: { ios: "speaker.wave.2.fill", android: "volume_up", web: "volume_up" },
+  volumeOff: { ios: "speaker.slash.fill", android: "volume_off", web: "volume_off" },
+  flag: { ios: "flag", android: "flag", web: "flag" },
   chevronRight: { ios: "chevron.right", android: "chevron_right", web: "chevron_right" },
 } as const satisfies Record<IconName, PlatformSymbol>;

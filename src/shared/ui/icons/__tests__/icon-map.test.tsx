@@ -25,6 +25,30 @@ describe("icon map", () => {
     }
   });
 
+  it("maps the media controls and flag on every platform", () => {
+    expect(iconMap.play).toEqual({
+      ios: "play.fill",
+      android: "play_arrow",
+      web: "play_arrow",
+    });
+    expect(iconMap.pause).toEqual({
+      ios: "pause.fill",
+      android: "pause",
+      web: "pause",
+    });
+    expect(iconMap.volume).toEqual({
+      ios: "speaker.wave.2.fill",
+      android: "volume_up",
+      web: "volume_up",
+    });
+    expect(iconMap.volumeOff).toEqual({
+      ios: "speaker.slash.fill",
+      android: "volume_off",
+      web: "volume_off",
+    });
+    expect(iconMap.flag).toEqual({ ios: "flag", android: "flag", web: "flag" });
+  });
+
   it("renders a per-platform name object with the token size and color", async () => {
     SymbolViewMock.mockClear();
 
