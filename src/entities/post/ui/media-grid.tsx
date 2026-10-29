@@ -10,10 +10,10 @@
  * `onPress` for the media viewer.
  */
 
+import { Image } from "expo-image";
 import type { StyleProp, ViewStyle } from "react-native";
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { AppImage } from "@/shared/media";
 import { Icon, useTheme } from "@/shared/ui";
 
 import type { PostMedia } from "../model";
@@ -176,7 +176,13 @@ function MediaTile({ item, index, count, onPress, style, testID }: MediaTileProp
       </View>
     </View>
   ) : (
-    <AppImage uri={item.url} style={styles.image} />
+    <Image
+      source={{ uri: item.url }}
+      style={styles.image}
+      contentFit="cover"
+      cachePolicy="memory-disk"
+      transition={200}
+    />
   );
 
   if (!onPress) {

@@ -6,11 +6,6 @@ import { ThemeProvider } from "@/shared/ui";
 import type { PostMedia } from "../../model";
 import { MediaGrid } from "../media-grid";
 
-jest.mock("expo-audio", () => ({
-  getRecordingPermissionsAsync: jest.fn(),
-  requestRecordingPermissionsAsync: jest.fn(),
-}));
-
 jest.mock("expo-image", () => {
   const { View } = jest.requireActual("react-native");
   return {
