@@ -3,15 +3,17 @@
  *
  * Stays dumb: no routing, no cache writes. The feed passes `isActive`
  * (viewability); detail screens leave it `true` for single-video autoplay.
- * Controls are dedicated `Pressable`s so taps never rely on bubbling
- * through a `Link`-wrapped card.
+ *
+ * Spec: docs/feel-spec.md §4.1 (F6). Controls are an overlay on the frame
+ * (PF2.2): dedicated `PressableScale` buttons with the token icons
+ * `play`/`pause`/`volume`/`volumeOff` and a 44pt hit area — no glyph text.
  */
 
 import { useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
+import { Icon, PressableScale, useTheme } from "@/shared/ui";
 import { SharedVideoView } from "@/shared/ui/video/video-view";
-import { Text } from "@/shared/ui/text";
 
 export type PostVideoProps = {
   postId: string;
@@ -21,6 +23,7 @@ export type PostVideoProps = {
 };
 
 export function PostVideo({ postId, mediaUrl, isActive = true, testID }: PostVideoProps) {
+  const theme = useTheme();
   const [userPaused, setUserPaused] = useState(false);
   const [muted, setMuted] = useState(true);
   const [prevActive, setPrevActive] = useState(isActive);
@@ -36,50 +39,76 @@ export function PostVideo({ postId, mediaUrl, isActive = true, testID }: PostVid
   const shouldPlay = isActive && !userPaused;
 
   return (
-    <View testID={testID ?? `post-video-${postId}`}>
+    <View testID={testID ?? `post-video-${postId}`} style={styles.wrap}>
       <SharedVideoView uri={mediaUrl} shouldPlay={shouldPlay} muted={muted} />
-      <View style={styles.controls}>
-        <Pressable
+      <View style={styles.overlay} pointerEvents="box-none">
+        <PressableScale
           testID={`video-toggle-${postId}`}
           accessibilityRole="button"
           accessibilityLabel={shouldPlay ? "Pause video" : "Play video"}
-          hitSlop={8}
           onPress={() => {
             setUserPaused((prev) => !prev);
           }}
-          style={styles.toggle}
+          style={styles.touch}
         >
-          <Text variant="label" color="textSecondary">
-            {shouldPlay ? "❚❚" : "▶"}
-          </Text>
-        </Pressable>
-        <Pressable
+          <View style={[styles.pill, { backgroundColor: theme.color.primary }]}>
+            <Icon
+              name={shouldPlay ? "pause" : "play"}
+              size="md"
+              color="onPrimary"
+              decorative
+            />
+          </View>
+        </PressableScale>
+        <PressableScale
           testID={`video-mute-${postId}`}
           accessibilityRole="button"
           accessibilityLabel={muted ? "Unmute" : "Mute"}
-          hitSlop={8}
           onPress={() => {
             setMuted((prev) => !prev);
           }}
-          style={styles.toggle}
+          style={styles.touch}
         >
-          <Text variant="label" color="textSecondary">
-            {muted ? "🔇" : "🔊"}
-          </Text>
-        </Pressable>
+          <View style={[styles.pill, { backgroundColor: theme.color.primary }]}>
+            <Icon
+              name={muted ? "volumeOff" : "volume"}
+              size="md"
+              color="onPrimary"
+              decorative
+            />
+          </View>
+        </PressableScale>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  controls: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingTop: 4,
+  wrap: {
+    position: "relative",
   },
-  toggle: {
-    padding: 8,
+  overlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    padding: 4,
+  },
+  touch: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pill: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
