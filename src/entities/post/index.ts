@@ -54,6 +54,7 @@ export {
   type QueryFetchOptions as UsePostOptions,
   type UserPostsPage,
 } from "./queries";
+export { MediaGrid, type MediaGridProps } from "./ui/media-grid";
 export { PostActions, type PostActionsProps } from "./ui/post-actions";
 export { PostBody, type PostBodyProps } from "./ui/post-body";
 export { PostCard, type PostCardProps } from "./ui/post-card";
