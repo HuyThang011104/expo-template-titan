@@ -98,6 +98,7 @@ export function AuthForm({
               onPress={handleSubmit}
               fullWidth
               size="lg"
+              style={{ borderRadius: theme.radius.full }}
               testID={submitTestID}
               accessibilityLabel={t(mode === "signIn" ? "auth.signIn" : "auth.signUp")}
             />

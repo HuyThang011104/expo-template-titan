@@ -10,13 +10,13 @@
  *   unknown profile shows a fallback, never a crash.
  */
 
-import { router } from "expo-router";
+import { router, Stack } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { useMe, useUpdateProfile } from "@/entities/user";
 import { pickFromLibrary } from "@/shared/media/picker";
-import { Button, Input, LoadingState, Screen, Text } from "@/shared/ui";
+import { Button, Input, LoadingState, Screen, Text, useTheme } from "@/shared/ui";
 
 import {
   validateProfileForm,
@@ -81,6 +81,7 @@ function EditProfileBody({
     link: string | null;
   };
 }) {
+  const theme = useTheme();
   const update = useUpdateProfile();
   const [displayName, setDisplayName] = useState(initial.displayName);
   const [bio, setBio] = useState(initial.bio ?? "");
@@ -147,6 +148,32 @@ function EditProfileBody({
 
   return (
     <Screen testID="edit-profile-screen">
+      <Stack.Screen
+        options={{
+          headerLeft: () => (
+            <Button
+              title="Cancel"
+              variant="ghost"
+              size="sm"
+              testID="edit-profile-cancel-button"
+              disabled={update.isPending}
+              onPress={handleEditProfileDismiss}
+            />
+          ),
+          headerRight: () => (
+            <Button
+              title={update.isPending ? "Saving…" : "Save"}
+              variant="primary"
+              size="sm"
+              testID="edit-profile-save-button"
+              disabled={!canSave}
+              loading={update.isPending}
+              style={{ borderRadius: theme.radius.full }}
+              onPress={save}
+            />
+          ),
+        }}
+      />
       <View style={styles.root}>
         <Input
           label="Name"
@@ -250,25 +277,6 @@ function EditProfileBody({
             {submitError}
           </Text>
         ) : null}
-        <View style={styles.buttons}>
-          <Button
-            title="Cancel"
-            variant="secondary"
-            size="sm"
-            testID="edit-profile-cancel-button"
-            disabled={update.isPending}
-            onPress={handleEditProfileDismiss}
-          />
-          <Button
-            title={update.isPending ? "Saving…" : "Save"}
-            variant="primary"
-            size="sm"
-            testID="edit-profile-save-button"
-            disabled={!canSave}
-            loading={update.isPending}
-            onPress={save}
-          />
-        </View>
       </View>
     </Screen>
   );
@@ -292,10 +300,5 @@ const styles = StyleSheet.create({
   imageFlex: {
     flex: 1,
     gap: 4,
-  },
-  buttons: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 8,
   },
 });

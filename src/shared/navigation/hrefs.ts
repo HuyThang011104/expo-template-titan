@@ -35,6 +35,9 @@ export const hrefs = {
   editPost: (postId: string): Href =>
     ({ pathname: "/edit-post", params: { postId } }) as unknown as Href,
   editProfile: (): Href => ({ pathname: "/edit-profile" }) as unknown as Href,
+  /** Full-screen media viewer (F16/PD10): canonical cache first, `index` is 0-based. */
+  mediaViewer: (postId: string, index: number): Href =>
+    ({ pathname: "/media-viewer", params: { postId, index: String(index) } }) as unknown as Href,
   settings: (): Href => ({ pathname: "/settings" }) as unknown as Href,
   notifSettings: (): Href => ({ pathname: "/settings/notifications" }) as unknown as Href,
   privacySettings: (): Href => ({ pathname: "/settings/privacy" }) as unknown as Href,

@@ -96,6 +96,19 @@ describe("PostCard press", () => {
     });
   });
 
+  it("forwards media taps with the pressed index", async () => {
+    const qc = createQueryClient();
+    hydrateFeedItem(qc, { post: mockPost1, author: authorU1 });
+    const onMediaPress = jest.fn();
+
+    await render(<PostCard postId="p-1" onMediaPress={onMediaPress} />, {
+      wrapper: makeWrapper(qc),
+    });
+
+    fireEvent.press(screen.getByTestId("media-grid-p-1-0"));
+    expect(onMediaPress).toHaveBeenCalledWith(0);
+  });
+
   it("non-owner long-press calls the safety entry point", async () => {
     const qc = createQueryClient();
     seedViewer(qc, "u-1");

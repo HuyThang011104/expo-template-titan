@@ -56,6 +56,9 @@ function FeedItem({
       onCommentPress={() => {
         router.push(hrefs.post(postId, "comment"));
       }}
+      onMediaPress={(index) => {
+        router.push(hrefs.mediaViewer(postId, index));
+      }}
       onSafetyPress={() => {
         router.push(hrefs.report("post", postId));
       }}

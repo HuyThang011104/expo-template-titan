@@ -35,6 +35,8 @@ export type PostCardProps = {
   onPressIn?: () => void;
   /** Comment affordance (F14/PD4): feature opens detail with `focus=comment`. */
   onCommentPress?: () => void;
+  /** Media affordance (F16): feature opens the viewer with `{ postId, index }`. */
+  onMediaPress?: (index: number) => void;
   /**
    * Safety entry point (F6). The card stays dumb: it only renders the
    * `...` affordance and calls back — navigation to `/report` is wired
@@ -112,6 +114,7 @@ export function PostCard({
   onPress,
   onPressIn,
   onCommentPress,
+  onMediaPress,
   onSafetyPress,
   safetyTestID,
   onOwnerEditPress,
@@ -189,7 +192,11 @@ export function PostCard({
           isActive={isVideoActive ?? true}
         />
       ) : post.media.length > 0 ? (
-        <MediaGrid media={post.media} testID={`media-grid-${postId}`} />
+        <MediaGrid
+          media={post.media}
+          onPress={onMediaPress}
+          testID={`media-grid-${postId}`}
+        />
       ) : null}
       <PostActions
         postId={postId}

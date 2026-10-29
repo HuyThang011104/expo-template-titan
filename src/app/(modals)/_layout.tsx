@@ -14,7 +14,10 @@ export default function ModalsLayout() {
         name="composer"
         options={{ presentation: "formSheet", title: "New post", headerShown: true }}
       />
-      <Stack.Screen name="media-viewer" options={{ presentation: "modal", headerShown: false }} />
+      <Stack.Screen
+        name="media-viewer"
+        options={{ presentation: "modal", headerShown: false, gestureEnabled: false }}
+      />
       <Stack.Screen
         name="report"
         options={{ presentation: "formSheet", title: "Report", headerShown: true }}

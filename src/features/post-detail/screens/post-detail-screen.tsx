@@ -120,6 +120,9 @@ function PostDetailBody({ postId, focusComment }: { postId: string; focusComment
         header={
           <PostCard
             postId={postId}
+            onMediaPress={(index) => {
+              router.push(hrefs.mediaViewer(postId, index));
+            }}
             onSafetyPress={() => {
               router.push(hrefs.report("post", postId));
             }}

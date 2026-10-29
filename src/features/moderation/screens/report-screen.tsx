@@ -6,11 +6,11 @@
  * - Details are never logged (PII).
  */
 
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
-import { Button, Input, Screen, Text } from "@/shared/ui";
+import { Button, Input, Screen, Text, useTheme } from "@/shared/ui";
 
 import { logReportOpen, logReportSubmit } from "../analytics";
 import { ReportReasonList } from "../components/report-reason-list";
@@ -27,6 +27,7 @@ export function handleReportDismiss(): void {
 }
 
 export function ReportScreen() {
+  const theme = useTheme();
   const { targetType, targetId } = useLocalSearchParams<{
     targetType?: string;
     targetId?: string;
@@ -79,32 +80,34 @@ export function ReportScreen() {
 
   return (
     <Screen testID="report-screen">
+      <Stack.Screen
+        options={{
+          headerLeft: () => (
+            <Button
+              title="Dismiss"
+              variant="ghost"
+              size="sm"
+              testID="report-dismiss-button"
+              onPress={handleReportDismiss}
+            />
+          ),
+          headerRight: () => (
+            <Button
+              title={busy ? "Sending…" : "Submit"}
+              variant="primary"
+              size="sm"
+              testID="report-submit-button"
+              disabled={!canSubmit}
+              loading={busy}
+              style={{ borderRadius: theme.radius.full }}
+              onPress={() => {
+                void handleSubmit();
+              }}
+            />
+          ),
+        }}
+      />
       <View style={styles.root}>
-        <View style={styles.header}>
-          <Button
-            title="Dismiss"
-            variant="secondary"
-            size="sm"
-            testID="report-dismiss-button"
-            onPress={handleReportDismiss}
-          />
-          <Button
-            title={busy ? "Sending…" : "Submit"}
-            variant="primary"
-            size="sm"
-            testID="report-submit-button"
-            disabled={!canSubmit}
-            loading={busy}
-            onPress={() => {
-              void handleSubmit();
-            }}
-          />
-        </View>
-
-        <Text variant="h1" accessibilityRole="header">
-          Report
-        </Text>
-
         <ReportReasonList
           selected={reason}
           onSelect={(next) => {
@@ -145,10 +148,6 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 8,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
   },
   center: {
     alignItems: "center",

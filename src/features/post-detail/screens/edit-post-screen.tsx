@@ -9,12 +9,12 @@
  *   server 403s otherwise); a 403/404 surfaces inline, never a crash.
  */
 
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { parseUpdatePostInput, usePost, useUpdatePost } from "@/entities/post";
-import { Button, Input, Screen, Text } from "@/shared/ui";
+import { Button, ComposerInput, Screen, Text, useTheme } from "@/shared/ui";
 
 export function handleEditPostDismiss(): void {
   if (router.canDismiss()) {
@@ -46,6 +46,7 @@ export function EditPostScreen() {
 }
 
 function EditPostBody({ postId }: { postId: string }) {
+  const theme = useTheme();
   const post = usePost(postId);
   const update = useUpdatePost(postId);
   const [body, setBody] = useState<string | null>(null);
@@ -102,8 +103,34 @@ function EditPostBody({ postId }: { postId: string }) {
 
   return (
     <Screen testID="edit-post-screen">
+      <Stack.Screen
+        options={{
+          headerLeft: () => (
+            <Button
+              title="Cancel"
+              variant="ghost"
+              size="sm"
+              testID="edit-post-cancel-button"
+              disabled={update.isPending}
+              onPress={handleEditPostDismiss}
+            />
+          ),
+          headerRight: () => (
+            <Button
+              title={update.isPending ? "Saving…" : "Save"}
+              variant="primary"
+              size="sm"
+              testID="edit-post-save-button"
+              disabled={!canSave}
+              loading={update.isPending}
+              style={{ borderRadius: theme.radius.full }}
+              onPress={save}
+            />
+          ),
+        }}
+      />
       <View style={styles.root}>
-        <Input
+        <ComposerInput
           value={value}
           onChangeText={(next) => {
             setBody(next);
@@ -111,7 +138,6 @@ function EditPostBody({ postId }: { postId: string }) {
             if (update.isError) update.reset();
           }}
           placeholder="What's happening?"
-          multiline
           maxLength={280}
           editable={!update.isPending}
           autoFocus
@@ -126,25 +152,6 @@ function EditPostBody({ postId }: { postId: string }) {
             {error}
           </Text>
         ) : null}
-        <View style={styles.buttons}>
-          <Button
-            title="Cancel"
-            variant="secondary"
-            size="sm"
-            testID="edit-post-cancel-button"
-            disabled={update.isPending}
-            onPress={handleEditPostDismiss}
-          />
-          <Button
-            title={update.isPending ? "Saving…" : "Save"}
-            variant="primary"
-            size="sm"
-            testID="edit-post-save-button"
-            disabled={!canSave}
-            loading={update.isPending}
-            onPress={save}
-          />
-        </View>
       </View>
     </Screen>
   );
@@ -159,10 +166,5 @@ const styles = StyleSheet.create({
   root: {
     gap: 12,
     padding: 16,
-  },
-  buttons: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 8,
   },
 });
