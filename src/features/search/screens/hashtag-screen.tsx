@@ -81,6 +81,7 @@ function HashtagBody({ tag }: { tag: string }) {
             void feed.refetch();
           }}
           prefetchPost={feed.prefetchPost}
+          showTabs={false}
         />
       </View>
     </Screen>

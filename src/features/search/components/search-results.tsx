@@ -1,20 +1,21 @@
 /**
  * Search results (F3).
  *
- * - Single `FlashList` of canonical `postIds` (like works cross-cache, no patching here).
- * - Matching users render once as `ListHeaderComponent` via `UserRow`.
+ * - Segmented `Top | People | Posts`; `Top` mixes the first 3 people with posts.
+ * - Single `AppList` of canonical ids (likes work cross-cache, no patching here).
+ * - Matching users render via `UserRow`; posts via canonical `PostCard`.
  * - Links go through shared `hrefs` so typed routes stay in one place.
  */
 
 import { Link, router } from "expo-router";
-import { FlashList } from "@shopify/flash-list";
+import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { PostCard } from "@/entities/post";
 import { SaveButton } from "@/entities/saved";
 import { UserRow, useUser } from "@/entities/user";
 import { hrefs } from "@/shared/navigation/hrefs";
-import { EmptyState, LoadingState, Text } from "@/shared/ui";
+import { AppList, EmptyState, LoadingState, Tabs, useTheme } from "@/shared/ui";
 
 import { logSearchOpen } from "../analytics";
 
@@ -26,17 +27,33 @@ export type SearchResultsProps = {
   onEndReached: () => void;
   onRefresh: () => void;
   prefetchPost: (id: string) => void;
+  /** Hashtag reuses the post list without the user tabs. */
+  showTabs?: boolean;
 };
+
+type SearchTab = "top" | "people" | "posts";
+
+type SearchRow = { kind: "user"; id: string } | { kind: "post"; id: string };
+
+const TAB_ITEMS = [
+  { key: "top", label: "Top", testID: "search-tab-top" },
+  { key: "people", label: "People", testID: "search-tab-people" },
+  { key: "posts", label: "Posts", testID: "search-tab-posts" },
+] as const;
 
 function SearchUserLink({ userId }: { userId: string }) {
   const query = useUser(userId);
   const handle = query.data?.handle;
   if (!handle) {
-    return <UserRow userId={userId} testID={`search-user-${userId}`} />;
+    return (
+      <View style={styles.userRow}>
+        <UserRow userId={userId} testID={`search-user-${userId}`} />
+      </View>
+    );
   }
   return (
     <Link href={hrefs.user(handle)} asChild>
-      <Pressable>
+      <Pressable style={styles.userRow}>
         <UserRow userId={userId} testID={`search-user-${userId}`} />
       </Pressable>
     </Link>
@@ -81,23 +98,6 @@ function SearchPostItem({
   );
 }
 
-function SearchHeader({ userIds }: { userIds: string[] }) {
-  if (userIds.length === 0) return null;
-  return (
-    <View style={styles.users}>
-      <Text variant="labelStrong" color="textSecondary">
-        People
-      </Text>
-      {userIds.map((id) => (
-        <SearchUserLink key={id} userId={id} />
-      ))}
-      <Text variant="labelStrong" color="textSecondary">
-        Posts
-      </Text>
-    </View>
-  );
-}
-
 function SearchEmpty() {
   return (
     <EmptyState
@@ -117,31 +117,72 @@ export function SearchResults({
   onEndReached,
   onRefresh,
   prefetchPost,
+  showTabs = true,
 }: SearchResultsProps) {
+  const theme = useTheme();
+  const [tab, setTab] = useState<SearchTab>("top");
+
+  const rows: SearchRow[] =
+    tab === "people"
+      ? userIds.map((id) => ({ kind: "user" as const, id }))
+      : tab === "posts"
+        ? postIds.map((id) => ({ kind: "post" as const, id }))
+        : [
+            ...userIds.slice(0, 3).map((id) => ({ kind: "user" as const, id })),
+            ...postIds.map((id) => ({ kind: "post" as const, id })),
+          ];
+
+  const postsTab = tab !== "people";
+
   return (
-    <FlashList
-      testID="search-list"
-      data={postIds}
-      renderItem={({ item }) => <SearchPostItem postId={item} prefetchPost={prefetchPost} />}
-      keyExtractor={(id) => id}
-      onEndReached={onEndReached}
-      onEndReachedThreshold={0.5}
-      onRefresh={onRefresh}
-      refreshing={isRefetching}
-      ListHeaderComponent={<SearchHeader userIds={userIds} />}
-      ListEmptyComponent={<SearchEmpty />}
-      ListFooterComponent={
-        isFetchingNextPage ? (
-          <LoadingState label="Loading more results" style={styles.footer} />
-        ) : null
-      }
-    />
+    <View style={styles.root}>
+      {showTabs ? (
+        <Tabs
+          items={TAB_ITEMS}
+          value={tab}
+          onChange={(key) => {
+            setTab(key as SearchTab);
+          }}
+          variant="segmented"
+          accessibilityLabel="Search results"
+          testID="search-tabs"
+          style={{
+            marginHorizontal: theme.space[4],
+            marginVertical: theme.space[2],
+          }}
+        />
+      ) : null}
+      <AppList
+        testID="search-list"
+        data={rows}
+        renderItem={({ item }) =>
+          item.kind === "user" ? (
+            <SearchUserLink userId={item.id} />
+          ) : (
+            <SearchPostItem postId={item.id} prefetchPost={prefetchPost} />
+          )
+        }
+        keyExtractor={(item) => `${item.kind}-${item.id}`}
+        onEndReached={postsTab ? onEndReached : undefined}
+        onEndReachedThreshold={0.5}
+        onRefresh={onRefresh}
+        refreshing={isRefetching}
+        ListEmptyComponent={<SearchEmpty />}
+        ListFooterComponent={
+          postsTab && isFetchingNextPage ? (
+            <LoadingState label="Loading more results" style={styles.footer} />
+          ) : null
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  users: {
-    gap: 8,
+  root: {
+    flex: 1,
+  },
+  userRow: {
     paddingHorizontal: 16,
     paddingVertical: 8,
   },

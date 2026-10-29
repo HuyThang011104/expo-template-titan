@@ -6,12 +6,12 @@
  * place; unknown handles/tags fall back to their screens (never a crash).
  */
 
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { UserRow, useUser } from "@/entities/user";
 import { hrefs } from "@/shared/navigation/hrefs";
-import { ErrorState, LoadingState, Text } from "@/shared/ui";
+import { ErrorState, ListItem, LoadingState, Text } from "@/shared/ui";
 
 import type { HashtagInfo } from "../schema";
 
@@ -24,28 +24,33 @@ export type TrendingListProps = {
   onTagPress?: (tag: string) => void;
 };
 
-function TrendingTagRow({ info, onPress }: { info: HashtagInfo; onPress?: (tag: string) => void }) {
-  const content = (
-    <Pressable
+function TrendingTagRow({
+  info,
+  rank,
+  onPress,
+}: {
+  info: HashtagInfo;
+  rank: number;
+  onPress?: (tag: string) => void;
+}) {
+  return (
+    <ListItem
       testID={`trending-tag-${info.tag}`}
-      accessibilityRole="button"
       accessibilityLabel={`Hashtag ${info.tag}, ${info.postCount} posts`}
+      leading={
+        <Text variant="h3" color="textTertiary">
+          {rank}
+        </Text>
+      }
+      title={`#${info.tag}`}
+      titleVariant="labelStrong"
+      subtitle={info.postCount === 1 ? "1 post" : `${info.postCount} posts`}
       onPress={() => {
         onPress?.(info.tag);
+        router.push(hrefs.hashtag(info.tag));
       }}
-      style={styles.tagRow}
-    >
-      <Text variant="labelStrong">#{info.tag}</Text>
-      <Text variant="caption" color="textSecondary">
-        {info.postCount} posts
-      </Text>
-    </Pressable>
-  );
-  // Navigation stays declarative; the optional callback fills the search box.
-  return (
-    <Link href={hrefs.hashtag(info.tag)} asChild>
-      {content}
-    </Link>
+      style={styles.tagItem}
+    />
   );
 }
 
@@ -96,8 +101,8 @@ export function TrendingList({ tags, userIds, isPending, isError, onRetry, onTag
           <Text variant="labelStrong" color="textSecondary">
             Trending
           </Text>
-          {tags.map((info) => (
-            <TrendingTagRow key={info.tag} info={info} onPress={onTagPress} />
+          {tags.map((info, index) => (
+            <TrendingTagRow key={info.tag} info={info} rank={index + 1} onPress={onTagPress} />
           ))}
         </View>
       ) : null}
@@ -121,8 +126,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  tagRow: {
-    gap: 2,
-    paddingVertical: 4,
+  tagItem: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
 });

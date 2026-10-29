@@ -8,7 +8,7 @@
 
 import { Pressable, StyleSheet, View } from "react-native";
 
-import { Button, Icon, Text } from "@/shared/ui";
+import { Button, IconButton, Text } from "@/shared/ui";
 
 export type SearchHistoryListProps = {
   history: string[];
@@ -46,18 +46,16 @@ export function SearchHistoryList({ history, onSelect, onRemoveOne, onClearAll }
           >
             <Text variant="body">{item}</Text>
           </Pressable>
-          <Pressable
-            testID={`search-history-remove-${item.toLowerCase()}`}
-            accessibilityRole="button"
+          <IconButton
+            icon="close"
+            size="sm"
+            variant="ghost"
             accessibilityLabel={`Remove ${item} from history`}
-            hitSlop={8}
+            testID={`search-history-remove-${item.toLowerCase()}`}
             onPress={() => {
               onRemoveOne(item);
             }}
-            style={styles.removeTouch}
-          >
-            <Icon name="close" size="sm" color="textSecondary" />
-          </Pressable>
+          />
         </View>
       ))}
     </View>
@@ -82,8 +80,5 @@ const styles = StyleSheet.create({
   queryTouch: {
     flex: 1,
     paddingVertical: 8,
-  },
-  removeTouch: {
-    padding: 8,
   },
 });

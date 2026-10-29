@@ -2,11 +2,12 @@ import type { ReactNode } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 
 import { Pressable } from "../primitives";
-import { Text } from "../text";
+import { Text, type TextVariant } from "../text";
 import { useTheme } from "../theme/use-theme";
 
 export type ListItemProps = {
   title: string;
+  titleVariant?: TextVariant;
   subtitle?: string;
   leading?: ReactNode;
   trailing?: ReactNode;
@@ -19,6 +20,7 @@ export type ListItemProps = {
 
 export function ListItem({
   title,
+  titleVariant = "body",
   subtitle,
   leading,
   trailing,
@@ -35,7 +37,7 @@ export function ListItem({
     <>
       {leading ? <View style={styles.leading}>{leading}</View> : null}
       <View style={styles.text}>
-        <Text variant="body" numberOfLines={1}>
+        <Text variant={titleVariant} numberOfLines={1}>
           {title}
         </Text>
         {subtitle ? (
