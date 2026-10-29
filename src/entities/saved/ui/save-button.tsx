@@ -7,9 +7,9 @@
  * Saved tab updates with no extra fetch.
  */
 
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
-import { Button, Text } from "@/shared/ui";
+import { Icon, Text, useTheme } from "@/shared/ui";
 
 import { useIsSaved, useSetSaved } from "../queries";
 
@@ -21,23 +21,33 @@ export type SaveButtonProps = {
 };
 
 export function SaveButton({ postId, testID, fetchImpl }: SaveButtonProps) {
+  const theme = useTheme();
   const saved = useIsSaved(postId, { fetchImpl });
   const toggle = useSetSaved(postId, { fetchImpl });
   const id = testID ?? `save-button-${postId}`;
 
   return (
     <View style={styles.root}>
-      <Button
-        title={saved ? "Saved" : "Save"}
+      <Pressable
         testID={id}
-        variant={saved ? "secondary" : "ghost"}
-        size="sm"
-        loading={toggle.isPending}
+        accessibilityRole="button"
+        accessibilityLabel={saved ? "Saved" : "Save"}
+        accessibilityState={{ selected: saved, busy: toggle.isPending }}
+        disabled={toggle.isPending}
+        hitSlop={theme.space[1]}
         onPress={() => {
           toggle.reset();
           toggle.mutate(!saved);
         }}
-      />
+        style={styles.touch}
+      >
+        <Icon
+          name={saved ? "bookmarkFill" : "bookmark"}
+          size="md"
+          color={saved ? "primary" : "textSecondary"}
+          decorative
+        />
+      </Pressable>
       {toggle.isError ? (
         <Text variant="caption" color="textSecondary" testID={`save-error-${postId}`}>
           Couldn&apos;t save. Tap to retry.
@@ -51,5 +61,11 @@ const styles = StyleSheet.create({
   root: {
     alignItems: "flex-start",
     gap: 4,
+  },
+  touch: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

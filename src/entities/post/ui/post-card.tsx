@@ -3,25 +3,38 @@
  *
  * Takes `postId` and reads the canonical `usePost` + `usePostAuthor`.
  * Renders the author header inline to respect the boundary.
+ *
+ * Spec: docs/feel-spec.md §4.1 (F5, F6, F14). Default surface is a flat row
+ * on `background` with a hairline divider on the bottom (feed/search/profile);
+ * `surface="card"` keeps the old framed look. Navigation and the comment
+ * affordance are feature-owned callbacks — the entity never imports a router.
  */
 
-import { Image } from "expo-image";
 import type { ReactNode } from "react";
+import { useRef } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { formatRelative } from "@/shared/lib/date";
-import { Avatar, Card, Icon, Skeleton, Text, useTheme } from "@/shared/ui";
+import { Avatar, Card, Icon, PressableScale, Skeleton, Text, useTheme } from "@/shared/ui";
 
 import { usePost, usePostAuthor, useViewerId } from "../queries";
+import { MediaGrid } from "./media-grid";
 import { PostActions } from "./post-actions";
 import { PostBody } from "./post-body";
-import { PostOwnerMenu } from "./post-owner-menu";
-import { PostShareButton } from "./post-share-button";
+import { PostOwnerMenu, type PostOwnerMenuHandle } from "./post-owner-menu";
 import { PostVideo } from "./post-video";
 
 export type PostCardProps = {
   postId: string;
   testID?: string;
+  /**
+   * Card press (navigation is feature-owned, same pattern as the other
+   * callbacks). When omitted the card is not tappable.
+   */
+  onPress?: () => void;
+  onPressIn?: () => void;
+  /** Comment affordance (F14/PD4): feature opens detail with `focus=comment`. */
+  onCommentPress?: () => void;
   /**
    * Safety entry point (F6). The card stays dumb: it only renders the
    * `...` affordance and calls back — navigation to `/report` is wired
@@ -35,12 +48,12 @@ export type PostCardProps = {
    * the safety one. Non-owners never see it; unknown viewer hides it
    * (fail-closed until `useMe` warms the `me` entry).
    */
+  onOwnerEditPress?: () => void;
   /**
    * Save affordance (G1.4). Cross-entity by design (`entities/saved` owns
    * the state), so features inject `<SaveButton postId />` — same pattern
-   * as `onSafetyPress`/`onOwnerEditPress`. Share renders inline (post-owned).
+   * as `onSafetyPress`. Share renders inline (post-owned).
    */
-  onOwnerEditPress?: () => void;
   saveAffordance?: ReactNode;
   /**
    * Rich-text navigation (G1.5). Mention/hashtag taps are feature-owned
@@ -54,11 +67,11 @@ export type PostCardProps = {
    * `isActive`; detail screens leave it `true` for single-video autoplay.
    */
   isVideoActive?: boolean;
+  /** `flat` (default) is the feed row; `card` keeps the framed variant. */
+  surface?: "flat" | "card";
 };
 
-const POST_IMAGE_HEIGHT = 200;
-
-function PostAuthorHeader({ authorId }: { authorId: string }) {
+function PostAuthorHeader({ authorId, timeLabel }: { authorId: string; timeLabel: string }) {
   const authorQuery = usePostAuthor(authorId);
 
   if (authorQuery.isPending) {
@@ -82,19 +95,36 @@ function PostAuthorHeader({ authorId }: { authorId: string }) {
     <View style={styles.authorRow}>
       <Avatar displayName={author.displayName} avatarUrl={author.avatarUrl} size={40} />
       <View style={styles.authorNames}>
-        <Text variant="labelStrong">{author.displayName}</Text>
-        <Text variant="caption" color="textSecondary">
-          @{author.handle}
+        <Text variant="labelStrong" numberOfLines={1}>
+          {author.displayName}
+        </Text>
+        <Text variant="caption" color="textSecondary" numberOfLines={1}>
+          {`@${author.handle} · ${timeLabel}`}
         </Text>
       </View>
     </View>
   );
 }
 
-export function PostCard({ postId, testID, onSafetyPress, safetyTestID, onOwnerEditPress, saveAffordance, onMentionPress, onHashtagPress, isVideoActive }: PostCardProps) {
+export function PostCard({
+  postId,
+  testID,
+  onPress,
+  onPressIn,
+  onCommentPress,
+  onSafetyPress,
+  safetyTestID,
+  onOwnerEditPress,
+  saveAffordance,
+  onMentionPress,
+  onHashtagPress,
+  isVideoActive,
+  surface = "flat",
+}: PostCardProps) {
   const theme = useTheme();
   const postQuery = usePost(postId);
   const viewerId = useViewerId();
+  const ownerMenuRef = useRef<PostOwnerMenuHandle>(null);
 
   if (postQuery.isPending) {
     return (
@@ -113,16 +143,26 @@ export function PostCard({ postId, testID, onSafetyPress, safetyTestID, onOwnerE
     );
   }
 
-  const firstMedia = post.media[0];
   const isOwner = !!viewerId && viewerId === post.authorId;
-  return (
-    <Card testID={testID} padding={3} style={styles.card}>
+  const [firstMedia] = post.media;
+  const singleVideo = post.media.length === 1 && firstMedia?.kind === "video";
+
+  function handleLongPress(): void {
+    if (isOwner && onOwnerEditPress) {
+      ownerMenuRef.current?.open();
+      return;
+    }
+    onSafetyPress?.();
+  }
+
+  const content = (
+    <>
       <View style={styles.headerRow}>
         <View style={styles.headerFlex}>
-          <PostAuthorHeader authorId={post.authorId} />
+          <PostAuthorHeader authorId={post.authorId} timeLabel={formatRelative(post.createdAt)} />
         </View>
         {isOwner && onOwnerEditPress ? (
-          <PostOwnerMenu postId={postId} onEditPress={onOwnerEditPress} />
+          <PostOwnerMenu postId={postId} onEditPress={onOwnerEditPress} ref={ownerMenuRef} />
         ) : onSafetyPress ? (
           <Pressable
             testID={safetyTestID ?? `safety-menu-${postId}`}
@@ -132,7 +172,7 @@ export function PostCard({ postId, testID, onSafetyPress, safetyTestID, onOwnerE
             onPress={onSafetyPress}
             style={styles.safetyTouch}
           >
-            <Icon name="more" size="md" color="textSecondary" />
+            <Icon name="more" size="md" color="textSecondary" decorative />
           </Pressable>
         ) : null}
       </View>
@@ -142,29 +182,70 @@ export function PostCard({ postId, testID, onSafetyPress, safetyTestID, onOwnerE
         onMentionPress={onMentionPress}
         onHashtagPress={onHashtagPress}
       />
-      {firstMedia?.kind === "image" ? (
-        <Image
-          source={{ uri: firstMedia.url }}
-          style={[styles.postImage, { borderRadius: theme.radius.md }]}
-          contentFit="cover"
-          transition={200}
+      {singleVideo && firstMedia ? (
+        <PostVideo
+          postId={postId}
+          mediaUrl={firstMedia.url}
+          isActive={isVideoActive ?? true}
         />
-      ) : firstMedia?.kind === "video" ? (
-        <PostVideo postId={postId} mediaUrl={firstMedia.url} isActive={isVideoActive ?? true} />
+      ) : post.media.length > 0 ? (
+        <MediaGrid media={post.media} testID={`media-grid-${postId}`} />
       ) : null}
-      <PostActions postId={postId} testID={`like-button-${postId}`} />
-      <View style={[styles.actionsRow, { gap: theme.space[4] }]}>
-        {saveAffordance}
-        <PostShareButton postId={postId} />
+      <PostActions
+        postId={postId}
+        testID={`like-button-${postId}`}
+        onCommentPress={onCommentPress}
+        saveAffordance={saveAffordance}
+      />
+    </>
+  );
+
+  if (surface === "card") {
+    return (
+      <Card testID={testID} padding={3} style={styles.card}>
+        {content}
+      </Card>
+    );
+  }
+
+  const flatStyle = [
+    styles.flat,
+    {
+      backgroundColor: theme.color.background,
+      borderBottomColor: theme.color.border,
+    },
+  ];
+
+  if (!onPress) {
+    return (
+      <View testID={testID} style={flatStyle}>
+        {content}
       </View>
-      <Text variant="caption" color="textSecondary">
-        {formatRelative(post.createdAt)}
-      </Text>
-    </Card>
+    );
+  }
+
+  return (
+    <PressableScale
+      testID={testID}
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onLongPress={handleLongPress}
+      delayLongPress={400}
+      accessibilityRole="button"
+      style={flatStyle}
+    >
+      {content}
+    </PressableScale>
   );
 }
 
 const styles = StyleSheet.create({
+  flat: {
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
   card: {
     gap: 8,
   },
@@ -175,23 +256,19 @@ const styles = StyleSheet.create({
   headerFlex: {
     flex: 1,
   },
-  actionsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
   safetyTouch: {
-    padding: 4,
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   authorRow: {
     flexDirection: "row",
     alignItems: "center",
   },
   authorNames: {
+    flex: 1,
     marginLeft: 12,
     justifyContent: "center",
-  },
-  postImage: {
-    width: "100%",
-    height: POST_IMAGE_HEIGHT,
   },
 });

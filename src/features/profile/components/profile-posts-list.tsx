@@ -6,8 +6,8 @@
  * mirroring `features/feed/components/feed-list`.
  */
 
-import { Link, router } from "expo-router";
-import { Pressable, StyleSheet } from "react-native";
+import { router } from "expo-router";
+import { StyleSheet } from "react-native";
 
 import { PostCard } from "@/entities/post";
 import { SaveButton } from "@/entities/saved";
@@ -35,32 +35,33 @@ function ProfilePostItem({
   prefetchPost: (id: string) => void;
 }) {
   return (
-    <Link href={hrefs.post(postId)} asChild>
-      <Pressable
-        onPressIn={() => {
-          logProfileOpenDetail(postId);
-          prefetchPost(postId);
-        }}
-      >
-        <PostCard
-          postId={postId}
-          testID={`post-card-${postId}`}
-          onSafetyPress={() => {
-            router.push(hrefs.report("post", postId));
-          }}
-          onOwnerEditPress={() => {
-            router.push(hrefs.editPost(postId));
-          }}
-          onMentionPress={(handle) => {
-            router.push(hrefs.user(handle));
-          }}
-          onHashtagPress={(tag) => {
-            router.push(hrefs.hashtag(tag));
-          }}
-          saveAffordance={<SaveButton postId={postId} />}
-        />
-      </Pressable>
-    </Link>
+    <PostCard
+      postId={postId}
+      testID={`post-card-${postId}`}
+      onPress={() => {
+        router.push(hrefs.post(postId));
+      }}
+      onPressIn={() => {
+        logProfileOpenDetail(postId);
+        prefetchPost(postId);
+      }}
+      onCommentPress={() => {
+        router.push(hrefs.post(postId, "comment"));
+      }}
+      onSafetyPress={() => {
+        router.push(hrefs.report("post", postId));
+      }}
+      onOwnerEditPress={() => {
+        router.push(hrefs.editPost(postId));
+      }}
+      onMentionPress={(handle) => {
+        router.push(hrefs.user(handle));
+      }}
+      onHashtagPress={(tag) => {
+        router.push(hrefs.hashtag(tag));
+      }}
+      saveAffordance={<SaveButton postId={postId} />}
+    />
   );
 }
 

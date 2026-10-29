@@ -9,7 +9,13 @@
  */
 
 import { useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import {
+  Pressable,
+  StyleSheet,
+  View,
+  type NativeSyntheticEvent,
+  type TextLayoutEventData,
+} from "react-native";
 import * as Linking from "expo-linking";
 
 import { Button, Sheet, Text } from "@/shared/ui";
@@ -22,6 +28,8 @@ export type PostBodyProps = {
   onMentionPress?: (handle: string) => void;
   onHashtagPress?: (tag: string) => void;
   testID?: string;
+  /** Lines shown before the inline "more" affordance (feed = 8). */
+  clampLines?: number;
   /** Injected for tests; defaults to `expo-linking` openURL. */
   openFn?: (url: string) => Promise<unknown>;
 };
@@ -32,11 +40,19 @@ export function PostBody({
   onMentionPress,
   onHashtagPress,
   testID,
+  clampLines = 8,
   openFn,
 }: PostBodyProps) {
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
   const [openFailed, setOpenFailed] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
   const segments = useMemo(() => parseRichText(body), [body]);
+
+  function handleTextLayout(event: NativeSyntheticEvent<TextLayoutEventData>): void {
+    if (expanded || overflowing) return;
+    if (event.nativeEvent.lines.length >= clampLines) setOverflowing(true);
+  }
 
   const openLink = async (url: string): Promise<void> => {
     setOpenFailed(false);
@@ -50,7 +66,12 @@ export function PostBody({
 
   return (
     <View>
-      <Text variant="body" testID={testID ?? `post-body-${postId}`}>
+      <Text
+        variant="body"
+        testID={testID ?? `post-body-${postId}`}
+        numberOfLines={expanded ? undefined : clampLines}
+        onTextLayout={handleTextLayout}
+      >
         {segments.map((segment, index) => {
           if (segment.kind === "mention") {
             return (
@@ -106,6 +127,20 @@ export function PostBody({
           return segment.text;
         })}
       </Text>
+      {overflowing && !expanded ? (
+        <Pressable
+          testID={`post-body-more-${postId}`}
+          accessibilityRole="button"
+          accessibilityLabel="Show more"
+          hitSlop={8}
+          onPress={() => {
+            setExpanded(true);
+          }}
+          style={styles.moreTouch}
+        >
+          <Text variant="link">more</Text>
+        </Pressable>
+      ) : null}
       <Sheet
         visible={pendingUrl !== null}
         onClose={() => {
@@ -155,6 +190,10 @@ export function PostBody({
 }
 
 const styles = StyleSheet.create({
+  moreTouch: {
+    alignSelf: "flex-start",
+    paddingVertical: 4,
+  },
   confirm: {
     gap: 12,
     paddingBottom: 8,

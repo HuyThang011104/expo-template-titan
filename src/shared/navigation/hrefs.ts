@@ -10,7 +10,14 @@ export const UNIVERSAL_LINK_ORIGIN = "https://titan.example";
 
 export const hrefs = {
   home: (): Href => "/",
-  post: (id: string): Href => ({ pathname: "/post/[id]", params: { id } }),
+  /**
+   * Post detail. `focus: "comment"` asks the screen to autofocus the
+   * composer (comment affordance, PD4); the route reads it in PF3.1.
+   */
+  post: (id: string, focus?: "comment"): Href =>
+    focus
+      ? ({ pathname: "/post/[id]", params: { id, focus } } as unknown as Href)
+      : { pathname: "/post/[id]", params: { id } },
   user: (handle: string): Href => ({ pathname: "/user/[handle]", params: { handle } }),
   userFollowers: (handle: string): Href =>
     ({ pathname: "/user/[handle]/followers", params: { handle } }) as unknown as Href,

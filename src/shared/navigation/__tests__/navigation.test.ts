@@ -11,6 +11,13 @@ describe("hrefs", () => {
     expect(hrefs.home()).toBe("/");
   });
 
+  it("builds a post href with the comment focus param", () => {
+    expect(hrefs.post("abc", "comment")).toEqual({
+      pathname: "/post/[id]",
+      params: { id: "abc", focus: "comment" },
+    });
+  });
+
   it("builds typed chat hrefs", () => {
     expect(hrefs.chat("c-1")).toEqual({
       pathname: "/(app)/(inbox)/chats/[id]",

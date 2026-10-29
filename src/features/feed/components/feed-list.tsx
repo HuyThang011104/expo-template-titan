@@ -4,14 +4,16 @@
  * - `data` is a flat `postIds` array read via canonical `PostCard`.
  * - F7a: viewability drives a single `activeVideoId` (never autoplay many).
  *   Blur/background clears it so video pauses off-screen.
- * - Tapping like also opens detail because nested presses bubble up.
+ * - F5: cards are flat rows with a hairline divider (`PostCard` draws it),
+ *   so the list owns no separator. Navigation is a `PostCard` callback
+ *   (no `Link` press wrapper), which keeps the press geometry on the card.
  */
 
-import { Link, router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { AppState, Pressable, StyleSheet, View } from "react-native";
+import { AppState, StyleSheet } from "react-native";
 
 import { PostCard, getPostData } from "@/entities/post";
 import { SaveButton } from "@/entities/saved";
@@ -40,33 +42,34 @@ function FeedItem({
   isVideoActive: boolean;
 }) {
   return (
-    <Link href={{ pathname: "/post/[id]", params: { id: postId } }} asChild>
-      <Pressable
-        onPressIn={() => {
-          logFeedOpenDetail(postId);
-          prefetchPost(postId);
-        }}
-      >
-        <PostCard
-          postId={postId}
-          testID={`post-card-${postId}`}
-          isVideoActive={isVideoActive}
-          onSafetyPress={() => {
-            router.push(hrefs.report("post", postId));
-          }}
-          onOwnerEditPress={() => {
-            router.push(hrefs.editPost(postId));
-          }}
-          onMentionPress={(handle) => {
-            router.push(hrefs.user(handle));
-          }}
-          onHashtagPress={(tag) => {
-            router.push(hrefs.hashtag(tag));
-          }}
-          saveAffordance={<SaveButton postId={postId} />}
-        />
-      </Pressable>
-    </Link>
+    <PostCard
+      postId={postId}
+      testID={`post-card-${postId}`}
+      isVideoActive={isVideoActive}
+      onPress={() => {
+        router.push(hrefs.post(postId));
+      }}
+      onPressIn={() => {
+        logFeedOpenDetail(postId);
+        prefetchPost(postId);
+      }}
+      onCommentPress={() => {
+        router.push(hrefs.post(postId, "comment"));
+      }}
+      onSafetyPress={() => {
+        router.push(hrefs.report("post", postId));
+      }}
+      onOwnerEditPress={() => {
+        router.push(hrefs.editPost(postId));
+      }}
+      onMentionPress={(handle) => {
+        router.push(hrefs.user(handle));
+      }}
+      onHashtagPress={(tag) => {
+        router.push(hrefs.hashtag(tag));
+      }}
+      saveAffordance={<SaveButton postId={postId} />}
+    />
   );
 }
 
@@ -153,7 +156,6 @@ export function FeedList({
           <LoadingState label="Loading more posts" style={styles.footer} />
         ) : null
       }
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
     />
   );
 }
@@ -161,8 +163,5 @@ export function FeedList({
 const styles = StyleSheet.create({
   footer: {
     paddingVertical: 16,
-  },
-  separator: {
-    height: 8,
   },
 });

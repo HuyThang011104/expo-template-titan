@@ -62,7 +62,7 @@ describe("PostCard", () => {
 
     expect(screen.getByText(mockPost1.body)).toBeTruthy();
     expect(screen.getByText("Ava Stone")).toBeTruthy();
-    expect(screen.getByText("@ava")).toBeTruthy();
+    expect(screen.getByText(/^@ava ·/)).toBeTruthy();
   });
 
   it("renders fallback for unknown posts (no crash)", async () => {

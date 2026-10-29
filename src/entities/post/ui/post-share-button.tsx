@@ -63,12 +63,7 @@ export function PostShareButton({ postId, testID, schemeOverride, shareFn }: Pos
         }}
         style={styles.touch}
       >
-        <View style={styles.row}>
-          <Icon name="share" size="sm" color="textSecondary" />
-          <Text variant="label" color="textSecondary">
-            Share
-          </Text>
-        </View>
+        <Icon name="share" size="md" color="textSecondary" decorative />
       </Pressable>
       {failed ? (
         <Text variant="caption" color="textSecondary" testID={`share-error-${postId}`}>
@@ -84,11 +79,9 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   touch: {
-    paddingVertical: 4,
-  },
-  row: {
-    flexDirection: "row",
+    width: 44,
+    height: 44,
     alignItems: "center",
-    gap: 4,
+    justifyContent: "center",
   },
 });

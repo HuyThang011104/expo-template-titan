@@ -8,12 +8,17 @@
  * a router or another feature).
  */
 
-import { useState } from "react";
+import { useImperativeHandle, useState, type Ref } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { Button, Icon, Sheet, Text } from "@/shared/ui";
 
 import { useDeletePost, usePost } from "../queries";
+
+export type PostOwnerMenuHandle = {
+  /** Opens the sheet — used by the card's long-press affordance. */
+  open: () => void;
+};
 
 export type PostOwnerMenuProps = {
   postId: string;
@@ -21,19 +26,34 @@ export type PostOwnerMenuProps = {
   testID?: string;
   /** Injected for tests; defaults to the app client. */
   fetchImpl?: typeof fetch;
+  /** React 19 ref-as-prop; lets `PostCard` open the sheet on long-press. */
+  ref?: Ref<PostOwnerMenuHandle>;
 };
 
-export function PostOwnerMenu({ postId, onEditPress, testID, fetchImpl }: PostOwnerMenuProps) {
+export function PostOwnerMenu({
+  postId,
+  onEditPress,
+  testID,
+  fetchImpl,
+  ref,
+}: PostOwnerMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const remove = useDeletePost(postId, { fetchImpl });
   const post = usePost(postId).data;
+
+  const open = (): void => {
+    remove.reset();
+    setMenuOpen(true);
+  };
 
   const closeAll = (): void => {
     setConfirming(false);
     setMenuOpen(false);
     remove.reset();
   };
+
+  useImperativeHandle(ref, () => ({ open }));
 
   return (
     <>
@@ -42,10 +62,7 @@ export function PostOwnerMenu({ postId, onEditPress, testID, fetchImpl }: PostOw
         accessibilityRole="button"
         accessibilityLabel="Post options"
         hitSlop={8}
-        onPress={() => {
-          remove.reset();
-          setMenuOpen(true);
-        }}
+        onPress={open}
         style={styles.touch}
       >
         <Icon name="more" size="md" color="textSecondary" />

@@ -51,32 +51,33 @@ function SearchPostItem({
   prefetchPost: (id: string) => void;
 }) {
   return (
-    <Link href={hrefs.post(postId)} asChild>
-      <Pressable
-        onPressIn={() => {
-          logSearchOpen();
-          prefetchPost(postId);
-        }}
-      >
-        <PostCard
-          postId={postId}
-          testID={`search-post-card-${postId}`}
-          onSafetyPress={() => {
-            router.push(hrefs.report("post", postId));
-          }}
-          onOwnerEditPress={() => {
-            router.push(hrefs.editPost(postId));
-          }}
-          onMentionPress={(handle) => {
-            router.push(hrefs.user(handle));
-          }}
-          onHashtagPress={(tag) => {
-            router.push(hrefs.hashtag(tag));
-          }}
-          saveAffordance={<SaveButton postId={postId} />}
-        />
-      </Pressable>
-    </Link>
+    <PostCard
+      postId={postId}
+      testID={`search-post-card-${postId}`}
+      onPress={() => {
+        router.push(hrefs.post(postId));
+      }}
+      onPressIn={() => {
+        logSearchOpen();
+        prefetchPost(postId);
+      }}
+      onCommentPress={() => {
+        router.push(hrefs.post(postId, "comment"));
+      }}
+      onSafetyPress={() => {
+        router.push(hrefs.report("post", postId));
+      }}
+      onOwnerEditPress={() => {
+        router.push(hrefs.editPost(postId));
+      }}
+      onMentionPress={(handle) => {
+        router.push(hrefs.user(handle));
+      }}
+      onHashtagPress={(tag) => {
+        router.push(hrefs.hashtag(tag));
+      }}
+      saveAffordance={<SaveButton postId={postId} />}
+    />
   );
 }
 
@@ -134,7 +135,6 @@ export function SearchResults({
           <LoadingState label="Loading more results" style={styles.footer} />
         ) : null
       }
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
     />
   );
 }
@@ -147,8 +147,5 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingVertical: 16,
-  },
-  separator: {
-    height: 8,
   },
 });
