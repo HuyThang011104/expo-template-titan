@@ -18,6 +18,9 @@ export type AppListProps<T> = {
   onEndReachedThreshold?: number;
   refreshing?: boolean;
   onRefresh?: () => void;
+  /** Screen-owned scroll handler (JS or Reanimated worklet). */
+  onScroll?: FlashListProps<T>["onScroll"];
+  scrollEventThrottle?: FlashListProps<T>["scrollEventThrottle"];
   ListEmptyComponent?: ComponentType | ReactElement | null;
   ListHeaderComponent?: ComponentType | ReactElement | null;
   ListFooterComponent?: ComponentType | ReactElement | null;
@@ -34,6 +37,8 @@ export function AppList<T>({
   onEndReachedThreshold = 0.5,
   refreshing,
   onRefresh,
+  onScroll,
+  scrollEventThrottle,
   ListEmptyComponent,
   ListHeaderComponent,
   ListFooterComponent,
@@ -50,6 +55,8 @@ export function AppList<T>({
       onEndReachedThreshold={onEndReachedThreshold}
       refreshing={refreshing}
       onRefresh={onRefresh}
+      onScroll={onScroll}
+      scrollEventThrottle={scrollEventThrottle}
       ListEmptyComponent={ListEmptyComponent}
       ListHeaderComponent={ListHeaderComponent}
       ListFooterComponent={ListFooterComponent}
