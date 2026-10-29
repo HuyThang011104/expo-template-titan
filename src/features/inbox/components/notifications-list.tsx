@@ -1,14 +1,13 @@
 /**
- * Notifications list — the single `FlashList` that renders the inbox.
+ * Notifications list — the single `AppList` that renders the inbox.
  *
  * - `data` is a flat `notificationIds` array read via canonical row.
  * - Tapping a row marks it read (entity mutation) and follows its target link.
  */
 
-import { FlashList } from "@shopify/flash-list";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
 
-import { EmptyState, LoadingState } from "@/shared/ui";
+import { AppList, EmptyState, LoadingState } from "@/shared/ui";
 
 import { NotificationRow } from "./notification-row";
 
@@ -41,7 +40,7 @@ export function NotificationsList({
   prefetchTarget,
 }: NotificationsListProps) {
   return (
-    <FlashList
+    <AppList
       testID="inbox-list"
       data={notificationIds}
       renderItem={({ item }) => (
@@ -49,7 +48,6 @@ export function NotificationsList({
       )}
       keyExtractor={(id) => id}
       onEndReached={onEndReached}
-      onEndReachedThreshold={0.5}
       onRefresh={onRefresh}
       refreshing={isRefetching}
       ListEmptyComponent={<InboxEmpty />}
@@ -58,7 +56,6 @@ export function NotificationsList({
           <LoadingState label="Loading more notifications" style={styles.footer} />
         ) : null
       }
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
     />
   );
 }
@@ -66,8 +63,5 @@ export function NotificationsList({
 const styles = StyleSheet.create({
   footer: {
     paddingVertical: 16,
-  },
-  separator: {
-    height: 8,
   },
 });

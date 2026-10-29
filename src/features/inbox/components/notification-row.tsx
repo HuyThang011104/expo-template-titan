@@ -1,15 +1,26 @@
 /**
- * Notification row (F5).
+ * Notification row (F5 + PF5.1).
  *
  * Reads the canonical `useNotification` + actor `useUser`; marking read
  * goes through the entity mutation (optimistic + rollback). Tapping a row
  * marks it read and follows the shared target link; rows without a
  * resolvable target stay in the list and only mark read.
+ *
+ * Anatomy follows the list-item pattern: avatar 40, actor + verb title,
+ * relative time caption, trailing cluster (unread dot, thumbnail in PF5.2).
+ * Unread tint fades out with `motion.base` once the row is read.
  */
 
-import { Link } from "expo-router";
+import { useEffect } from "react";
+import { router } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Pressable, StyleSheet, View } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 
 import {
   resolveNotificationHref,
@@ -18,7 +29,7 @@ import {
 } from "@/entities/notification";
 import { Avatar, useUser } from "@/entities/user";
 import { formatRelative } from "@/shared/lib/date";
-import { Skeleton, Text, useTheme } from "@/shared/ui";
+import { Badge, Skeleton, Text, useTheme } from "@/shared/ui";
 
 import { logNotificationTap } from "../analytics";
 import type { NotificationKind } from "@/entities/notification";
@@ -52,6 +63,24 @@ function RowBody({
   const qc = useQueryClient();
   const query = useNotification(notificationId);
   const markMutation = useMarkNotificationRead(notificationId);
+  const reduceMotion = useReducedMotion();
+
+  const unreadTint = useSharedValue(query.data?.read === false ? 1 : 0);
+
+  useEffect(() => {
+    if (!query.data) return;
+    if (!query.data.read) {
+      // Only the fade-out is animated; a row that becomes unread again
+      // (rollback/refetch) shows its tint immediately.
+      unreadTint.value = 1;
+      return;
+    }
+    unreadTint.value = reduceMotion
+      ? 0
+      : withTiming(0, { duration: theme.motion.base });
+  }, [query.data, reduceMotion, theme.motion.base, unreadTint]);
+
+  const tintStyle = useAnimatedStyle(() => ({ opacity: unreadTint.value }));
 
   const actorId = query.data?.actorId ?? "";
   const actorQuery = useUser(actorId);
@@ -77,7 +106,8 @@ function RowBody({
   }
 
   const actorName = actorQuery.data?.displayName ?? "Someone";
-  const content = (
+
+  return (
     <Pressable
       testID={`notification-row-${notificationId}`}
       accessibilityRole="button"
@@ -90,38 +120,43 @@ function RowBody({
       onPress={() => {
         logNotificationTap(notificationId);
         markMutation.mutate();
+        const href = resolveNotificationHref(qc, notification);
+        if (href) router.push(href);
       }}
-      style={StyleSheet.flatten([styles.row, markMutation.isPending && styles.marking])}
+      style={[styles.row, markMutation.isPending && styles.marking]}
     >
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: theme.color.primarySoft },
+          tintStyle,
+        ]}
+      />
       <Avatar
         displayName={actorQuery.data?.displayName ?? "?"}
         avatarUrl={actorQuery.data?.avatarUrl ?? null}
         size={40}
       />
       <View style={styles.texts}>
-        <Text variant="labelStrong">
+        <Text variant="labelStrong" numberOfLines={2}>
           {actorName} {verbFor(notification.kind)}
         </Text>
         <Text variant="caption" color="textSecondary">
           {formatRelative(notification.createdAt)}
         </Text>
       </View>
-      {!notification.read ? (
-        <View
-          testID={`notification-unread-${notificationId}`}
-          accessibilityLabel="Unread"
-          style={[styles.dot, { backgroundColor: theme.color.primary }]}
-        />
-      ) : null}
+      <View style={styles.trailing}>
+        {!notification.read ? (
+          <Badge
+            variant="dot"
+            tone="primary"
+            testID={`notification-unread-${notificationId}`}
+            accessibilityLabel="Unread"
+          />
+        ) : null}
+      </View>
     </Pressable>
-  );
-
-  const href = resolveNotificationHref(qc, notification);
-  if (!href) return content;
-  return (
-    <Link href={href} asChild>
-      {content}
-    </Link>
   );
 }
 
@@ -133,6 +168,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
+    minHeight: 64,
     gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -143,11 +179,11 @@ const styles = StyleSheet.create({
   texts: {
     flex: 1,
     justifyContent: "center",
-    gap: 4,
+    gap: 2,
   },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  trailing: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
 });

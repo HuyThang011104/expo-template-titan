@@ -1,21 +1,58 @@
 /**
- * Inbox screen (F5 notifications).
+ * Inbox screen (F5 notifications, PF5.1).
  *
  * - Reads the inbox through `useInbox` (entity-backed infinite list).
- * - Header owns the mark-all-read action; rows own per-tap mark-read.
+ * - Native header owns the actions: Chats and Mark all read (testIDs kept).
+ * - Rows own per-tap mark-read.
  * - Chat screens stay placeholders (F4 skipped) — this screen only.
  */
 
 import { useEffect } from "react";
-import { router } from "expo-router";
+import { router, Stack } from "expo-router";
 import { StyleSheet, View } from "react-native";
 
 import { hrefs } from "@/shared/navigation/hrefs";
-import { Button, ErrorState, LoadingState, Screen, Text } from "@/shared/ui";
+import { Button, ErrorState, IconButton, LoadingState, Screen } from "@/shared/ui";
 
 import { logInboxOpen, logMarkAllRead } from "../analytics";
 import { NotificationsList } from "../components/notifications-list";
 import { useInbox } from "../queries/use-inbox";
+
+type InboxHeaderActionsProps = {
+  unreadCount: number;
+  markingAll: boolean;
+  onMarkAllRead: () => void;
+};
+
+function InboxHeaderActions({
+  unreadCount,
+  markingAll,
+  onMarkAllRead,
+}: InboxHeaderActionsProps) {
+  const disabled = unreadCount === 0 || markingAll;
+
+  return (
+    <View style={styles.headerActions}>
+      <IconButton
+        icon="comment"
+        size="sm"
+        accessibilityLabel="Chats"
+        testID="inbox-open-chats"
+        onPress={() => {
+          router.push(hrefs.chats());
+        }}
+      />
+      <Button
+        title={markingAll ? "Marking…" : "Mark all read"}
+        variant="ghost"
+        size="sm"
+        testID="inbox-mark-all"
+        disabled={disabled}
+        onPress={onMarkAllRead}
+      />
+    </View>
+  );
+}
 
 export function InboxScreen() {
   const inbox = useInbox();
@@ -48,64 +85,44 @@ export function InboxScreen() {
     );
   }
 
-  const markAllDisabled = inbox.unreadCount === 0 || inbox.isMarkingAll;
+  const markAllRead = (): void => {
+    logMarkAllRead(inbox.unreadCount);
+    inbox.markAllRead();
+  };
 
   return (
     <Screen testID="inbox-screen">
-      <View style={styles.headerRow}>
-        <View style={styles.headerFlex}>
-          <Text variant="title">Inbox</Text>
-        </View>
-        <Button
-          title="Chats"
-          variant="secondary"
-          size="sm"
-          testID="inbox-open-chats"
-          onPress={() => {
-            router.push(hrefs.chats());
-          }}
-        />
-        <Button
-          title={inbox.isMarkingAll ? "Marking…" : "Mark all read"}
-          variant="secondary"
-          size="sm"
-          testID="inbox-mark-all"
-          disabled={markAllDisabled}
-          onPress={() => {
-            logMarkAllRead(inbox.unreadCount);
-            inbox.markAllRead();
-          }}
-        />
-      </View>
-      <View style={styles.listFlex}>
-        <NotificationsList
-          notificationIds={inbox.notificationIds}
-          isFetchingNextPage={inbox.isFetchingNextPage}
-          isRefetching={inbox.isRefetching}
-          onEndReached={() => {
-            if (inbox.hasNextPage && !inbox.isFetchingNextPage) void inbox.fetchNextPage();
-          }}
-          onRefresh={() => {
-            void inbox.refetch();
-          }}
-          prefetchTarget={inbox.prefetchTarget}
-        />
-      </View>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <InboxHeaderActions
+              unreadCount={inbox.unreadCount}
+              markingAll={inbox.isMarkingAll}
+              onMarkAllRead={markAllRead}
+            />
+          ),
+        }}
+      />
+      <NotificationsList
+        notificationIds={inbox.notificationIds}
+        isFetchingNextPage={inbox.isFetchingNextPage}
+        isRefetching={inbox.isRefetching}
+        onEndReached={() => {
+          if (inbox.hasNextPage && !inbox.isFetchingNextPage) void inbox.fetchNextPage();
+        }}
+        onRefresh={() => {
+          void inbox.refetch();
+        }}
+        prefetchTarget={inbox.prefetchTarget}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  headerRow: {
+  headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  headerFlex: {
-    flex: 1,
-  },
-  listFlex: {
-    flex: 1,
+    gap: 4,
   },
 });
