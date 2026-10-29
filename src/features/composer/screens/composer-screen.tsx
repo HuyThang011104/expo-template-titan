@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, Stack } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { Platform, StyleSheet, View } from "react-native";
@@ -17,7 +17,7 @@ import {
 import { parseRichText } from "@/entities/post";
 import { canTagUser, getUserByHandleData, useMe } from "@/entities/user";
 import { findBlockedMentionHandles } from "@/shared/lib/mention-gate";
-import { Button, Input, Screen, Text } from "@/shared/ui";
+import { Avatar, Button, ComposerInput, IconButton, Screen, Text, useTheme } from "@/shared/ui";
 
 /**
  * Keyboard scope mirroring `KeyboardScope` in `app-providers.tsx`: the
@@ -38,6 +38,7 @@ function ComposerKeyboardAvoidingView({ children }: { children: ReactNode }) {
 /**
  * Composer screen (F1.4 polish).
  *
+ * - Chrome lives in the native header: `close` left, pill `Post` right (F1/F2).
  * - Text 1–280 chars + 0–4 images (`images` only, `allowsMultiple`, `quality 0.8`).
  * - Pick → preview strip → upload each via `uploadMedia` → `POST /posts` →
  *   prepend feed page 0 → clear draft → dismiss.
@@ -51,6 +52,7 @@ function ComposerKeyboardAvoidingView({ children }: { children: ReactNode }) {
  *   on route change) plus `logComposerOpen` for the feature event.
  */
 export function ComposerScreen() {
+  const theme = useTheme();
   const qc = useQueryClient();
   const me = useMe();
   const { body, setBody, localUris, setLocalUris, loaded, clear } = useComposerDraft();
@@ -68,6 +70,7 @@ export function ComposerScreen() {
   const busy = isPending || isUploading;
   const canPost = loaded && trimmed.length > 0 && !overLimit && !busy;
   const showRepickNote = loaded && localUris.length > 0 && media.items.length === 0;
+  const postLabel = isUploading ? "Uploading…" : isPending ? "Posting…" : "Post";
 
   async function handleAddPhoto(): Promise<void> {
     setError(null);
@@ -123,47 +126,57 @@ export function ComposerScreen() {
 
   return (
     <Screen testID="composer-screen">
-      <ComposerKeyboardAvoidingView>
-        <View style={styles.root}>
-          <View style={styles.header}>
-            <Button
-              title="Dismiss"
-              variant="secondary"
+      <Stack.Screen
+        options={{
+          headerLeft: () => (
+            <IconButton
+              icon="close"
               size="sm"
+              accessibilityLabel="Dismiss"
               testID="composer-dismiss-button"
               onPress={handleDismiss}
             />
+          ),
+          headerRight: () => (
             <Button
-              title={isUploading ? "Uploading…" : isPending ? "Posting…" : "Post"}
+              title={postLabel}
               variant="primary"
               size="sm"
               testID="composer-post-button"
               disabled={!canPost}
               loading={busy}
+              style={{ borderRadius: theme.radius.full }}
               onPress={() => {
                 void handlePost();
               }}
             />
+          ),
+        }}
+      />
+      <ComposerKeyboardAvoidingView>
+        <View style={styles.root}>
+          <View style={styles.bodyRow}>
+            <Avatar
+              displayName={me.data?.displayName ?? "You"}
+              avatarUrl={me.data?.avatarUrl ?? null}
+              size={40}
+              testID="composer-avatar"
+            />
+            <ComposerInput
+              value={body}
+              onChangeText={(next) => {
+                setBody(next);
+                if (error) setError(null);
+              }}
+              placeholder="What's happening?"
+              maxLength={COMPOSER_MAX_LENGTH}
+              editable={!busy}
+              autoFocus
+              testID="composer-input"
+              accessibilityLabel="Post body"
+              style={styles.input}
+            />
           </View>
-
-          <Text variant="h1" accessibilityRole="header">
-            New post
-          </Text>
-
-          <Input
-            value={body}
-            onChangeText={(next) => {
-              setBody(next);
-              if (error) setError(null);
-            }}
-            placeholder="What's happening?"
-            multiline
-            maxLength={COMPOSER_MAX_LENGTH}
-            editable={!busy}
-            autoFocus
-            testID="composer-input"
-            accessibilityLabel="Post body"
-          />
 
           <ComposerMediaStrip
             uris={media.items.map((asset) => asset.uri)}
@@ -246,13 +259,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   root: {
+    flex: 1,
     gap: 12,
     padding: 16,
   },
-  header: {
+  bodyRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  input: {
+    flex: 1,
   },
   mediaRow: {
     flexDirection: "row",
