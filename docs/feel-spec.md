@@ -48,8 +48,8 @@
 | F12 | Profile header title transition (Q7 cũ) | **Trong wave** — title native crossfade `@handle` → displayName khi khối identity cuộn qua header; scroll-driven, không setState mỗi frame | Đổi cấu trúc profile: header vào `ListHeaderComponent` |
 | F13 | Notification media thumbnail (Q8 cũ) | **Trong wave** — thumbnail 44px lấy từ canonical post cache, không fetch thêm | Row inbox thêm trailing thumbnail |
 | F14 | Action row counts | Like hiện count khi `> 0` (ẩn `0`); comment/share/save **icon-only** — model không có `commentCount`/share/save count | §4.1 |
-| F15 | Sticky profile tabs | Overlay tabs dựng bằng `scrollY` (dùng chung cơ chế Q7), fade-in khi tabs trong list cuộn qua — không dựa `stickyHeaderIndices` | §4.4, PF4.3 |
-| F16 | Media viewer dữ liệu + gesture | Params `{ postId, index }`; đọc canonical cache, thiếu thì `usePost`; route `gestureEnabled: false` để pinch/pan không xung đột dismiss | §4.10, §7.1 |
+| F15 | Sticky profile tabs + horizontal pager | Overlay tabs dựng bằng `scrollY` (dùng chung cơ chế Q7), fade-in khi tabs trong list cuộn qua; Posts/Saved dùng native pager để tap và swipe, mỗi page giữ offset riêng | §4.4, PF4.3 |
+| F16 | Media viewer dữ liệu + gesture | Params `{ postId, index }`; đọc canonical cache, thiếu thì `usePost`; ở scale 1 kéo dọc để dismiss, scale > 1 chỉ pan/zoom; route `gestureEnabled: false` để tránh cạnh tranh dismiss | §4.10, §7.1 |
 
 ---
 
@@ -205,12 +205,12 @@ AppList (mỗi tab)
 └─ PostCard ids
 ```
 
-1. Header **nằm trong list**: cuộn là cover/avatar/names trôi đi. Tabs trong list cuộn theo; **overlay tabs dính** (nền `surface` + hairline dưới, fade-in khi tabs cuộn qua) dựng bằng `scrollY` ở PF4.3 — không dựa `stickyHeaderIndices`.
+1. Header **nằm trong mỗi page list**: cuộn là cover/avatar/names trôi đi. Tabs trong list cuộn theo; **overlay tabs dính** (nền `surface` + hairline dưới, fade-in khi tabs cuộn qua) dựng bằng `scrollY` ở PF4.3 — không dựa `stickyHeaderIndices`. Posts/Saved nằm trong native horizontal pager và giữ scroll offset riêng.
 2. **Action pill** (fullWidth): follow = `Button primary radius full`; đã follow → `secondary` "Following"; me → `secondary` "Edit profile". Hết 2 nút `secondary sm` dồn cột (A7).
 3. **Me-profile overflow**: `IconButton more` ở `headerRight` → Sheet: Follow requests (badge N), Settings, Sign out (danger). Giữ testID `profile-sign-out-button` trên item trong Sheet — Maestro phải mở menu trước (sửa cùng PR).
 4. **User-profile** (khác viewer): action slot = `FollowButton` hoặc Edit (self); overflow `more` = report / block / share.
 5. Private/blocked → `EmptyState` (lock icon), hết 2 `Text` tay (A7).
-6. Tabs Posts/Saved giữ `underline` + testID; Saved tab dùng cùng vỏ list, giữ `saved-list`.
+6. Tabs Posts/Saved giữ `underline` + testID; tap và swipe ngang đều đổi page; Saved tab dùng cùng vỏ list, giữ `saved-list`.
 7. Canonical ids / `PostCard` / refresh / infinite scroll: không đổi.
 
 #### 4.4.1 Header title transition — Q7 (F12)
@@ -295,7 +295,7 @@ Giữ nguyên anatomy hiện tại (display + Field + error inline) — đã đ�
 1. **Report**: headerLeft `Dismiss` (IconButton close hoặc text-button theo platform), headerRight pill `Submit`; bỏ hàng nút + h1 trong body (A5). Radio list giữ; có thể đổi row sang `ListItem` với trailing `check`. TestID giữ.
 2. **Edit-post**: headerLeft `Cancel`, headerRight pill `Save`; body chỉ còn `ComposerInput` + counter (ring không cần, giữ caption). Bỏ hàng nút dưới (A5).
 3. **Edit-profile**: đồng bộ pattern trên.
-4. **Media-viewer**: hết placeholder (A6) — full-screen `modal`, nền đen; params `{ postId, index }`, đọc canonical post cache, thiếu thì `usePost`; ảnh zoom/pan (pinch + pan + double-tap), `IconButton close` overlay; video dùng `expo-video` fullscreen controls. Route đặt `gestureEnabled: false` để pinch/pan không xung đột với dismiss. Giữ tên route + testID.
+4. **Media-viewer**: hết placeholder (A6) — full-screen `modal`, nền đen; params `{ postId, index }`, đọc canonical post cache, thiếu thì `usePost`; ảnh zoom/pan (pinch + pan + double-tap), kéo dọc ở scale 1 để dismiss, `IconButton close` vẫn là fallback accessibility; video dùng `expo-video` fullscreen controls. Route đặt `gestureEnabled: false` để gesture ảnh không xung đột với native dismiss. Giữ tên route + testID.
 
 ### 4.11 Home shell
 
@@ -347,7 +347,7 @@ Mở rộng passthrough `onScroll` + `scrollEventThrottle` để profile đo off
 | Bấm card (feed) | scale 0.97 | — | `PressableScale`, fast |
 | Like | heart fill + pop | light | spring scale 1→1.3→1, ~350ms |
 | Unlike | fill out | — | fade fast |
-| Bấm more/overflow | sheet native | — | native |
+| Bấm more/overflow | native-backed bottom sheet | — | `@expo/ui/community/bottom-sheet` |
 | Post thành công | dismiss modal | success | native dismiss |
 | Send comment/message | bubble/item hiện ngay (optimistic đã có) | light | FadeInDown fast cho item mới |
 | Follow/unfollow | đổi label pill | light | crossfade fast |
@@ -378,7 +378,7 @@ Một cơ chế duy nhất: `react-native-keyboard-controller` `KeyboardAvoiding
 
 ### 7.3 Overflow & share
 
-1. Overflow menu (post/user/chat/report) = `Sheet` hiện có (formSheet slide-up), content là list `ListItem`; mở từ cả `more` button lẫn long-press card.
+1. Overflow menu (post/user/chat/report) = shared `Sheet` adapter backed by `@expo/ui/community/bottom-sheet`, content là list `ListItem`; mở từ cả `more` button lẫn long-press card.
 2. Share: giữ native share sheet hiện tại của `PostShareButton`.
 3. Confirm phá dữ liệu (xoá post, sign out): native `Alert` (đúng design-system §6.4).
 

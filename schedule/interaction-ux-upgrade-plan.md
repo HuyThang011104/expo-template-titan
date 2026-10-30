@@ -1,6 +1,6 @@
 # Plan Interaction UX Upgrade — UX1 → UX5
 
-> Trạng thái: **Draft — chưa bắt đầu**  
+> Trạng thái: **Implementation complete — device QA pending**
 > Ngày: 2026-10-30  
 > Phạm vi: media viewer, profile tabs, action bottom sheet, Android modal behavior  
 > Nền tảng: Expo SDK 57, React Native 0.86, New Architecture, Reanimated 4, Gesture Handler 2, FlashList 2  
@@ -395,18 +395,18 @@ Không sửa spec trong cùng PR feature nếu thay đổi là quyết định U
 
 ## 10. Definition of Done
 
-- [ ] Bottom sheet có swipe-to-dismiss trên Android/iOS.
-- [ ] Backdrop tap và Android back đóng sheet đúng một lần.
-- [ ] Không còn warning `formSheet` + `transparent`.
-- [ ] Profile tabs chuyển được bằng tap và swipe.
-- [ ] Mỗi profile tab giữ scroll position riêng.
-- [ ] Sticky tabs/title transition không re-render theo từng frame.
-- [ ] Media viewer kéo xuống được ở scale 1.
-- [ ] Media viewer zoom/pan hiện tại không bị regression.
-- [ ] Close button và accessibility labels vẫn tồn tại.
-- [ ] Web fallback không crash.
-- [ ] Unit tests liên quan pass.
-- [ ] Typecheck, lint, token check và focused tests pass.
+- [ ] Bottom sheet có swipe-to-dismiss trên Android/iOS (chờ device QA).
+- [ ] Backdrop tap và Android back đóng sheet đúng một lần (chờ device QA).
+- [x] Không còn warning `formSheet` + `transparent` trong `Sheet` adapter.
+- [x] Profile tabs chuyển được bằng tap và native pager swipe (device QA còn chờ).
+- [x] Mỗi profile tab có list/ref/scroll value riêng, không reset offset khi đổi tab.
+- [x] Sticky tabs/title transition dùng active page scroll value, không setState theo frame.
+- [x] Media viewer có gesture kéo xuống ở scale 1; route gesture vẫn tắt.
+- [x] Media viewer zoom/pan ở scale > 1 giữ nguyên nhánh xử lý.
+- [x] Close button và accessibility labels vẫn tồn tại.
+- [x] Web fallback không import native pager.
+- [x] Focused unit tests liên quan pass.
+- [x] Typecheck, focused lint và token check pass.
 - [ ] Device QA Android/iOS pass.
 - [ ] Dev client được rebuild sau native dependency change.
 - [ ] Không sửa `MediaPipelineModule.web.ts` ngoài phạm vi media metadata.

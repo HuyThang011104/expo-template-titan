@@ -368,12 +368,12 @@ src/features/profile/screens/edit-profile-screen.tsx    # chỉ nếu bị ảnh
 
 **Contract**
 
-- Một scroll container: `ProfilePostsList` nhận `ListHeaderComponent` (header + follow-requests + Tabs); header ra khỏi body cố định.
+- Mỗi profile page sở hữu một `ProfilePostsList` trong native horizontal pager; mỗi page giữ offset riêng, header/tabs được dùng chung theo cùng layout.
 - Header: cover 140, Avatar 96 đè (−32, viền `background` 3), h2 name, `@handle`, bio/link, stats 1 dòng (`tabular-nums`), action pill fullWidth.
 - Me: `headerRight` `IconButton more` → Sheet (Follow requests badge N, Settings, Sign out danger). Giữ `profile-sign-out-button` trên item trong Sheet → **Maestro `profile.yaml` mở menu trước**.
 - User: `FollowButton`/Edit trong action; overflow = report/block/share.
 - Private/blocked → `EmptyState` lock.
-- Tabs trong list (chưa sticky ở PR này); overlay sticky ở PF4.3; giữ testID tabs/list.
+- Tabs hiển thị trong sticky header và hỗ trợ cả tap lẫn swipe ngang giữa Posts/Saved; giữ testID tabs/list.
 - Không đổi `useUserPosts`/`useSavedPosts`/canonical ids.
 
 **Xong khi**
@@ -436,13 +436,13 @@ src/features/profile/screens/user-detail-screen.tsx
 **Contract**
 
 - Overlay `Tabs` dính ngay dưới native header (absolute top 0 trong Screen body), nền `surface` + hairline `border` dưới; fade-in theo `scrollY` khi tabs trong list cuộn qua — đo `tabsBottom` bằng `onLayout` (dùng lại cơ chế PF4.2).
-- Tap tab → đổi tab + `scrollToOffset({ offset: 0 })` (reset scroll khi đổi tab).
+- Tap hoặc swipe ngang → đổi active page; không reset scroll, mỗi page giữ offset riêng.
 - `pointerEvents="none"` khi opacity 0 (không chặn tap list); không bắt scroll.
 - Reduce motion → hiện/ẩn tức thời tại ngưỡng.
 - a11y: `role=tab` + `selected`; chỉ bản đang hiện được screen reader đọc (ẩn bản kia) — tránh đọc trùng.
 
 **Xong khi**
-- [ ] Cuộn qua tabs → overlay hiện không nháy; tap switch đúng tab + list về đầu.
+- [ ] Cuộn qua tabs → overlay hiện không nháy; tap/swipe chuyển đúng tab và giữ offset riêng.
 - [ ] Không layout shift; overlay ẩn không chặn tap.
 - [ ] QA iOS + Android, reduced motion, light/dark.
 
@@ -607,7 +607,7 @@ Route modal giữ thin (không sửa); screen đọc params.
 **Contract**
 
 - Full-screen `modal`, nền đen; params `{ postId, index }`; đọc canonical cache, thiếu → `usePost`; `expo-image` + gesture-handler (pinch, pan, double-tap zoom); close `IconButton` overlay; video `expo-video` fullscreen controls.
-- Không swipe-to-dismiss custom; route đặt `gestureEnabled: false` (PD6/F16) để pinch/pan không đóng nhầm.
+- Ở scale 1, kéo dọc xuống để dismiss; ở scale > 1 chỉ pan/zoom trong bounds. Route vẫn đặt `gestureEnabled: false` (PD6/F16) để pinch/pan không đóng nhầm.
 - Giữ route/testID; a11y label cho close; reduce motion → bỏ zoom animation (vẫn cho zoom tĩnh).
 
 **Xong khi**
@@ -717,7 +717,7 @@ rg "expo-haptics" src/features                         # = 0 (chỉ shared/lib)
 | PD3 | Sticky profile tabs | **Có** — overlay `Tabs` dựng bằng `scrollY`, không dùng `stickyHeaderIndices` | F15, §4.4 | PF4.3 |
 | PD4 | Comment → detail | Luôn kèm `focus=comment`; autofocus ở PF3.1 | §4.1 | PF2.1, PF3.1 |
 | PD5 | Settings grouping | Hub 1 group; notifications 1 group "Activity" | §4.9 | PF9.1 |
-| PD6 | Media viewer gesture | Không swipe-dismiss custom; `gestureEnabled: false`; close button | F16, §4.10, §7.1 | PF8.2 |
+| PD6 | Media viewer gesture | Scale 1 kéo xuống để dismiss; scale > 1 pan/zoom; `gestureEnabled: false`; close button | F16, §4.10, §7.1 | PF8.2 |
 | PD7 | Rebuild dev client | **Có, 1 lần** sau PF0.1 | AGENTS | PF0.1 |
 | PD8 | Tỉ lệ media | 1 ảnh **4:5** maxH 420; grid **ô vuông**; video grid = tile + play (API không có width/height) | F6, §4.1 | PF0.5, PF2.1 |
 | PD9 | Counts action row | Like ẩn count khi `0`; comment/share/save icon-only (model không có count) | F14, §4.1 | PF2.1 |

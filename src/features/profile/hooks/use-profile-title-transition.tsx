@@ -12,7 +12,7 @@
 import { useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo } from "react";
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from "react-native";
-import { useSharedValue, type SharedValue } from "react-native-reanimated";
+import { useDerivedValue, useSharedValue, type SharedValue } from "react-native-reanimated";
 
 import { ProfileHeaderTitle } from "../components/profile-title";
 import type { TitleSwitchRange } from "../lib/title-progress";
@@ -29,12 +29,17 @@ export type UseProfileTitleTransitionArgs = {
   ready: boolean;
 };
 
+export type ProfileTabKey = "posts" | "saved";
+
 export type ProfileTitleTransition = {
   /** Reused by the sticky tabs overlay (PF4.3). */
   scrollY: SharedValue<number>;
+  /** Selects which profile page drives the native title and sticky tabs. */
+  setActiveTab: (tab: ProfileTabKey) => void;
   /** Bottom edge of the in-list tabs, in list content coordinates. */
   tabsBottom: SharedValue<number>;
   onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onScrollFor: (tab: ProfileTabKey) => (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onIdentityLayout: (event: LayoutChangeEvent) => void;
   onTabsLayout: (event: LayoutChangeEvent) => void;
 };
@@ -46,13 +51,18 @@ export function useProfileTitleTransition({
   ready,
 }: UseProfileTitleTransitionArgs): ProfileTitleTransition {
   const navigation = useNavigation();
-  const scrollY = useSharedValue(0);
   const switchRange = useSharedValue<TitleSwitchRange>({
     start: Number.POSITIVE_INFINITY,
     end: Number.POSITIVE_INFINITY,
   });
   // 0 = not measured yet (the sticky overlay stays hidden).
   const tabsBottom = useSharedValue(0);
+  const activeTab = useSharedValue<ProfileTabKey>("posts");
+  const postsScrollY = useSharedValue(0);
+  const savedScrollY = useSharedValue(0);
+  const scrollY = useDerivedValue(() =>
+    activeTab.get() === "saved" ? savedScrollY.get() : postsScrollY.get(),
+  );
 
   // Stable element: the options effect must not re-run on scroll/renders.
   const title = useMemo(
@@ -78,11 +88,31 @@ export function useProfileTitleTransition({
     };
   }, [navigation, ready, title, fallbackTitle]);
 
+  const setActiveTab = useCallback(
+    (tab: ProfileTabKey): void => {
+      activeTab.set(tab);
+    },
+    [activeTab],
+  );
+
+  const onScrollFor = useCallback(
+    (tab: ProfileTabKey) =>
+      (event: NativeSyntheticEvent<NativeScrollEvent>): void => {
+        const value = event.nativeEvent.contentOffset.y;
+        if (tab === "saved") {
+          savedScrollY.set(value);
+        } else {
+          postsScrollY.set(value);
+        }
+      },
+    [postsScrollY, savedScrollY],
+  );
+
   const onScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      scrollY.set(event.nativeEvent.contentOffset.y);
+      onScrollFor("posts")(event);
     },
-    [scrollY],
+    [onScrollFor],
   );
 
   const onIdentityLayout = useCallback(
@@ -104,5 +134,13 @@ export function useProfileTitleTransition({
     [tabsBottom],
   );
 
-  return { scrollY, tabsBottom, onScroll, onIdentityLayout, onTabsLayout };
+  return {
+    scrollY,
+    tabsBottom,
+    setActiveTab,
+    onScroll,
+    onScrollFor,
+    onIdentityLayout,
+    onTabsLayout,
+  };
 }

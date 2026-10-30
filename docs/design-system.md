@@ -670,11 +670,13 @@ Không đọc `colors.light` / `colors.dark` trực tiếp trong component.
 - Style: underline hoặc segmented; chọn một kiểu toàn app.
 - Khuyến nghị: **underline** cho profile, **segmented** cho filter.
 - Accessibility: `role="tab"`, `selected`.
+- Profile Posts/Saved dùng `react-native-pager-view` ở native để hỗ trợ cả tap và swipe ngang; mỗi page giữ scroll position riêng. Shared `Tabs` chỉ quản lý label, indicator và selected state, không chứa pager logic.
 
 #### Sheet / Dialog
 
 - Ưu tiên native `formSheet` cho composer/report/settings.
-- `Sheet` custom chỉ khi cần cross-platform hoặc nội dung phức tạp.
+- Overflow/action `Sheet` dùng `@expo/ui/community/bottom-sheet`, bật drag-to-dismiss và Android back; giữ adapter nội bộ để caller không phụ thuộc native API.
+- Không kết hợp `RN.Modal transparent` với `presentationStyle="formSheet"`.
 - Confirm đơn giản: dùng `Alert.alert` native.
 - Dialog custom: title `h3`, body `body`, action row.
 

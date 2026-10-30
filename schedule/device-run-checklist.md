@@ -132,6 +132,16 @@ Nguồn: `schedule/f1-composer-plan.md`. Chạy trên Android dev-client, build 
 - [ ] Grep gate: `rg "from '@/features/feed" src/features/composer` → 0; `rg setQueryData src/features/composer` → 0
 - [ ] Maestro (khi có build `e2e-test`): `maestro test e2e/flows/composer.yaml` pass
 
+## 12. Interaction UX upgrade — device gate
+
+- [ ] Profile Posts/Saved: tap tab và swipe ngang đều đổi page; mỗi page giữ đúng scroll offset sau khi chuyển qua lại.
+- [ ] Profile sticky tabs/title: title hiện đúng theo scroll, không che list và không tạo layout shift.
+- [ ] Android action sheet: mở từ overflow, swipe xuống để đóng, tap ngoài để đóng, back để đóng; không còn warning `formSheet` + `transparent`.
+- [ ] Android gesture navigation và 3-button navigation: sheet không bị kẹt, không double-close, action row vẫn thực hiện đúng.
+- [ ] iOS action sheet: drag indicator, interactive dismiss, safe area và keyboard behavior đúng.
+- [ ] Media viewer: scale 1 kéo ảnh xuống để dismiss; scale > 1 vẫn pan/zoom, không dismiss nhầm; nút close vẫn hoạt động.
+- [ ] Web fallback: profile tab vẫn đổi được bằng tap khi native pager không khả dụng.
+
 ## Nhật ký chạy
 
 | Ngày | Device / OS | Build profile | Kết quả | Lỗi / ghi chú |

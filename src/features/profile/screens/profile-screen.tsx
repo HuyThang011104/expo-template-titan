@@ -1,14 +1,9 @@
 /**
  * "Me" profile screen (`/(profile)` tab, G2.1, PF4.1).
  *
- * - `useMe` for the header (`GET /users/me`, mock `u-1`).
- * - `useUserPosts(me.id)` for the infinite posts list (canonical `PostCard`,
- *   like works cross-cache with no extra patching).
- * - One scroll container: the identity block + follow-requests row + tabs are
- *   the list header, so cover/avatar/names scroll away (PF4.3 adds the sticky
- *   tabs overlay).
- * - Overflow (`more`) replaces the old header buttons: Follow requests,
- *   Settings, Sign out (testID preserved on the sheet item).
+ * Each profile tab owns a FlashList inside a native horizontal pager. The
+ * identity block and tabs remain list headers, so cover/avatar/names scroll
+ * away while the overlay tabs and native title follow the active page.
  */
 
 import type { FlashListRef } from "@shopify/flash-list";
@@ -26,9 +21,13 @@ import { Button, ErrorState, LoadingState, Screen, Tabs, Text, useTheme } from "
 import { logProfileOpen } from "../analytics";
 import { ProfileHeader } from "../components/profile-header";
 import { ProfileOverflowMenu } from "../components/profile-overflow-sheet";
+import { ProfilePager, type ProfilePagerRef } from "../components/profile-pager";
 import { ProfilePostsFooter, ProfilePostsList } from "../components/profile-posts-list";
 import { ProfileStickyTabs } from "../components/profile-sticky-tabs";
-import { useProfileTitleTransition } from "../hooks/use-profile-title-transition";
+import {
+  useProfileTitleTransition,
+  type ProfileTabKey,
+} from "../hooks/use-profile-title-transition";
 
 export function ProfileScreen() {
   const { signOut } = useSession();
@@ -39,9 +38,11 @@ export function ProfileScreen() {
   const requests = useFollowRequests();
   const posts = useUserPosts(userId);
   const saved = useSavedPosts();
-  const [tab, setTab] = useState<"posts" | "saved">("posts");
+  const [tab, setTab] = useState<ProfileTabKey>("posts");
   const [stickyShown, setStickyShown] = useState(false);
-  const listRef = useRef<FlashListRef<string>>(null);
+  const pagerRef = useRef<ProfilePagerRef>(null);
+  const postsListRef = useRef<FlashListRef<string>>(null);
+  const savedListRef = useRef<FlashListRef<string>>(null);
 
   useEffect(() => {
     if (me.data) logProfileOpen(me.data.id);
@@ -81,13 +82,18 @@ export function ProfileScreen() {
 
   const user = me.data;
   const requestCount = requests.userIds.length;
-  const active = tab === "saved" ? saved : posts;
 
   const handleTabChange = (key: string): void => {
-    setTab(key as "posts" | "saved");
-    // PF4.3: reset scroll when switching tabs (sticky overlay included).
-    titleTransition.scrollY.set(0);
-    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    const nextTab: ProfileTabKey = key === "saved" ? "saved" : "posts";
+    titleTransition.setActiveTab(nextTab);
+    setTab(nextTab);
+    pagerRef.current?.setPage(nextTab === "saved" ? 1 : 0);
+  };
+
+  const handlePageSelected = (page: number): void => {
+    const nextTab: ProfileTabKey = page === 1 ? "saved" : "posts";
+    titleTransition.setActiveTab(nextTab);
+    setTab(nextTab);
   };
 
   const header = (
@@ -145,46 +151,94 @@ export function ProfileScreen() {
     </View>
   );
 
-  return (
-    <Screen testID="profile-screen">
-      <Stack.Screen options={{ headerRight: () => <ProfileOverflowMenu /> }} />
+  const postsPage = (
+    <View key="posts" style={styles.page}>
       <ProfilePostsList
-        postIds={active.postIds}
-        isFetchingNextPage={active.isFetchingNextPage}
-        isRefetching={active.isRefetching}
-        hasNextPage={active.hasNextPage}
+        postIds={posts.postIds}
+        isFetchingNextPage={posts.isFetchingNextPage}
+        isRefetching={posts.isRefetching}
+        hasNextPage={posts.hasNextPage}
         onEndReached={() => {
-          void active.fetchNextPage();
+          void posts.fetchNextPage();
         }}
         onRefresh={() => {
-          void active.refetch();
+          void posts.refetch();
         }}
-        prefetchPost={tab === "saved" ? () => {} : posts.prefetchPost}
-        listRef={listRef}
-        onScroll={titleTransition.onScroll}
+        prefetchPost={posts.prefetchPost}
+        listRef={postsListRef}
+        onScroll={tab === "posts" ? titleTransition.onScrollFor("posts") : undefined}
         scrollEventThrottle={16}
         header={header}
+        footer={<ProfilePostsFooter visible={posts.isFetchingNextPage} />}
         emptyComponent={
-          active.isPending ? (
-            <LoadingState
-              label={tab === "saved" ? "Loading saved posts" : "Loading posts"}
-              testID={tab === "saved" ? "saved-loading" : "profile-posts-loading"}
-            />
-          ) : active.isError ? (
+          posts.isPending ? (
+            <LoadingState label="Loading posts" testID="profile-posts-loading" />
+          ) : posts.isError ? (
             <ErrorState
-              title={tab === "saved" ? "Couldn't load saved posts" : "Couldn't load posts"}
+              title="Couldn't load posts"
               message="Check your connection and try again."
-              testID={tab === "saved" ? "saved-error" : "profile-posts-error"}
-              retryTestID={tab === "saved" ? "saved-retry-button" : "profile-posts-retry-button"}
+              testID="profile-posts-error"
+              retryTestID="profile-posts-retry-button"
               onRetry={() => {
-                void active.refetch();
+                void posts.refetch();
               }}
             />
           ) : undefined
         }
-        testID={tab === "saved" ? "saved-list" : "profile-list"}
+        testID="profile-list"
       />
-      <ProfilePostsFooter visible={active.isFetchingNextPage} />
+    </View>
+  );
+
+  const savedPage = (
+    <View key="saved" style={styles.page}>
+      <ProfilePostsList
+        postIds={saved.postIds}
+        isFetchingNextPage={saved.isFetchingNextPage}
+        isRefetching={saved.isRefetching}
+        hasNextPage={saved.hasNextPage}
+        onEndReached={() => {
+          void saved.fetchNextPage();
+        }}
+        onRefresh={() => {
+          void saved.refetch();
+        }}
+        prefetchPost={() => {}}
+        listRef={savedListRef}
+        onScroll={tab === "saved" ? titleTransition.onScrollFor("saved") : undefined}
+        scrollEventThrottle={16}
+        header={header}
+        footer={<ProfilePostsFooter visible={saved.isFetchingNextPage} />}
+        emptyComponent={
+          saved.isPending ? (
+            <LoadingState label="Loading saved posts" testID="saved-loading" />
+          ) : saved.isError ? (
+            <ErrorState
+              title="Couldn't load saved posts"
+              message="Check your connection and try again."
+              testID="saved-error"
+              retryTestID="saved-retry-button"
+              onRetry={() => {
+                void saved.refetch();
+              }}
+            />
+          ) : undefined
+        }
+        testID="saved-list"
+      />
+    </View>
+  );
+
+  return (
+    <Screen testID="profile-screen">
+      <Stack.Screen options={{ headerRight: () => <ProfileOverflowMenu /> }} />
+      <ProfilePager
+        ref={pagerRef}
+        pageIndex={tab === "saved" ? 1 : 0}
+        onPageSelected={handlePageSelected}
+      >
+        {[postsPage, savedPage]}
+      </ProfilePager>
       <ProfileStickyTabs
         scrollY={titleTransition.scrollY}
         tabsBottom={titleTransition.tabsBottom}
@@ -201,6 +255,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+  },
+  page: {
+    flex: 1,
   },
   requestsRow: {
     paddingHorizontal: 16,

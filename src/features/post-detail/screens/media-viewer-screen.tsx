@@ -13,6 +13,7 @@ import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { VideoView, useVideoPlayer } from "expo-video";
+import { useSharedValue } from "react-native-reanimated";
 
 import { getPostData, usePost } from "@/entities/post";
 import { colors, IconButton, Screen, Text } from "@/shared/ui";
@@ -33,6 +34,7 @@ export function MediaViewerScreen() {
   const cached = postId ? getPostData(qc, postId) : undefined;
   const postQuery = usePost(postId ?? "");
   const post = cached ?? postQuery.data;
+  const dismissProgress = useSharedValue(0);
 
   const mediaIndex = Number(index ?? 0);
   const media =
@@ -60,6 +62,8 @@ export function MediaViewerScreen() {
           <MediaViewerImage
             key={`${postId}-${mediaIndex}`}
             uri={media.url}
+            onDismiss={handleDismiss}
+            onDismissProgress={dismissProgress}
             testID={`media-viewer-image-${postId}-${mediaIndex}`}
           />
         )}

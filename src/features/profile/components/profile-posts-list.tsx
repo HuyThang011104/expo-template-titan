@@ -30,6 +30,8 @@ export type ProfilePostsListProps = {
   header?: ReactElement | null;
   /** Overrides the default empty state (pending/error/private body). */
   emptyComponent?: ReactElement | null;
+  /** Loading footer owned by the page so each pager tab has its own state. */
+  footer?: ReactElement | null;
   /** Q7 (PF4.2): one shared-value write per scroll frame. */
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   scrollEventThrottle?: number;
@@ -101,6 +103,7 @@ export function ProfilePostsList({
   prefetchPost,
   header,
   emptyComponent,
+  footer,
   onScroll,
   scrollEventThrottle,
   listRef,
@@ -122,6 +125,7 @@ export function ProfilePostsList({
       scrollEventThrottle={scrollEventThrottle}
       ListHeaderComponent={header ?? null}
       ListEmptyComponent={emptyComponent ?? <ProfilePostsEmpty />}
+      ListFooterComponent={footer ?? null}
     />
   );
 }
