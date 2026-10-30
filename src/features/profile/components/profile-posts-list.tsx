@@ -127,6 +127,7 @@ export function ProfilePostsList({
       progressViewOffset={progressViewOffset}
       onScroll={onScroll}
       scrollEventThrottle={scrollEventThrottle}
+      showsVerticalScrollIndicator={false}
       ListHeaderComponent={header ?? null}
       ListEmptyComponent={emptyComponent ?? <ProfilePostsEmpty />}
       ListFooterComponent={footer ?? null}

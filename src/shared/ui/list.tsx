@@ -61,6 +61,7 @@ function AppListBase<T>({ List, ...props }: AppListBaseProps<T>) {
     progressViewOffset,
     onScroll,
     scrollEventThrottle,
+    showsVerticalScrollIndicator,
     ListEmptyComponent,
     ListHeaderComponent,
     ListFooterComponent,
@@ -82,6 +83,7 @@ function AppListBase<T>({ List, ...props }: AppListBaseProps<T>) {
       progressViewOffset={progressViewOffset}
       onScroll={onScroll}
       scrollEventThrottle={scrollEventThrottle}
+      showsVerticalScrollIndicator={showsVerticalScrollIndicator}
       ListEmptyComponent={ListEmptyComponent}
       ListHeaderComponent={ListHeaderComponent}
       ListFooterComponent={ListFooterComponent}
