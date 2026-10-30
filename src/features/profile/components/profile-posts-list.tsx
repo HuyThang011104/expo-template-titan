@@ -49,6 +49,7 @@ function ProfilePostItem({
     <PostCard
       postId={postId}
       testID={`post-card-${postId}`}
+      disablePressAnimation
       onPress={() => {
         router.push(hrefs.post(postId));
       }}
