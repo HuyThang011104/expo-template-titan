@@ -3,8 +3,10 @@
  *
  * Owns `scrollY` (the visible page's offset), the per-page offsets so each
  * pager tab keeps its own position, and the sticky-tabs progress derived from
- * `tabsTop`. Scrolling only writes one shared value per page; React never
- * re-renders per frame.
+ * `tabsTop`. The scroll handlers are Reanimated worklets, so offsets are
+ * written on the UI thread and the overlay header/title stay frame-locked to
+ * the native list instead of trailing the JS bridge. React never re-renders
+ * per frame.
  *
  * Spec: docs/feel-spec.md §4.4.1 and §4.4 (PF4.3).
  */
@@ -13,6 +15,7 @@ import { useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo } from "react";
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import {
+  useAnimatedScrollHandler,
   useDerivedValue,
   useReducedMotion,
   useSharedValue,
@@ -141,18 +144,18 @@ export function useProfileTitleTransition({
     [postsScrollY, savedScrollY],
   );
 
-  const postsScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>): void => {
-      const value = event.nativeEvent.contentOffset.y;
+  const postsScroll = useAnimatedScrollHandler(
+    (event) => {
+      const value = event.contentOffset.y;
       postsScrollY.set(value);
       if (activeTab.get() === "posts") scrollY.set(value);
     },
     [activeTab, postsScrollY, scrollY],
   );
 
-  const savedScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>): void => {
-      const value = event.nativeEvent.contentOffset.y;
+  const savedScroll = useAnimatedScrollHandler(
+    (event) => {
+      const value = event.contentOffset.y;
       savedScrollY.set(value);
       if (activeTab.get() === "saved") scrollY.set(value);
     },

@@ -78,7 +78,7 @@ export {
 export { ErrorScreen, type ErrorScreenProps } from "./error-screen";
 export { ExternalLink } from "./external-link";
 export { Icon, iconMap, iconNames, type IconName, type IconProps } from "./icons";
-export { AppList, type AppListProps } from "./list";
+export { AppAnimatedList, AppList, type AppListProps } from "./list";
 export { Screen, type ScreenProps } from "./screen";
 export {
   Box,

@@ -71,6 +71,10 @@ export function ProfileScreen() {
     fallbackTitle: "Profile",
     ready: me.isSuccess,
   });
+  // Worklets cannot capture `titleTransition` itself: it holds the animated
+  // scroll handlers (`WorkletEventHandlerNative`), which are not copyable.
+  // Close over the shared values directly instead.
+  const { scrollY, tabsTop, stickyProgress } = titleTransition;
 
   // The overlay aligns with the list content origin, so translating it by the
   // active list's offset reproduces an in-list header without the pager
@@ -79,19 +83,15 @@ export function ProfileScreen() {
   // moves it down (pull-to-refresh).
   const headerStyle = useAnimatedStyle(
     () => ({
-      transform: [
-        {
-          translateY: -Math.min(titleTransition.scrollY.get(), titleTransition.tabsTop.get()),
-        },
-      ],
+      transform: [{ translateY: -Math.min(scrollY.get(), tabsTop.get()) }],
     }),
-    [titleTransition.scrollY, titleTransition.tabsTop],
+    [scrollY, tabsTop],
   );
 
   // The in-list tabs fade out exactly as the sticky copy fades in.
   const inListTabsStyle = useAnimatedStyle(
-    () => ({ opacity: 1 - titleTransition.stickyProgress.get() }),
-    [titleTransition.stickyProgress],
+    () => ({ opacity: 1 - stickyProgress.get() }),
+    [stickyProgress],
   );
 
   if (me.isPending) {
@@ -136,8 +136,9 @@ export function ProfileScreen() {
     }
 
     const incomingOffset = Math.max(titleTransition.getPageScrollY(tab), 0);
-    const tabsTop = titleTransition.tabsTop.get();
-    const nearTop = tabsTop > 0 && (headerOffset < tabsTop || incomingOffset < tabsTop);
+    const tabsTopValue = tabsTop.get();
+    const nearTop =
+      tabsTopValue > 0 && (headerOffset < tabsTopValue || incomingOffset < tabsTopValue);
     const target = nearTop ? headerOffset : incomingOffset;
 
     if (target !== incomingOffset) {
@@ -192,8 +193,8 @@ export function ProfileScreen() {
       swipeSyncTargetRef.current = null;
       return;
     }
-    const tabsTop = titleTransition.tabsTop.get();
-    if (tabsTop <= 0) return;
+    const tabsTopValue = tabsTop.get();
+    if (tabsTopValue <= 0) return;
 
     // Align the incoming page as soon as the swipe starts, before it is more
     // than half visible; waiting for the halfway point makes it jump. `tab`
@@ -202,7 +203,7 @@ export function ProfileScreen() {
     if (swipeSyncTargetRef.current === targetTab) return;
     swipeSyncTargetRef.current = targetTab;
 
-    const headerOffset = Math.min(Math.max(titleTransition.scrollY.get(), 0), tabsTop);
+    const headerOffset = Math.min(Math.max(titleTransition.scrollY.get(), 0), tabsTopValue);
     const incomingOffset = titleTransition.getPageScrollY(targetTab);
     const target = alignIncomingPage(targetTab, headerOffset);
 
@@ -371,7 +372,7 @@ export function ProfileScreen() {
         </Animated.View>
       </View>
       <ProfileStickyTabs
-        progress={titleTransition.stickyProgress}
+        progress={stickyProgress}
         value={tab}
         onChange={handleTabChange}
         onShownChange={setStickyShown}

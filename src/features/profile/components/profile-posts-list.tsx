@@ -14,7 +14,7 @@ import { StyleSheet, type NativeScrollEvent, type NativeSyntheticEvent } from "r
 import { PostCard } from "@/entities/post";
 import { SaveButton } from "@/entities/saved";
 import { hrefs } from "@/shared/navigation/hrefs";
-import { AppList, EmptyState, LoadingState } from "@/shared/ui";
+import { AppAnimatedList, EmptyState, LoadingState } from "@/shared/ui";
 
 import { logProfileOpenDetail } from "../analytics";
 
@@ -113,7 +113,7 @@ export function ProfilePostsList({
   testID = "profile-list",
 }: ProfilePostsListProps) {
   return (
-    <AppList
+    <AppAnimatedList
       ref={listRef}
       testID={testID}
       data={postIds}
