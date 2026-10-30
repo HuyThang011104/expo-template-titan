@@ -33,6 +33,8 @@ export type CommentComposerProps = {
   postId: string;
   replyTo: ReplyTarget | null;
   onClearReply: () => void;
+  /** Called with the parent id after a reply is created (expand that thread). */
+  onReplyCreated?: (parentId: string) => void;
   /** `focus=comment` (PF3.1): opens the detail with the input focused. */
   autoFocus?: boolean;
   fetchImpl?: typeof fetch;
@@ -42,6 +44,7 @@ export function CommentComposer({
   postId,
   replyTo,
   onClearReply,
+  onReplyCreated,
   autoFocus = false,
   fetchImpl,
 }: CommentComposerProps) {
@@ -77,11 +80,13 @@ export function CommentComposer({
       return;
     }
     setLocalError(null);
+    const parentId = replyTo?.id ?? null;
     create.mutate(
-      { body: trimmed, parentId: replyTo?.id ?? null },
+      { body: trimmed, parentId },
       {
         onSuccess: () => {
           setBody("");
+          if (parentId !== null) onReplyCreated?.(parentId);
           onClearReply();
         },
       },

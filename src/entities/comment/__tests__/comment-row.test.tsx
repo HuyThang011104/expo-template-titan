@@ -87,6 +87,50 @@ describe("CommentRow", () => {
     expect(onReplyPress).toHaveBeenCalledWith({ id: "c-1", handle: "ava" });
   });
 
+  it("toggles collapsed replies from the reply count", async () => {
+    const qc = createQueryClient();
+    hydrateCommentItem(qc, wire);
+    const onToggleReplies = jest.fn();
+
+    await render(
+      <CommentRow
+        commentId="c-1"
+        replyCount={3}
+        repliesExpanded={false}
+        onToggleReplies={onToggleReplies}
+      />,
+      { wrapper: makeWrapper(qc) },
+    );
+
+    expect(screen.getByText("View 3 replies")).toBeTruthy();
+    fireEvent.press(screen.getByTestId("comment-toggle-replies-c-1"));
+    expect(onToggleReplies).toHaveBeenCalledWith("c-1");
+  });
+
+  it("shows Hide replies when the thread is expanded", async () => {
+    const qc = createQueryClient();
+    hydrateCommentItem(qc, wire);
+
+    await render(
+      <CommentRow commentId="c-1" replyCount={1} repliesExpanded onToggleReplies={() => {}} />,
+      { wrapper: makeWrapper(qc) },
+    );
+
+    expect(screen.getByText("Hide replies")).toBeTruthy();
+    expect(screen.getByTestId("comment-toggle-replies-c-1")).toBeExpanded();
+  });
+
+  it("hides the reply toggle when there are no replies", async () => {
+    const qc = createQueryClient();
+    hydrateCommentItem(qc, wire);
+
+    await render(<CommentRow commentId="c-1" onToggleReplies={() => {}} />, {
+      wrapper: makeWrapper(qc),
+    });
+
+    expect(screen.queryByTestId("comment-toggle-replies-c-1")).toBeNull();
+  });
+
   it("indents replies by 32 + 8", async () => {
     const qc = createQueryClient();
     hydrateCommentItem(qc, wire);

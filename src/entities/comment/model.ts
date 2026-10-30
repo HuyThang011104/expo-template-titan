@@ -37,4 +37,8 @@ export type CommentWireItem = {
 export type CommentThreadRow = {
   comment: Comment;
   depth: 0 | 1;
+  /** Only meaningful for depth 0: number of replies to this comment. */
+  replyCount: number;
+  /** Only meaningful for depth 0: whether those replies are shown inline. */
+  repliesExpanded: boolean;
 };

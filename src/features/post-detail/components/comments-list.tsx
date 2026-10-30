@@ -4,7 +4,8 @@
  * Infinite id-list over the canonical comment cache (same discipline as
  * `ProfilePostsList`): pages hold ids, rows read `useComment`. Display
  * order comes from `buildCommentThread` — top-level newest-first (new
- * comments prepend head), replies oldest-first indented one level.
+ * comments prepend head), replies oldest-first indented one level and
+ * collapsed until their parent is in `expandedReplyIds`.
  */
 
 import { useQueryClient } from "@tanstack/react-query";
@@ -31,10 +32,20 @@ export type CommentsListProps = {
   postId: string;
   header: ReactNode;
   onReplyPress: (target: ReplyTarget) => void;
+  /** Parent comment ids whose replies are expanded inline. */
+  expandedReplyIds: ReadonlySet<string>;
+  onToggleReplies: (parentId: string) => void;
   fetchImpl?: typeof fetch;
 };
 
-export function CommentsList({ postId, header, onReplyPress, fetchImpl }: CommentsListProps) {
+export function CommentsList({
+  postId,
+  header,
+  onReplyPress,
+  expandedReplyIds,
+  onToggleReplies,
+  fetchImpl,
+}: CommentsListProps) {
   const qc = useQueryClient();
   const comments = usePostComments(postId, { fetchImpl });
 
@@ -68,6 +79,7 @@ export function CommentsList({ postId, header, onReplyPress, fetchImpl }: Commen
     comments.commentIds
       .map((id) => getCommentData(qc, id))
       .filter((comment) => comment !== undefined),
+    { expandedIds: expandedReplyIds },
   );
   const totalHint = comments.hasNextPage ? "+" : "";
 
@@ -77,7 +89,14 @@ export function CommentsList({ postId, header, onReplyPress, fetchImpl }: Commen
         testID="comments-list"
         data={rows}
         renderItem={({ item }) => (
-          <CommentRow commentId={item.comment.id} depth={item.depth} onReplyPress={onReplyPress} />
+          <CommentRow
+            commentId={item.comment.id}
+            depth={item.depth}
+            replyCount={item.replyCount}
+            repliesExpanded={item.repliesExpanded}
+            onReplyPress={onReplyPress}
+            onToggleReplies={onToggleReplies}
+          />
         )}
         keyExtractor={(item) => item.comment.id}
         ListHeaderComponent={

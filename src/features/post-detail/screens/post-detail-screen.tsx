@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { PostCard, usePost } from "@/entities/post";
 import { SaveButton } from "@/entities/saved";
@@ -49,6 +49,27 @@ function PostDetailBody({ postId, focusComment }: { postId: string; focusComment
   const me = useMe();
   const rel = useRelationship(authorId);
   const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
+  const [expandedReplyIds, setExpandedReplyIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+
+  const toggleReplies = useCallback((parentId: string) => {
+    setExpandedReplyIds((current) => {
+      const next = new Set(current);
+      if (next.has(parentId)) next.delete(parentId);
+      else next.add(parentId);
+      return next;
+    });
+  }, []);
+
+  const expandReplies = useCallback((parentId: string) => {
+    setExpandedReplyIds((current) => {
+      if (current.has(parentId)) return current;
+      const next = new Set(current);
+      next.add(parentId);
+      return next;
+    });
+  }, []);
 
   if (post.isPending || rel.isPending) {
     return (
@@ -109,6 +130,7 @@ function PostDetailBody({ postId, focusComment }: { postId: string; focusComment
           postId={postId}
           replyTo={replyTo}
           autoFocus={focusComment}
+          onReplyCreated={expandReplies}
           onClearReply={() => {
             setReplyTo(null);
           }}
@@ -117,6 +139,8 @@ function PostDetailBody({ postId, focusComment }: { postId: string; focusComment
     >
       <CommentsList
         postId={postId}
+        expandedReplyIds={expandedReplyIds}
+        onToggleReplies={toggleReplies}
         header={
           <PostCard
             postId={postId}

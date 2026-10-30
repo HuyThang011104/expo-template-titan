@@ -39,6 +39,8 @@ export const iconNames = [
   "volumeOff",
   "flag",
   "chevronRight",
+  "chevronDown",
+  "chevronUp",
 ] as const;
 
 export type IconName = (typeof iconNames)[number];
@@ -81,4 +83,6 @@ export const iconMap = {
   volumeOff: { ios: "speaker.slash.fill", android: "volume_off", web: "volume_off" },
   flag: { ios: "flag", android: "flag", web: "flag" },
   chevronRight: { ios: "chevron.right", android: "chevron_right", web: "chevron_right" },
+  chevronDown: { ios: "chevron.down", android: "keyboard_arrow_down", web: "keyboard_arrow_down" },
+  chevronUp: { ios: "chevron.up", android: "keyboard_arrow_up", web: "keyboard_arrow_up" },
 } as const satisfies Record<IconName, PlatformSymbol>;

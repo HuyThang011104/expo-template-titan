@@ -158,49 +158,52 @@ describe("likeComment", () => {
 });
 
 describe("buildCommentThread", () => {
-  it("orders tops newest-first with replies oldest-first indented", () => {
-    const rows = buildCommentThread([
-      {
-        id: "t-old",
-        postId: "p",
-        authorId: "u-1",
-        body: "old",
-        parentId: null,
-        likeCount: 0,
-        likedByMe: false,
-        createdAt: "2026-09-09T08:00:00.000Z",
-      },
-      {
-        id: "t-new",
-        postId: "p",
-        authorId: "u-1",
-        body: "new",
-        parentId: null,
-        likeCount: 0,
-        likedByMe: false,
-        createdAt: "2026-09-09T10:00:00.000Z",
-      },
-      {
-        id: "r-late",
-        postId: "p",
-        authorId: "u-2",
-        body: "late",
-        parentId: "t-new",
-        likeCount: 0,
-        likedByMe: false,
-        createdAt: "2026-09-09T11:00:00.000Z",
-      },
-      {
-        id: "r-early",
-        postId: "p",
-        authorId: "u-2",
-        body: "early",
-        parentId: "t-new",
-        likeCount: 0,
-        likedByMe: false,
-        createdAt: "2026-09-09T10:30:00.000Z",
-      },
-    ]);
+  it("orders tops newest-first with replies oldest-first when expanded", () => {
+    const rows = buildCommentThread(
+      [
+        {
+          id: "t-old",
+          postId: "p",
+          authorId: "u-1",
+          body: "old",
+          parentId: null,
+          likeCount: 0,
+          likedByMe: false,
+          createdAt: "2026-09-09T08:00:00.000Z",
+        },
+        {
+          id: "t-new",
+          postId: "p",
+          authorId: "u-1",
+          body: "new",
+          parentId: null,
+          likeCount: 0,
+          likedByMe: false,
+          createdAt: "2026-09-09T10:00:00.000Z",
+        },
+        {
+          id: "r-late",
+          postId: "p",
+          authorId: "u-2",
+          body: "late",
+          parentId: "t-new",
+          likeCount: 0,
+          likedByMe: false,
+          createdAt: "2026-09-09T11:00:00.000Z",
+        },
+        {
+          id: "r-early",
+          postId: "p",
+          authorId: "u-2",
+          body: "early",
+          parentId: "t-new",
+          likeCount: 0,
+          likedByMe: false,
+          createdAt: "2026-09-09T10:30:00.000Z",
+        },
+      ],
+      { expandedIds: new Set(["t-new"]) },
+    );
 
     expect(rows.map((row) => [row.comment.id, row.depth])).toEqual([
       ["t-new", 0],
@@ -208,6 +211,39 @@ describe("buildCommentThread", () => {
       ["r-late", 1],
       ["t-old", 0],
     ]);
+  });
+
+  it("collapses replies by default and reports replyCount", () => {
+    const rows = buildCommentThread([
+      {
+        id: "t-1",
+        postId: "p",
+        authorId: "u-1",
+        body: "top",
+        parentId: null,
+        likeCount: 0,
+        likedByMe: false,
+        createdAt: "2026-09-09T10:00:00.000Z",
+      },
+      {
+        id: "r-1",
+        postId: "p",
+        authorId: "u-2",
+        body: "reply",
+        parentId: "t-1",
+        likeCount: 0,
+        likedByMe: false,
+        createdAt: "2026-09-09T10:30:00.000Z",
+      },
+    ]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      comment: { id: "t-1" },
+      depth: 0,
+      replyCount: 1,
+      repliesExpanded: false,
+    });
   });
 
   it("keeps orphan replies visible as top-level", () => {

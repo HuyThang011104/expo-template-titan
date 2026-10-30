@@ -24,7 +24,12 @@ export type CommentRowProps = {
   commentId: string;
   /** 0 top-level, 1 reply (indented). */
   depth?: 0 | 1;
+  /** Replies for a top-level comment; `0` hides the toggle. */
+  replyCount?: number;
+  /** Whether those replies are currently shown inline. */
+  repliesExpanded?: boolean;
   onReplyPress?: (comment: { id: string; handle: string }) => void;
+  onToggleReplies?: (commentId: string) => void;
   testID?: string;
 };
 
@@ -67,7 +72,15 @@ function useCommentAuthorSnapshot(authorId: string): AuthorSnapshot {
   return { displayName, handle, avatarUrl };
 }
 
-export function CommentRow({ commentId, depth = 0, onReplyPress, testID }: CommentRowProps) {
+export function CommentRow({
+  commentId,
+  depth = 0,
+  replyCount = 0,
+  repliesExpanded = false,
+  onReplyPress,
+  onToggleReplies,
+  testID,
+}: CommentRowProps) {
   const query = useComment(commentId);
   const like = useLikeComment(commentId);
   const snapshot = useCommentAuthorSnapshot(query.data?.authorId ?? "");
@@ -162,6 +175,35 @@ export function CommentRow({ commentId, depth = 0, onReplyPress, testID }: Comme
             </Pressable>
           ) : null}
         </View>
+        {onToggleReplies && replyCount > 0 ? (
+          <Pressable
+            testID={`comment-toggle-replies-${commentId}`}
+            accessibilityRole="button"
+            accessibilityLabel={
+              repliesExpanded
+                ? "Hide replies"
+                : `View ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`
+            }
+            accessibilityState={{ expanded: repliesExpanded }}
+            hitSlop={8}
+            onPress={() => {
+              onToggleReplies(commentId);
+            }}
+            style={styles.threadToggle}
+          >
+            <Text variant="label" color="textSecondary">
+              {repliesExpanded
+                ? "Hide replies"
+                : `View ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`}
+            </Text>
+            <Icon
+              name={repliesExpanded ? "chevronUp" : "chevronDown"}
+              size="sm"
+              color="textSecondary"
+              decorative
+            />
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );
@@ -199,5 +241,12 @@ const styles = StyleSheet.create({
   },
   count: {
     fontVariant: ["tabular-nums"],
+  },
+  threadToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 2,
+    paddingVertical: 2,
   },
 });
