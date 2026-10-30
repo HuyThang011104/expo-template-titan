@@ -9,12 +9,12 @@
  *
  * Spec: docs/feel-spec.md §4.3. Pill `ComposerInput` (1–4 lines) plus an
  * `IconButton send` that only appears once there is text; the reply banner
- * sits above the pill. Keyboard avoidance stays on `react-native-keyboard-controller`.
+ * sits above the pill. Keyboard avoidance is owned by `DetailPage`, which
+ * wraps the body and this pinned footer in one `KeyboardAvoidingView`.
  */
 
 import { useState } from "react";
-import { Platform, Pressable, StyleSheet, View } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useCreateComment } from "@/entities/comment";
@@ -91,73 +91,71 @@ export function CommentComposer({
   const error = localError ?? (create.isError ? "Couldn't post your comment. Tap Send to retry." : null);
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <View
-        style={[styles.root, { borderTopColor: theme.color.border }]}
-        testID="comment-composer"
-      >
-        {replyTo ? (
-          <View style={styles.replyBanner}>
-            <Text variant="label" color="textSecondary" testID="comment-reply-banner">
-              Replying to @{replyTo.handle}
-            </Text>
-            <Pressable
-              testID="comment-reply-cancel"
-              accessibilityRole="button"
-              accessibilityLabel="Cancel reply"
-              hitSlop={8}
-              onPress={onClearReply}
-            >
-              <Icon name="close" size="sm" color="textSecondary" decorative />
-            </Pressable>
-          </View>
-        ) : null}
-        <View style={styles.row}>
-          <View
-            style={[
-              styles.pill,
-              {
-                backgroundColor: theme.color.surfaceSunken,
-                borderRadius: theme.radius.full,
-              },
-            ]}
-          >
-            <ComposerInput
-              value={body}
-              onChangeText={(text) => {
-                setBody(text);
-                if (localError) setLocalError(null);
-                if (create.isError) create.reset();
-              }}
-              placeholder={replyTo ? `Reply to @${replyTo.handle}…` : "Add a comment…"}
-              minLines={1}
-              maxLines={4}
-              maxLength={500}
-              editable={!create.isPending}
-              autoFocus={autoFocus}
-              accessibilityLabel="Comment"
-              testID="comment-input"
-            />
-          </View>
-          {trimmed.length > 0 ? (
-            <IconButton
-              icon="send"
-              accessibilityLabel="Send comment"
-              variant="primary"
-              size="md"
-              disabled={!canSend}
-              testID="comment-send-button"
-              onPress={send}
-            />
-          ) : null}
-        </View>
-        {error ? (
-          <Text variant="caption" color="danger" testID="comment-error">
-            {error}
+    <View
+      style={[styles.root, { borderTopColor: theme.color.border }]}
+      testID="comment-composer"
+    >
+      {replyTo ? (
+        <View style={styles.replyBanner}>
+          <Text variant="label" color="textSecondary" testID="comment-reply-banner">
+            Replying to @{replyTo.handle}
           </Text>
+          <Pressable
+            testID="comment-reply-cancel"
+            accessibilityRole="button"
+            accessibilityLabel="Cancel reply"
+            hitSlop={8}
+            onPress={onClearReply}
+          >
+            <Icon name="close" size="sm" color="textSecondary" decorative />
+          </Pressable>
+        </View>
+      ) : null}
+      <View style={styles.row}>
+        <View
+          style={[
+            styles.pill,
+            {
+              backgroundColor: theme.color.surfaceSunken,
+              borderRadius: theme.radius.full,
+            },
+          ]}
+        >
+          <ComposerInput
+            value={body}
+            onChangeText={(text) => {
+              setBody(text);
+              if (localError) setLocalError(null);
+              if (create.isError) create.reset();
+            }}
+            placeholder={replyTo ? `Reply to @${replyTo.handle}…` : "Add a comment…"}
+            minLines={1}
+            maxLines={4}
+            maxLength={500}
+            editable={!create.isPending}
+            autoFocus={autoFocus}
+            accessibilityLabel="Comment"
+            testID="comment-input"
+          />
+        </View>
+        {trimmed.length > 0 ? (
+          <IconButton
+            icon="send"
+            accessibilityLabel="Send comment"
+            variant="primary"
+            size="md"
+            disabled={!canSend}
+            testID="comment-send-button"
+            onPress={send}
+          />
         ) : null}
       </View>
-    </KeyboardAvoidingView>
+      {error ? (
+        <Text variant="caption" color="danger" testID="comment-error">
+          {error}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 

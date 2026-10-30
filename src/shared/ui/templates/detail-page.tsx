@@ -1,8 +1,26 @@
 import type { ReactNode } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
 import { ErrorState, LoadingState } from "../components";
 import { Screen } from "../screen";
+
+/**
+ * Keyboard scope mirroring `KeyboardScope` in `app-providers.tsx`: the
+ * controller library is native-only, so web renders children straight through.
+ */
+function DetailKeyboardAvoidingView({ children }: { children: ReactNode }) {
+  if (process.env.EXPO_OS === "web") return <>{children}</>;
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      automaticOffset
+      style={styles.flex}
+    >
+      {children}
+    </KeyboardAvoidingView>
+  );
+}
 
 export type DetailPageProps = {
   testID: string;
@@ -21,7 +39,8 @@ export type DetailPageProps = {
 /**
  * Native-header detail page (spec §8.1): body fills the screen, optional
  * footer stays pinned. States match ListPage so detail screens answer the
- * same five questions.
+ * same five questions. The body and footer share one keyboard-avoiding scope,
+ * so a focused composer lifts above the keyboard instead of hiding behind it.
  */
 export function DetailPage({
   testID,
@@ -60,13 +79,18 @@ export function DetailPage({
 
   return (
     <Screen testID={testID}>
-      <View style={styles.body}>{children}</View>
-      {footer}
+      <DetailKeyboardAvoidingView>
+        <View style={styles.body}>{children}</View>
+        {footer}
+      </DetailKeyboardAvoidingView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   body: {
     flex: 1,
   },
