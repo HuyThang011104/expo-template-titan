@@ -187,4 +187,11 @@ describe("Avatar", () => {
       backgroundColor: "#F0F1F4",
     });
   });
+
+  it("does not crash when the display name is missing from restored data", async () => {
+    await renderWithTheme(<Avatar displayName={undefined} avatarUrl={null} testID="missing-name" />);
+
+    expect(screen.getByText("?")).toBeTruthy();
+    expect(screen.getByTestId("missing-name").props.accessibilityLabel).toBe("User");
+  });
 });

@@ -22,13 +22,25 @@ import { queryClient } from "./query-client";
 
 /** Storage key + version. Bump the buster on persisted-shape changes. */
 const PERSIST_KEY = "titan.query-cache";
-const CACHE_BUSTER = "titan-cache-v1";
+// v2 drops the malformed v1 snapshots that could contain a JSON-serialized
+// in-flight query promise (see shouldDehydrateQuery below).
+const CACHE_BUSTER = "titan-cache-v2";
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 /** Pure allowlist (exported for tests): identity/profile keys only. */
 export function shouldPersistQueryKey(queryKey: readonly unknown[]): boolean {
   const [head] = queryKey;
   return head === "session" || head === "me" || head === "users";
+}
+
+type PersistableQuery = {
+  queryKey: readonly unknown[];
+  state: { status: string };
+};
+
+/** Persist only completed queries; pending queries carry a non-serializable promise. */
+export function shouldDehydrateQuery(query: PersistableQuery): boolean {
+  return query.state.status === "success" && shouldPersistQueryKey(query.queryKey);
 }
 
 /** AsyncStorage-shaped adapter over the drafts store. */
@@ -49,14 +61,19 @@ export function startQueryPersistence(): void {
       key: PERSIST_KEY,
       throttleTime: 2000,
     });
-    persistQueryClient({
+    const [, restorePromise] = persistQueryClient({
       queryClient,
       persister,
       maxAge: MAX_AGE_MS,
       buster: CACHE_BUSTER,
       dehydrateOptions: {
-        shouldDehydrateQuery: (query) => shouldPersistQueryKey(query.queryKey),
+        shouldDehydrateQuery,
       },
+    });
+    // `persistQueryClient` restores asynchronously, so a synchronous try/catch
+    // cannot prevent a malformed legacy snapshot from becoming unhandled.
+    void restorePromise.catch(() => {
+      logger.warn("[query] cache restore failed", { key: PERSIST_KEY });
     });
   } catch {
     logger.warn("[query] persistence disabled", { key: PERSIST_KEY });

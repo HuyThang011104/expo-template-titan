@@ -7,8 +7,9 @@ import { useTheme } from "../theme/use-theme";
 export type AvatarSize = 24 | 32 | 40 | 48 | 64 | 96;
 
 export type AvatarProps = {
-  displayName: string;
-  avatarUrl: string | null;
+  /** Runtime data can be incomplete while restoring an old persisted cache. */
+  displayName?: string | null;
+  avatarUrl?: string | null;
   size?: AvatarSize;
   testID?: string;
 };
@@ -20,6 +21,8 @@ export type AvatarProps = {
 export function Avatar({ displayName, avatarUrl, size = 40, testID }: AvatarProps) {
   const theme = useTheme();
   const shape = { width: size, height: size, borderRadius: theme.radius.full };
+  const safeDisplayName = typeof displayName === "string" ? displayName : "";
+  const accessibleName = safeDisplayName.trim() || "User";
 
   if (avatarUrl) {
     return (
@@ -28,18 +31,18 @@ export function Avatar({ displayName, avatarUrl, size = 40, testID }: AvatarProp
         style={shape}
         contentFit="cover"
         transition={theme.motion.fast}
-        accessibilityLabel={displayName}
+        accessibilityLabel={accessibleName}
         testID={testID}
       />
     );
   }
 
-  const initial = (displayName.trim().slice(0, 1) || "?").toUpperCase();
+  const initial = (safeDisplayName.trim().slice(0, 1) || "?").toUpperCase();
   return (
     <View
       style={[shape, styles.fallback, { backgroundColor: theme.color.surfaceMuted }]}
       accessibilityRole="image"
-      accessibilityLabel={displayName}
+      accessibilityLabel={accessibleName}
       testID={testID}
     >
       <Text variant={initialVariant(size)} color="textSecondary" style={styles.initial}>

@@ -4,7 +4,7 @@
  */
 
 import { deleteDraft, loadDraft, saveDraft } from "../../storage/db/drafts";
-import { queryPersistStorage, shouldPersistQueryKey } from "../persist";
+import { queryPersistStorage, shouldDehydrateQuery, shouldPersistQueryKey } from "../persist";
 
 jest.mock("../../storage/db/drafts", () => ({
   saveDraft: jest.fn(async () => {}),
@@ -28,6 +28,26 @@ describe("shouldPersistQueryKey", () => {
     expect(shouldPersistQueryKey(["feed", "home", ""])).toBe(false);
     expect(shouldPersistQueryKey(["posts", "p1"])).toBe(false);
     expect(shouldPersistQueryKey([])).toBe(false);
+  });
+});
+
+describe("shouldDehydrateQuery", () => {
+  it("does not persist pending allowlisted queries with in-flight promises", () => {
+    expect(
+      shouldDehydrateQuery({ queryKey: ["me"], state: { status: "pending" } }),
+    ).toBe(false);
+  });
+
+  it("persists successful allowlisted queries", () => {
+    expect(
+      shouldDehydrateQuery({ queryKey: ["me"], state: { status: "success" } }),
+    ).toBe(true);
+  });
+
+  it("still excludes successful non-allowlisted queries", () => {
+    expect(
+      shouldDehydrateQuery({ queryKey: ["feed", "home"], state: { status: "success" } }),
+    ).toBe(false);
   });
 });
 

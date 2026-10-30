@@ -4,7 +4,7 @@
  * For gesture-driven sheets (drag to dismiss), graduate to `@gorhom/bottom-sheet`.
  */
 
-import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { Modal, Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { Text } from "./text";
 import { useTheme } from "./theme/use-theme";
@@ -20,13 +20,14 @@ export type SheetProps = {
 
 export function Sheet({ visible, onClose, title, children, testID }: SheetProps) {
   const theme = useTheme();
+  const isIOS = Platform.OS === "ios";
 
   return (
     <Modal
       visible={visible}
-      transparent
+      transparent={!isIOS}
       animationType="slide"
-      presentationStyle="formSheet"
+      presentationStyle={isIOS ? "formSheet" : "overFullScreen"}
       onRequestClose={onClose}
       testID={testID}
     >
