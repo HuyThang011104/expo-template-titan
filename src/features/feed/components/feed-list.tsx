@@ -45,6 +45,7 @@ function FeedItem({
     <PostCard
       postId={postId}
       testID={`post-card-${postId}`}
+      disablePressAnimation
       isVideoActive={isVideoActive}
       onPress={() => {
         router.push(hrefs.post(postId));

@@ -33,6 +33,8 @@ export type PostCardProps = {
    */
   onPress?: () => void;
   onPressIn?: () => void;
+  /** Disables the scale/opacity feedback while keeping the card pressable. */
+  disablePressAnimation?: boolean;
   /** Comment affordance (F14/PD4): feature opens detail with `focus=comment`. */
   onCommentPress?: () => void;
   /** Media affordance (F16): feature opens the viewer with `{ postId, index }`. */
@@ -113,6 +115,7 @@ export function PostCard({
   testID,
   onPress,
   onPressIn,
+  disablePressAnimation = false,
   onCommentPress,
   onMediaPress,
   onSafetyPress,
@@ -228,6 +231,22 @@ export function PostCard({
       <View testID={testID} style={flatStyle}>
         {content}
       </View>
+    );
+  }
+
+  if (disablePressAnimation) {
+    return (
+      <Pressable
+        testID={testID}
+        onPress={onPress}
+        onPressIn={onPressIn}
+        onLongPress={handleLongPress}
+        delayLongPress={400}
+        accessibilityRole="button"
+        style={flatStyle}
+      >
+        {content}
+      </Pressable>
     );
   }
 
