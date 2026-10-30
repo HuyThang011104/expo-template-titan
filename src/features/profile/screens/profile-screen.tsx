@@ -24,7 +24,11 @@ import { Button, ErrorState, LoadingState, Screen, Tabs, Text, useTheme } from "
 import { logProfileOpen } from "../analytics";
 import { ProfileHeader } from "../components/profile-header";
 import { ProfileOverflowMenu } from "../components/profile-overflow-sheet";
-import { ProfilePager, type ProfilePagerRef } from "../components/profile-pager";
+import {
+  ProfilePager,
+  type ProfilePageScroll,
+  type ProfilePagerRef,
+} from "../components/profile-pager";
 import { ProfilePostsFooter, ProfilePostsList } from "../components/profile-posts-list";
 import { ProfileStickyTabs } from "../components/profile-sticky-tabs";
 import {
@@ -47,10 +51,19 @@ export function ProfileScreen() {
   const pagerRef = useRef<ProfilePagerRef>(null);
   const postsListRef = useRef<FlashListRef<string>>(null);
   const savedListRef = useRef<FlashListRef<string>>(null);
+  const swipeSyncTargetRef = useRef<ProfileTabKey | null>(null);
+  const programmaticNavRef = useRef(false);
+  const programmaticNavTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (me.data) logProfileOpen(me.data.id);
   }, [me.data]);
+
+  useEffect(() => {
+    return () => {
+      if (programmaticNavTimerRef.current) clearTimeout(programmaticNavTimerRef.current);
+    };
+  }, []);
 
   const titleTransition = useProfileTitleTransition({
     handle: me.data?.handle ?? "",
@@ -61,12 +74,24 @@ export function ProfileScreen() {
 
   // The overlay aligns with the list content origin, so translating it by the
   // active list's offset reproduces an in-list header without the pager
-  // dragging it sideways. Negative overscroll moves it down (pull-to-refresh).
+  // dragging it sideways. It stops when the tab row reaches the top, which
+  // leaves the in-list tabs stuck under the sticky copy. Negative overscroll
+  // moves it down (pull-to-refresh).
   const headerStyle = useAnimatedStyle(
     () => ({
-      transform: [{ translateY: -Math.min(titleTransition.scrollY.get(), headerHeight) }],
+      transform: [
+        {
+          translateY: -Math.min(titleTransition.scrollY.get(), titleTransition.tabsTop.get()),
+        },
+      ],
     }),
-    [headerHeight, titleTransition.scrollY],
+    [titleTransition.scrollY, titleTransition.tabsTop],
+  );
+
+  // The in-list tabs fade out exactly as the sticky copy fades in.
+  const inListTabsStyle = useAnimatedStyle(
+    () => ({ opacity: 1 - titleTransition.stickyProgress.get() }),
+    [titleTransition.stickyProgress],
   );
 
   if (me.isPending) {
@@ -97,17 +122,93 @@ export function ProfileScreen() {
   const user = me.data;
   const requestCount = requests.userIds.length;
 
+  // Swiping a page whose list is at the top under a collapsed header would show
+  // a blank header-sized gap. Align it to the current header offset so the
+  // shared header never jumps between pages. When both pages are scrolled past
+  // the header, keep their own offsets (the header is already fully collapsed).
+  const alignIncomingPage = (tab: ProfileTabKey, headerOffset: number): number => {
+    const targetList = tab === "saved" ? savedListRef : postsListRef;
+    const count = tab === "saved" ? saved.postIds.length : posts.postIds.length;
+    // An empty page cannot scroll far enough to sit under a collapsed header.
+    if (count === 0) {
+      targetList.current?.scrollToOffset({ offset: 0, animated: false });
+      return 0;
+    }
+
+    const incomingOffset = Math.max(titleTransition.getPageScrollY(tab), 0);
+    const tabsTop = titleTransition.tabsTop.get();
+    const nearTop = tabsTop > 0 && (headerOffset < tabsTop || incomingOffset < tabsTop);
+    const target = nearTop ? headerOffset : incomingOffset;
+
+    if (target !== incomingOffset) {
+      targetList.current?.scrollToOffset({ offset: target, animated: false });
+    }
+
+    return target;
+  };
+
+  const syncAndActivateTab = (nextTab: ProfileTabKey): void => {
+    const headerOffset = Math.min(
+      Math.max(titleTransition.scrollY.get(), 0),
+      titleTransition.tabsTop.get(),
+    );
+    titleTransition.activateTab(nextTab, alignIncomingPage(nextTab, headerOffset));
+  };
+
+  const clearProgrammaticNav = (): void => {
+    programmaticNavRef.current = false;
+    if (programmaticNavTimerRef.current) {
+      clearTimeout(programmaticNavTimerRef.current);
+      programmaticNavTimerRef.current = null;
+    }
+  };
+
   const handleTabChange = (key: string): void => {
     const nextTab: ProfileTabKey = key === "saved" ? "saved" : "posts";
-    titleTransition.setActiveTab(nextTab);
+    if (nextTab === tab) return;
+
+    // The pager animates, so ignore its scroll events; the target was aligned
+    // above and activating it again would only touch the page being left.
+    clearProgrammaticNav();
+    programmaticNavRef.current = true;
+    programmaticNavTimerRef.current = setTimeout(clearProgrammaticNav, 500);
+    syncAndActivateTab(nextTab);
     setTab(nextTab);
     pagerRef.current?.setPage(nextTab === "saved" ? 1 : 0);
   };
 
   const handlePageSelected = (page: number): void => {
     const nextTab: ProfileTabKey = page === 1 ? "saved" : "posts";
-    titleTransition.setActiveTab(nextTab);
+    clearProgrammaticNav();
+    swipeSyncTargetRef.current = null;
+    syncAndActivateTab(nextTab);
     setTab(nextTab);
+  };
+
+  const handlePageScroll = ({ offset }: ProfilePageScroll): void => {
+    if (programmaticNavRef.current) return;
+
+    if (offset === 0) {
+      swipeSyncTargetRef.current = null;
+      return;
+    }
+    const tabsTop = titleTransition.tabsTop.get();
+    if (tabsTop <= 0) return;
+
+    // Align the incoming page as soon as the swipe starts, before it is more
+    // than half visible; waiting for the halfway point makes it jump. `tab`
+    // still points at the page being left until `onPageSelected` settles.
+    const targetTab: ProfileTabKey = tab === "posts" ? "saved" : "posts";
+    if (swipeSyncTargetRef.current === targetTab) return;
+    swipeSyncTargetRef.current = targetTab;
+
+    const headerOffset = Math.min(Math.max(titleTransition.scrollY.get(), 0), tabsTop);
+    const incomingOffset = titleTransition.getPageScrollY(targetTab);
+    const target = alignIncomingPage(targetTab, headerOffset);
+
+    if (target !== incomingOffset) {
+      titleTransition.setPageScrollY(targetTab, target);
+    }
   };
 
   const headerContent = (
@@ -156,16 +257,18 @@ export function ProfileScreen() {
         accessibilityElementsHidden={stickyShown}
         importantForAccessibility={stickyShown ? "no-hide-descendants" : "auto"}
       >
-        <Tabs
-          variant="underline"
-          items={[
-            { key: "posts", label: "Posts", testID: "profile-tab-posts" },
-            { key: "saved", label: "Saved", testID: "profile-tab-saved" },
-          ]}
-          value={tab}
-          onChange={handleTabChange}
-          testID="profile-tabs"
-        />
+        <Animated.View style={inListTabsStyle}>
+          <Tabs
+            variant="underline"
+            items={[
+              { key: "posts", label: "Posts", testID: "profile-tab-posts" },
+              { key: "saved", label: "Saved", testID: "profile-tab-saved" },
+            ]}
+            value={tab}
+            onChange={handleTabChange}
+            testID="profile-tabs"
+          />
+        </Animated.View>
       </View>
     </View>
   );
@@ -185,7 +288,7 @@ export function ProfileScreen() {
         }}
         prefetchPost={posts.prefetchPost}
         listRef={postsListRef}
-        onScroll={tab === "posts" ? titleTransition.onScrollFor("posts") : undefined}
+        onScroll={titleTransition.onScrollFor("posts")}
         scrollEventThrottle={16}
         header={<View style={{ height: headerHeight }} />}
         progressViewOffset={headerHeight}
@@ -225,7 +328,7 @@ export function ProfileScreen() {
         }}
         prefetchPost={() => {}}
         listRef={savedListRef}
-        onScroll={tab === "saved" ? titleTransition.onScrollFor("saved") : undefined}
+        onScroll={titleTransition.onScrollFor("saved")}
         scrollEventThrottle={16}
         header={<View style={{ height: headerHeight }} />}
         progressViewOffset={headerHeight}
@@ -255,8 +358,10 @@ export function ProfileScreen() {
       <Stack.Screen options={{ headerRight: () => <ProfileOverflowMenu /> }} />
       <ProfilePager
         ref={pagerRef}
+        initialPage={0}
         pageIndex={tab === "saved" ? 1 : 0}
         onPageSelected={handlePageSelected}
+        onPageScroll={handlePageScroll}
       >
         {[postsPage, savedPage]}
       </ProfilePager>
@@ -266,8 +371,7 @@ export function ProfileScreen() {
         </Animated.View>
       </View>
       <ProfileStickyTabs
-        scrollY={titleTransition.scrollY}
-        tabsBottom={titleTransition.tabsBottom}
+        progress={titleTransition.stickyProgress}
         value={tab}
         onChange={handleTabChange}
         onShownChange={setStickyShown}

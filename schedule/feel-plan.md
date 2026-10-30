@@ -368,7 +368,8 @@ src/features/profile/screens/edit-profile-screen.tsx    # chỉ nếu bị ảnh
 
 **Contract**
 
-- Mỗi profile page sở hữu một `ProfilePostsList` trong native horizontal pager; mỗi page giữ offset riêng, header/tabs được dùng chung theo cùng layout.
+- Mỗi profile page sở hữu một `ProfilePostsList` trong native horizontal pager; mỗi page giữ offset riêng. Header/tabs là overlay dùng chung ngoài pager, list chỉ có spacer đúng `headerHeight`.
+- Chuyển tab: nếu page đích hoặc header hiện tại gần top, đồng bộ page đích về header offset hiện tại trước khi activate (tránh header nhảy/khoảng trống); nếu cả hai đã cuộn qua header thì giữ offset riêng. Page rỗng mở header.
 - Header: cover 140, Avatar 96 đè (−32, viền `background` 3), h2 name, `@handle`, bio/link, stats 1 dòng (`tabular-nums`), action pill fullWidth.
 - Me: `headerRight` `IconButton more` → Sheet (Follow requests badge N, Settings, Sign out danger). Giữ `profile-sign-out-button` trên item trong Sheet → **Maestro `profile.yaml` mở menu trước**.
 - User: `FollowButton`/Edit trong action; overflow = report/block/share.
@@ -381,7 +382,7 @@ src/features/profile/screens/edit-profile-screen.tsx    # chỉ nếu bị ảnh
 - [ ] Maestro `profile.yaml`, `follow.yaml` pass (đã sửa sign-out).
 - [ ] Ảnh before/after; device QA.
 
-**Rủi ro**: đưa header vào `ListHeaderComponent` làm mất `flex:1` cũ — kiểm tra empty state + footer height.
+**Rủi ro**: header overlay ngoài pager + spacer `headerHeight` trong list lệch nhau khi đo layout → kiểm tra empty state, footer height và danh sách ngắn.
 
 ---
 
@@ -435,8 +436,9 @@ src/features/profile/screens/user-detail-screen.tsx
 
 **Contract**
 
-- Overlay `Tabs` dính ngay dưới native header (absolute top 0 trong Screen body), nền `surface` + hairline `border` dưới; fade-in theo `scrollY` khi tabs trong list cuộn qua — đo `tabsBottom` bằng `onLayout` (dùng lại cơ chế PF4.2).
-- Tap hoặc swipe ngang → đổi active page; không reset scroll, mỗi page giữ offset riêng.
+- Header overlay dịch theo `scrollY` nhưng **dừng khi tabs chạm top** (`tabsTop` đo bằng `onLayout`, dùng lại cơ chế PF4.2) → tabs trong header thành sticky.
+- Overlay `Tabs` dính ngay dưới native header (absolute top 0 trong Screen body), nền `surface` + hairline `border` dưới; crossfade theo `stickyProgress` bắt đầu đúng tại `tabsTop`, cùng vị trí với tabs đang dính nên không nháy/không lệch.
+- Tap hoặc swipe ngang → đổi active page; page đích được đồng bộ header offset khi cần, mỗi page giữ offset riêng khi cả hai đã cuộn qua header.
 - `pointerEvents="none"` khi opacity 0 (không chặn tap list); không bắt scroll.
 - Reduce motion → hiện/ẩn tức thời tại ngưỡng.
 - a11y: `role=tab` + `selected`; chỉ bản đang hiện được screen reader đọc (ẩn bản kia) — tránh đọc trùng.
@@ -446,7 +448,7 @@ src/features/profile/screens/user-detail-screen.tsx
 - [ ] Không layout shift; overlay ẩn không chặn tap.
 - [ ] QA iOS + Android, reduced motion, light/dark.
 
-**Rủi ro**: `pointerEvents`/đo `tabsBottom` sai → overlay che list hoặc không hiện; QA bằng tap ở vùng tabs.
+**Rủi ro**: `pointerEvents`/đo `tabsTop` sai → overlay che list hoặc không hiện; QA bằng tap ở vùng tabs. `scrollToOffset` trên list ngắn có thể không đạt target — page rỗng được xử lý riêng, QA thêm list 1–2 post.
 
 ---
 
@@ -741,7 +743,7 @@ rg "expo-haptics" src/features                         # = 0 (chỉ shared/lib)
 | PF3.1 — Comment row + composer | [ ] | M | focus param |
 | PF4.1 — Profile anatomy | [ ] | L | Sign out vào Sheet |
 | PF4.2 — Q7 title transition | [ ] | M | QA matrix bắt buộc |
-| PF4.3 — Sticky tabs overlay | [ ] | S–M | Dùng `scrollY`/`tabsBottom` của PF4.2 |
+| PF4.3 — Sticky tabs overlay | [ ] | S–M | Dùng `scrollY`/`tabsTop` của PF4.2 |
 | PF5.1 — Inbox anatomy | [ ] | M | |
 | PF5.2 — Q8 notif thumbnail | [ ] | S | Cache-only |
 | PF6.1 — Chat chrome + keyboard + list | [ ] | M | Bỏ RN KAV |

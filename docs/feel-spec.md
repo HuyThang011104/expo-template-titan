@@ -45,10 +45,10 @@
 | F9 | `@expo/ui` / `expo-glass-effect` | **Không dùng ở wave này** (đã cài nhưng chưa import; @expo/ui phân mảnh iOS/Android, glass chỉ iOS 26). Revisit sau | Không xoá dep, chỉ để yên |
 | F10 | Reduce motion | Bắt buộc: mọi spring/animation tự viết phải tắt theo `useReducedMotion`, giữ opacity feedback | Feel primitive chịu trách nhiệm, screen không tự xử |
 | F11 | testID & Maestro | Không đổi testID hiện có; phần tử mới thêm testID mới; Maestro sửa cùng PR | Feed/composer flows không vỡ |
-| F12 | Profile header title transition (Q7 cũ) | **Trong wave** — title native crossfade `@handle` → displayName khi khối identity cuộn qua header; scroll-driven, không setState mỗi frame | Đổi cấu trúc profile: header vào `ListHeaderComponent` |
+| F12 | Profile header title transition (Q7 cũ) | **Trong wave** — title native crossfade `@handle` → displayName khi khối identity cuộn qua header; scroll-driven, không setState mỗi frame | Đổi cấu trúc profile: header overlay dùng chung ngoài pager |
 | F13 | Notification media thumbnail (Q8 cũ) | **Trong wave** — thumbnail 44px lấy từ canonical post cache, không fetch thêm | Row inbox thêm trailing thumbnail |
 | F14 | Action row counts | Like hiện count khi `> 0` (ẩn `0`); comment/share/save **icon-only** — model không có `commentCount`/share/save count | §4.1 |
-| F15 | Sticky profile tabs + horizontal pager | Overlay tabs dựng bằng `scrollY` (dùng chung cơ chế Q7), fade-in khi tabs trong list cuộn qua; Posts/Saved dùng native pager để tap và swipe, mỗi page giữ offset riêng | §4.4, PF4.3 |
+| F15 | Sticky profile tabs + horizontal pager | Header dùng chung dựng bằng `scrollY` (dùng chung cơ chế Q7), dừng khi tabs chạm top; overlay tabs crossfade tại đúng vị trí đó; Posts/Saved dùng native pager để tap và swipe, mỗi page giữ offset riêng | §4.4, PF4.3 |
 | F16 | Media viewer dữ liệu + gesture | Params `{ postId, index }`; đọc canonical cache, thiếu thì `usePost`; ở scale 1 kéo dọc để dismiss, scale > 1 chỉ pan/zoom; route `gestureEnabled: false` để tránh cạnh tranh dismiss | §4.10, §7.1 |
 
 ---
@@ -191,21 +191,24 @@ Composer (pinned footer của `DetailPage`):
 
 ### 4.4 Profile
 
-**Cấu trúc — một scroll container duy nhất (A14):**
+**Cấu trúc — header dùng chung trên pager (A14):**
 
 ```text
-AppList (mỗi tab)
-├─ ListHeaderComponent = <ProfileHeaderBlock>
+Screen
+├─ ProfilePager (native horizontal)
+│   ├─ Posts page: AppList(ids) — spacer đúng headerHeight
+│   └─ Saved page: AppList(ids) — spacer đúng headerHeight
+├─ Header overlay (ngoài pager) = <ProfileHeaderBlock>
 │    cover 140 → Avatar 96 đè cover (−32, viền background 3)
 │    h2 name → @handle caption → bio/link
 │    stats 1 dòng: N posts · N followers · N following (CountLink, tabular-nums)
 │    action: Follow pill (primary) / Following (secondary) / Edit profile (secondary)
 │    Follow requests row (nếu N > 0)
 │    Tabs underline  Posts | Saved
-└─ PostCard ids
+└─ Sticky Tabs overlay (fade thay tabs trong header khi đã dính)
 ```
 
-1. Header **nằm trong mỗi page list**: cuộn là cover/avatar/names trôi đi. Tabs trong list cuộn theo; **overlay tabs dính** (nền `surface` + hairline dưới, fade-in khi tabs cuộn qua) dựng bằng `scrollY` ở PF4.3 — không dựa `stickyHeaderIndices`. Posts/Saved nằm trong native horizontal pager và giữ scroll offset riêng.
+1. Header **dùng chung, nằm ngoài pager**: dịch theo `scrollY` của page active nên cover/avatar/names trôi đi, nhưng không bị pager kéo ngang. Header dừng khi hàng tabs chạm top (`tabsTop`), nhờ vậy tabs trong header thành sticky. Sticky tabs overlay crossfade đúng vị trí đó (nền `surface` + hairline dưới) — không dựa `stickyHeaderIndices`. Posts/Saved nằm trong native horizontal pager, mỗi page giữ offset riêng. Khi chuyển tab, page đích được đồng bộ về header offset hiện tại nếu một trong hai page gần top; nếu cả hai đã cuộn qua header thì giữ offset riêng. Page rỗng luôn mở header (không đủ nội dung để cuộn dưới header đóng).
 2. **Action pill** (fullWidth): follow = `Button primary radius full`; đã follow → `secondary` "Following"; me → `secondary` "Edit profile". Hết 2 nút `secondary sm` dồn cột (A7).
 3. **Me-profile overflow**: `IconButton more` ở `headerRight` → Sheet: Follow requests (badge N), Settings, Sign out (danger). Giữ testID `profile-sign-out-button` trên item trong Sheet — Maestro phải mở menu trước (sửa cùng PR).
 4. **User-profile** (khác viewer): action slot = `FollowButton` hoặc Edit (self); overflow `more` = report / block / share.
@@ -463,10 +466,12 @@ Không còn câu hỏi mở. Mapping để tra cứu:
 | `entities/post/ui/post-actions.tsx` | Thêm comment slot; `PressableScale`; haptic |
 | `entities/comment/ui/comment-row.tsx` | Thêm Avatar 32; action giữ; indent 40 |
 | `features/post-detail/components/comment-composer.tsx` | Pill `ComposerInput` + `IconButton send` |
-| `features/profile/screens/profile-screen.tsx` | Một scroll container: header vào `ListHeaderComponent`; stats row; pill action; overflow more (headerRight); Sign out vào Sheet |
+| `features/profile/screens/profile-screen.tsx` | Header dùng chung ngoài pager + spacer trong list; stats row; pill action; overflow more (headerRight); Sign out vào Sheet |
 | `features/profile/components/profile-header.tsx` | Avatar đè cover, stats 1 dòng; `onLayout` khối identity cho Q7 |
 | `features/profile/components/profile-title.tsx` (mới) | Header title crossfade Q7 (§4.4.1) |
-| `features/profile/components/profile-posts-list.tsx` | Nhận `ListHeaderComponent` (header + tabs) + `onScroll` |
+| `features/profile/components/profile-pager.tsx` (mới) | Native horizontal pager; tap `setPage`, swipe báo `onPageSelected`/`onPageScroll` |
+| `features/profile/components/profile-sticky-tabs.tsx` (mới) | Sticky tabs overlay crossfade theo `stickyProgress` |
+| `features/profile/components/profile-posts-list.tsx` | Nhận spacer header + `onScroll`; list không chứa header/tabs |
 | `features/inbox/screens/inbox-screen.tsx` | Bỏ header body; mark-all → headerRight; row → ListItem pattern |
 | `features/inbox/components/notification-row.tsx` | Trailing thumbnail từ post cache (§4.5.1) |
 | `features/chat/screens/chat-detail-screen.tsx` | Bỏ header body; keyboard-controller |

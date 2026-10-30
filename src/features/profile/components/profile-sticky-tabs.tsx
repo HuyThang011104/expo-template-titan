@@ -1,13 +1,11 @@
 /**
  * Sticky tabs overlay (PF4.3).
  *
- * Sits under the native header over the list, fading in when the in-list
- * tabs scroll past the overlay's top edge. Reuses the PF4.2 `scrollY` +
- * measured `tabsBottom`, so scrolling still never renders React: opacity is
- * native, and the only JS update is the interactive/a11y flag at the
- * threshold.
+ * Sits under the native header over the list, fading in with the shared
+ * `stickyProgress` value owned by the profile scroll hook. The same progress
+ * fades the in-list tabs out, so the two bars never read as duplicates.
  *
- * Spec: docs/feel-spec.md §4.4 (item 1) and PF4.3 contract.
+ * Spec: docs/feel-spec.md §4.4 (PF4.3).
  */
 
 import { useCallback, useState } from "react";
@@ -16,19 +14,14 @@ import Animated, {
   runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
-  useDerivedValue,
-  useReducedMotion,
   type SharedValue,
 } from "react-native-reanimated";
 
 import { Tabs, useTheme } from "@/shared/ui";
 
-/** Opacity ramp length before the in-list tabs fully clear the header. */
-const FADE_DISTANCE = 32;
-
 export type ProfileStickyTabsProps = {
-  scrollY: SharedValue<number>;
-  tabsBottom: SharedValue<number>;
+  /** 0 → 1 after the in-list tabs reach the header top. */
+  progress: SharedValue<number>;
   value: string;
   onChange: (key: string) => void;
   /** Lets the screen hide the in-list tabs from screen readers (no duplicates). */
@@ -37,15 +30,13 @@ export type ProfileStickyTabsProps = {
 };
 
 export function ProfileStickyTabs({
-  scrollY,
-  tabsBottom,
+  progress,
   value,
   onChange,
   onShownChange,
   style,
 }: ProfileStickyTabsProps) {
   const theme = useTheme();
-  const reduceMotion = useReducedMotion();
   const [shown, setShown] = useState(false);
 
   const handleShown = useCallback(
@@ -55,16 +46,6 @@ export function ProfileStickyTabs({
     },
     [onShownChange],
   );
-
-  const progress = useDerivedValue(() => {
-    const bottom = tabsBottom.get();
-    if (bottom <= 0) return 0;
-    const scroll = scrollY.get();
-    if (reduceMotion) return scroll >= bottom ? 1 : 0;
-    const start = Math.max(0, bottom - FADE_DISTANCE);
-    const raw = (scroll - start) / FADE_DISTANCE;
-    return raw <= 0 ? 0 : raw >= 1 ? 1 : raw;
-  });
 
   useAnimatedReaction(
     () => progress.get() >= 1,
@@ -83,9 +64,9 @@ export function ProfileStickyTabs({
       pointerEvents={shown ? "auto" : "none"}
       accessibilityElementsHidden={!shown}
       importantForAccessibility={shown ? "auto" : "no-hide-descendants"}
-      style={[styles.container, { backgroundColor: theme.color.surface }, style]}
+      style={[styles.container, style]}
     >
-      <Animated.View style={opacityStyle}>
+      <Animated.View style={[opacityStyle, { backgroundColor: theme.color.surface }]}>
         <Tabs
           variant="underline"
           items={[

@@ -209,22 +209,22 @@ Profile Posts/Saved chuyển được bằng tap và swipe, không mất scroll 
 ### Thiết kế state
 
 ```text
-tab: "posts" | "saved"
-pageIndex: 0 | 1
-postsListRef
-savedListRef
-postsScrollY
-savedScrollY
-activeScrollY → title transition + sticky tabs
+tab: "posts" | "saved"        // single source of truth for chrome
+pager                         // uncontrolled native index; pageIndex prop is web-only
+postsListRef / savedListRef
+postsScrollY / savedScrollY   // per-page offsets in shared values
+activeScrollY                 // scrollY of the active page → title + header + sticky tabs
+tabsTop                       // header stops translating when the tab row reaches top
 ```
 
 ### Quy tắc UX
 
-- Tap tab gọi `pagerRef.setPage(index)`.
-- Swipe pager gọi `onPageSelected` và cập nhật `tab`.
-- Không gọi `scrollToOffset(0)` khi đổi tab.
-- Mỗi tab giữ offset riêng trong lúc user chuyển qua lại.
-- Header identity và tabs xuất hiện nhất quán trên mỗi page.
+- Tap tab gọi `pagerRef.setPage(index)`; bỏ qua `onPageScroll` trong lúc pager animate (programmatic nav) để không chạm page đang rời.
+- Swipe pager gọi `onPageSelected` và cập nhật `tab`; `onPageScroll` đồng bộ page đích ngay khi swipe bắt đầu (trước khi nó quá nửa màn) để không jump.
+- Chuyển tab: nếu page đích hoặc header hiện tại gần top, đưa page đích về header offset hiện tại; nếu cả hai đã cuộn qua header (`tabsTop`) thì giữ offset riêng. Page rỗng luôn mở header.
+- Không gọi `scrollToOffset(0)` vô điều kiện khi đổi tab.
+- Mỗi tab giữ offset riêng trong lúc user chuyển qua lại (trừ nhánh đồng bộ ở trên).
+- Header identity và tabs là một overlay dùng chung ngoài pager; list chỉ có spacer đúng `headerHeight`.
 - Sticky tabs chỉ có một bản accessibility-visible tại một thời điểm.
 - Swipe ngang không được làm hỏng vertical scroll của `FlashList`.
 - Khi đang loading/error/empty, pager vẫn giữ kích thước ổn định.
@@ -234,12 +234,13 @@ activeScrollY → title transition + sticky tabs
 
 ```text
 ProfileScreen
-├── ProfileStickyTabs
-└── PagerView
-    ├── ProfilePostsPage
-    │   └── ProfilePostsList (posts, own ref, own scrollY)
-    └── ProfileSavedPage
-        └── ProfilePostsList (saved, own ref, own scrollY)
+├── ProfilePager (native horizontal)
+│   ├── ProfilePostsPage
+│   │   └── ProfilePostsList (posts, own ref, own scrollY, header spacer)
+│   └── ProfileSavedPage
+│       └── ProfilePostsList (saved, own ref, own scrollY, header spacer)
+├── Shared header overlay (identity + in-list tabs; translateY clamped at tabsTop)
+└── ProfileStickyTabs (crossfade at the same position; a11y only when shown)
 ```
 
 Có thể dùng cùng component `ProfilePostsPage`, không copy business logic giữa hai tab.

@@ -1,24 +1,31 @@
 /**
- * Q7 header title transition wiring (PF4.2).
+ * Profile header scroll wiring (PF4.2 / PF4.3).
  *
- * Owns the two shared values (`scrollY`, `switchRange`) and installs the
- * custom `headerTitle` exactly once per data change — never during scroll.
- * The scroll handler only writes one shared value; scrolling does not render
- * React or touch the navigator.
+ * Owns `scrollY` (the visible page's offset), the per-page offsets so each
+ * pager tab keeps its own position, and the sticky-tabs progress derived from
+ * `tabsTop`. Scrolling only writes one shared value per page; React never
+ * re-renders per frame.
  *
- * Spec: docs/feel-spec.md §4.4.1.
+ * Spec: docs/feel-spec.md §4.4.1 and §4.4 (PF4.3).
  */
 
 import { useNavigation } from "expo-router";
 import { useCallback, useEffect, useMemo } from "react";
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from "react-native";
-import { useDerivedValue, useSharedValue, type SharedValue } from "react-native-reanimated";
+import {
+  useDerivedValue,
+  useReducedMotion,
+  useSharedValue,
+  type SharedValue,
+} from "react-native-reanimated";
 
 import { ProfileHeaderTitle } from "../components/profile-title";
 import type { TitleSwitchRange } from "../lib/title-progress";
 
 /** Native header height used to start the fade before the block clears it. */
 const HEADER_HEIGHT = 48;
+/** Crossfade length between the stuck in-list tabs and the sticky overlay. */
+const FADE_DISTANCE = 32;
 
 export type UseProfileTitleTransitionArgs = {
   handle: string;
@@ -32,12 +39,18 @@ export type UseProfileTitleTransitionArgs = {
 export type ProfileTabKey = "posts" | "saved";
 
 export type ProfileTitleTransition = {
-  /** Reused by the sticky tabs overlay (PF4.3). */
+  /** Offset of the active page; drives the header, title, and sticky tabs. */
   scrollY: SharedValue<number>;
-  /** Selects which profile page drives the native title and sticky tabs. */
-  setActiveTab: (tab: ProfileTabKey) => void;
-  /** Bottom edge of the in-list tabs, in list content coordinates. */
-  tabsBottom: SharedValue<number>;
+  /** Switches the active page and points the chrome at `offset`. */
+  activateTab: (tab: ProfileTabKey, offset: number) => void;
+  /** Last reported offset for a page (used to align pages on tab change). */
+  getPageScrollY: (tab: ProfileTabKey) => number;
+  /** Updates a page offset after an imperative scroll. */
+  setPageScrollY: (tab: ProfileTabKey, offset: number) => void;
+  /** Top edge of the in-list tabs, in list content coordinates. */
+  tabsTop: SharedValue<number>;
+  /** 0 → 1 after the in-list tabs reach the native header. */
+  stickyProgress: SharedValue<number>;
   onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onScrollFor: (tab: ProfileTabKey) => (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
   onIdentityLayout: (event: LayoutChangeEvent) => void;
@@ -51,18 +64,28 @@ export function useProfileTitleTransition({
   ready,
 }: UseProfileTitleTransitionArgs): ProfileTitleTransition {
   const navigation = useNavigation();
+  const reduceMotion = useReducedMotion();
   const switchRange = useSharedValue<TitleSwitchRange>({
     start: Number.POSITIVE_INFINITY,
     end: Number.POSITIVE_INFINITY,
   });
-  // 0 = not measured yet (the sticky overlay stays hidden).
-  const tabsBottom = useSharedValue(0);
+  // 0 = not measured yet (the header does not move and the overlay stays hidden).
+  const tabsTop = useSharedValue(0);
   const activeTab = useSharedValue<ProfileTabKey>("posts");
   const postsScrollY = useSharedValue(0);
   const savedScrollY = useSharedValue(0);
-  const scrollY = useDerivedValue(() =>
-    activeTab.get() === "saved" ? savedScrollY.get() : postsScrollY.get(),
-  );
+  const scrollY = useSharedValue(0);
+
+  // The header stops translating when the tabs reach the top, so the two tab
+  // bars crossfade at the same position instead of one chasing the other.
+  const stickyProgress = useDerivedValue(() => {
+    const top = tabsTop.get();
+    if (top <= 0) return 0;
+    const scroll = scrollY.get();
+    if (reduceMotion) return scroll >= top ? 1 : 0;
+    const raw = (scroll - top) / FADE_DISTANCE;
+    return raw <= 0 ? 0 : raw >= 1 ? 1 : raw;
+  });
 
   // Stable element: the options effect must not re-run on scroll/renders.
   const title = useMemo(
@@ -88,31 +111,57 @@ export function useProfileTitleTransition({
     };
   }, [navigation, ready, title, fallbackTitle]);
 
-  const setActiveTab = useCallback(
-    (tab: ProfileTabKey): void => {
+  const activateTab = useCallback(
+    (tab: ProfileTabKey, offset: number): void => {
+      const value = Math.max(0, offset);
       activeTab.set(tab);
+      if (tab === "saved") {
+        savedScrollY.set(value);
+      } else {
+        postsScrollY.set(value);
+      }
+      scrollY.set(value);
     },
-    [activeTab],
+    [activeTab, postsScrollY, savedScrollY, scrollY],
   );
 
-  const onScrollFor = useCallback(
-    (tab: ProfileTabKey) =>
-      (event: NativeSyntheticEvent<NativeScrollEvent>): void => {
-        const value = event.nativeEvent.contentOffset.y;
-        if (tab === "saved") {
-          savedScrollY.set(value);
-        } else {
-          postsScrollY.set(value);
-        }
-      },
+  const getPageScrollY = useCallback(
+    (tab: ProfileTabKey): number => (tab === "saved" ? savedScrollY.get() : postsScrollY.get()),
     [postsScrollY, savedScrollY],
   );
 
-  const onScroll = useCallback(
-    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-      onScrollFor("posts")(event);
+  const setPageScrollY = useCallback(
+    (tab: ProfileTabKey, offset: number): void => {
+      if (tab === "saved") {
+        savedScrollY.set(offset);
+      } else {
+        postsScrollY.set(offset);
+      }
     },
-    [onScrollFor],
+    [postsScrollY, savedScrollY],
+  );
+
+  const postsScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>): void => {
+      const value = event.nativeEvent.contentOffset.y;
+      postsScrollY.set(value);
+      if (activeTab.get() === "posts") scrollY.set(value);
+    },
+    [activeTab, postsScrollY, scrollY],
+  );
+
+  const savedScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>): void => {
+      const value = event.nativeEvent.contentOffset.y;
+      savedScrollY.set(value);
+      if (activeTab.get() === "saved") scrollY.set(value);
+    },
+    [activeTab, savedScrollY, scrollY],
+  );
+
+  const onScrollFor = useCallback(
+    (tab: ProfileTabKey) => (tab === "saved" ? savedScroll : postsScroll),
+    [postsScroll, savedScroll],
   );
 
   const onIdentityLayout = useCallback(
@@ -128,17 +177,19 @@ export function useProfileTitleTransition({
 
   const onTabsLayout = useCallback(
     (event: LayoutChangeEvent) => {
-      const { y, height } = event.nativeEvent.layout;
-      tabsBottom.set(y + height);
+      tabsTop.set(event.nativeEvent.layout.y);
     },
-    [tabsBottom],
+    [tabsTop],
   );
 
   return {
     scrollY,
-    tabsBottom,
-    setActiveTab,
-    onScroll,
+    tabsTop,
+    stickyProgress,
+    activateTab,
+    getPageScrollY,
+    setPageScrollY,
+    onScroll: postsScroll,
     onScrollFor,
     onIdentityLayout,
     onTabsLayout,

@@ -18,17 +18,9 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 function Harness() {
-  const scrollY = useSharedValue(0);
-  const tabsBottom = useSharedValue(400);
+  const progress = useSharedValue(0);
 
-  return (
-    <ProfileStickyTabs
-      scrollY={scrollY}
-      tabsBottom={tabsBottom}
-      value="posts"
-      onChange={() => {}}
-    />
-  );
+  return <ProfileStickyTabs progress={progress} value="posts" onChange={() => {}} />;
 }
 
 describe("ProfileStickyTabs", () => {

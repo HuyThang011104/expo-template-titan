@@ -3,18 +3,21 @@ import { StyleSheet, View } from "react-native";
 
 import type { ProfilePagerProps, ProfilePagerRef } from "./profile-pager";
 
-/** Web fallback: preserve tap tabs without importing the native pager. */
+/**
+ * Web fallback: tap tabs still work through the screen's `tab` state, so the
+ * pager only has to render the selected child. Swipe is native-only.
+ */
 export const ProfilePager = forwardRef<ProfilePagerRef, ProfilePagerProps>(function ProfilePager(
-  { pageIndex, onPageSelected, children, testID = "profile-pager" },
+  { pageIndex = 0, children, testID = "profile-pager" },
   ref,
 ) {
   useImperativeHandle(
     ref,
     () => ({
-      setPage: (page) => onPageSelected(page),
-      setPageWithoutAnimation: (page) => onPageSelected(page),
+      setPage: () => {},
+      setPageWithoutAnimation: () => {},
     }),
-    [onPageSelected],
+    [],
   );
 
   const page = children[pageIndex] ?? children[0];

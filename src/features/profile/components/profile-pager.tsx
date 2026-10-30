@@ -1,5 +1,5 @@
-import PagerView, { type PagerViewOnPageSelectedEvent } from "react-native-pager-view";
-import { forwardRef, useEffect, useImperativeHandle, useRef, type ReactElement } from "react";
+import PagerView from "react-native-pager-view";
+import { forwardRef, useImperativeHandle, useRef, type ReactElement } from "react";
 import { StyleSheet } from "react-native";
 
 export type ProfilePagerRef = {
@@ -7,9 +7,21 @@ export type ProfilePagerRef = {
   setPageWithoutAnimation: (page: number) => void;
 };
 
+export type ProfilePageScroll = {
+  /** Page being left while swiping. */
+  position: number;
+  /** Progress toward the next page, 0 → 1. */
+  offset: number;
+};
+
 export type ProfilePagerProps = {
-  pageIndex: number;
+  /** Page shown on mount. The native pager owns its index after that. */
+  initialPage?: number;
+  /** Web-only: selects which child is rendered (native pager ignores it). */
+  pageIndex?: number;
   onPageSelected: (page: number) => void;
+  /** Fires while a swipe or tab animation is in progress. */
+  onPageScroll?: (event: ProfilePageScroll) => void;
   children: ReactElement[];
   testID?: string;
 };
@@ -17,47 +29,44 @@ export type ProfilePagerProps = {
 /**
  * Native horizontal pager for profile tabs. Each child must be a full-screen
  * View so FlashList owns vertical scrolling inside its own page.
+ *
+ * The pager is uncontrolled: taps call `setPage`, swipes report through
+ * `onPageSelected`, and the screen keeps the single `tab` state. There is no
+ * `pageIndex` effect fighting the gesture.
  */
 export const ProfilePager = forwardRef<ProfilePagerRef, ProfilePagerProps>(function ProfilePager(
-  { pageIndex, onPageSelected, children, testID = "profile-pager" },
+  { initialPage = 0, onPageSelected, onPageScroll, children, testID = "profile-pager" },
   ref,
 ) {
   const pagerRef = useRef<PagerView>(null);
-  const selectedPage = useRef(pageIndex);
 
   useImperativeHandle(
     ref,
     () => ({
       setPage: (page) => {
-        selectedPage.current = page;
         pagerRef.current?.setPage(page);
       },
       setPageWithoutAnimation: (page) => {
-        selectedPage.current = page;
         pagerRef.current?.setPageWithoutAnimation(page);
       },
     }),
     [],
   );
 
-  useEffect(() => {
-    if (pageIndex === selectedPage.current) return;
-    selectedPage.current = pageIndex;
-    pagerRef.current?.setPage(pageIndex);
-  }, [pageIndex]);
-
-  const handlePageSelected = (event: PagerViewOnPageSelectedEvent): void => {
-    const page = Math.round(event.nativeEvent.position);
-    selectedPage.current = page;
-    onPageSelected(page);
-  };
-
   return (
     <PagerView
       ref={pagerRef}
       style={styles.container}
-      initialPage={pageIndex}
-      onPageSelected={handlePageSelected}
+      initialPage={initialPage}
+      onPageSelected={(event) => {
+        onPageSelected(Math.round(event.nativeEvent.position));
+      }}
+      onPageScroll={(event) => {
+        onPageScroll?.({
+          position: event.nativeEvent.position,
+          offset: event.nativeEvent.offset,
+        });
+      }}
       testID={testID}
     >
       {children}

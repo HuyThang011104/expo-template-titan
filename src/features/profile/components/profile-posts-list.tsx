@@ -26,7 +26,7 @@ export type ProfilePostsListProps = {
   onEndReached: () => void;
   onRefresh: () => void;
   prefetchPost: (id: string) => void;
-  /** Header block (cover/avatar/identity/action/tabs) inside the same list. */
+  /** Spacer matching the shared header overlay height. */
   header?: ReactElement | null;
   /** Android refresh spinner offset (profile overlay header height). */
   progressViewOffset?: number;
