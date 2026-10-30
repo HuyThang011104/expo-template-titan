@@ -1,15 +1,18 @@
 /**
  * "Me" profile screen (`/(profile)` tab, G2.1, PF4.1).
  *
- * Each profile tab owns a FlashList inside a native horizontal pager. The
- * identity block and tabs remain list headers, so cover/avatar/names scroll
- * away while the overlay tabs and native title follow the active page.
+ * Each profile tab owns a FlashList inside a native horizontal pager, so a
+ * swipe moves only the tab's content. The identity block and tabs render once
+ * as an overlay above the pager and translate with the active list's
+ * `scrollY`, so cover/avatar/names still scroll away while the overlay tabs
+ * and native title follow the active page.
  */
 
 import type { FlashListRef } from "@shopify/flash-list";
 import { router, Stack } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
 
 import { useUserPosts } from "@/entities/post";
 import { useSavedPosts } from "@/entities/saved";
@@ -40,6 +43,7 @@ export function ProfileScreen() {
   const saved = useSavedPosts();
   const [tab, setTab] = useState<ProfileTabKey>("posts");
   const [stickyShown, setStickyShown] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(0);
   const pagerRef = useRef<ProfilePagerRef>(null);
   const postsListRef = useRef<FlashListRef<string>>(null);
   const savedListRef = useRef<FlashListRef<string>>(null);
@@ -54,6 +58,16 @@ export function ProfileScreen() {
     fallbackTitle: "Profile",
     ready: me.isSuccess,
   });
+
+  // The overlay aligns with the list content origin, so translating it by the
+  // active list's offset reproduces an in-list header without the pager
+  // dragging it sideways. Negative overscroll moves it down (pull-to-refresh).
+  const headerStyle = useAnimatedStyle(
+    () => ({
+      transform: [{ translateY: -Math.min(titleTransition.scrollY.get(), headerHeight) }],
+    }),
+    [headerHeight, titleTransition.scrollY],
+  );
 
   if (me.isPending) {
     return (
@@ -96,8 +110,13 @@ export function ProfileScreen() {
     setTab(nextTab);
   };
 
-  const header = (
-    <View>
+  const headerContent = (
+    <View
+      pointerEvents="box-none"
+      onLayout={(event) => {
+        setHeaderHeight(event.nativeEvent.layout.height);
+      }}
+    >
       <ProfileHeader
         user={user}
         testID={`profile-header-${user.handle}`}
@@ -168,7 +187,8 @@ export function ProfileScreen() {
         listRef={postsListRef}
         onScroll={tab === "posts" ? titleTransition.onScrollFor("posts") : undefined}
         scrollEventThrottle={16}
-        header={header}
+        header={<View style={{ height: headerHeight }} />}
+        progressViewOffset={headerHeight}
         footer={<ProfilePostsFooter visible={posts.isFetchingNextPage} />}
         emptyComponent={
           posts.isPending ? (
@@ -207,7 +227,8 @@ export function ProfileScreen() {
         listRef={savedListRef}
         onScroll={tab === "saved" ? titleTransition.onScrollFor("saved") : undefined}
         scrollEventThrottle={16}
-        header={header}
+        header={<View style={{ height: headerHeight }} />}
+        progressViewOffset={headerHeight}
         footer={<ProfilePostsFooter visible={saved.isFetchingNextPage} />}
         emptyComponent={
           saved.isPending ? (
@@ -239,6 +260,11 @@ export function ProfileScreen() {
       >
         {[postsPage, savedPage]}
       </ProfilePager>
+      <View pointerEvents="box-none" style={styles.headerClip}>
+        <Animated.View pointerEvents="box-none" style={[styles.headerOverlay, headerStyle]}>
+          {headerContent}
+        </Animated.View>
+      </View>
       <ProfileStickyTabs
         scrollY={titleTransition.scrollY}
         tabsBottom={titleTransition.tabsBottom}
@@ -258,6 +284,20 @@ const styles = StyleSheet.create({
   },
   page: {
     flex: 1,
+  },
+  headerClip: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflow: "hidden",
+  },
+  headerOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
   },
   requestsRow: {
     paddingHorizontal: 16,

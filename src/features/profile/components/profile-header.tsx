@@ -74,8 +74,11 @@ export function ProfileHeader({
   const statsVisible = postsCount !== undefined || followStats !== null;
 
   return (
-    <View testID={testID} onLayout={onIdentityLayout}>
-      <View style={[styles.cover, { backgroundColor: theme.color.surfaceMuted }]}>
+    <View testID={testID} onLayout={onIdentityLayout} pointerEvents="box-none">
+      <View
+        pointerEvents="none"
+        style={[styles.cover, { backgroundColor: theme.color.surfaceMuted }]}
+      >
         {user.coverUrl ? (
           <Image
             source={{ uri: user.coverUrl }}
@@ -87,7 +90,7 @@ export function ProfileHeader({
           />
         ) : null}
       </View>
-      <View style={styles.avatarRow}>
+      <View pointerEvents="none" style={styles.avatarRow}>
         <View
           style={[
             styles.avatarRing,

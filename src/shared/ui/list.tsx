@@ -20,6 +20,8 @@ export type AppListProps<T> = {
   onEndReachedThreshold?: number;
   refreshing?: boolean;
   onRefresh?: () => void;
+  /** Android refresh spinner offset, e.g. below a collapsing overlay header. */
+  progressViewOffset?: number;
   /** Screen-owned scroll handler (JS or Reanimated worklet). */
   onScroll?: FlashListProps<T>["onScroll"];
   scrollEventThrottle?: FlashListProps<T>["scrollEventThrottle"];
@@ -40,6 +42,7 @@ export function AppList<T>({
   onEndReachedThreshold = 0.5,
   refreshing,
   onRefresh,
+  progressViewOffset,
   onScroll,
   scrollEventThrottle,
   ListEmptyComponent,
@@ -59,6 +62,7 @@ export function AppList<T>({
       onEndReachedThreshold={onEndReachedThreshold}
       refreshing={refreshing}
       onRefresh={onRefresh}
+      progressViewOffset={progressViewOffset}
       onScroll={onScroll}
       scrollEventThrottle={scrollEventThrottle}
       ListEmptyComponent={ListEmptyComponent}

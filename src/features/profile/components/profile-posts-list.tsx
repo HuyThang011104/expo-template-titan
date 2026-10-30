@@ -28,6 +28,8 @@ export type ProfilePostsListProps = {
   prefetchPost: (id: string) => void;
   /** Header block (cover/avatar/identity/action/tabs) inside the same list. */
   header?: ReactElement | null;
+  /** Android refresh spinner offset (profile overlay header height). */
+  progressViewOffset?: number;
   /** Overrides the default empty state (pending/error/private body). */
   emptyComponent?: ReactElement | null;
   /** Loading footer owned by the page so each pager tab has its own state. */
@@ -102,6 +104,7 @@ export function ProfilePostsList({
   onRefresh,
   prefetchPost,
   header,
+  progressViewOffset,
   emptyComponent,
   footer,
   onScroll,
@@ -121,6 +124,7 @@ export function ProfilePostsList({
       }}
       onRefresh={onRefresh}
       refreshing={isRefetching}
+      progressViewOffset={progressViewOffset}
       onScroll={onScroll}
       scrollEventThrottle={scrollEventThrottle}
       ListHeaderComponent={header ?? null}
