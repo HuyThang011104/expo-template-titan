@@ -6,11 +6,16 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import type { ReactNode } from "react";
 
+import type { PickedMedia } from "../../../../shared/media";
 import { ThemeProvider } from "../../../../shared/ui/theme/theme-provider";
 import { ComposerDetailsStep } from "../composer-details-step";
 
 function wrapper({ children }: { children: ReactNode }) {
   return <ThemeProvider initialName="light">{children}</ThemeProvider>;
+}
+
+function video(uri: string): PickedMedia {
+  return { uri, width: 1280, height: 720, kind: "video", mimeType: "video/mp4", duration: 1500 };
 }
 
 const baseProps = {
@@ -42,6 +47,20 @@ describe("ComposerDetailsStep", () => {
     expect(screen.getByTestId("composer-step-details")).toBeTruthy();
     expect(screen.getByTestId("composer-input").props.value).toBe("Hello");
     expect(screen.getByTestId("composer-counter")).toBeTruthy();
+  });
+
+  it("hints that the caption is optional for media-only posts", async () => {
+    await render(
+      <ComposerDetailsStep
+        {...baseProps}
+        body=""
+        hasMedia
+        items={[video("file:///v.mp4")]}
+      />,
+      { wrapper },
+    );
+
+    expect(screen.getByTestId("composer-caption-optional")).toBeTruthy();
   });
 
   it("forwards body changes and the media edit action", async () => {

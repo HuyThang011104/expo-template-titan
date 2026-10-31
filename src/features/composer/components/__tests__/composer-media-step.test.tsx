@@ -53,6 +53,7 @@ describe("ComposerMediaStep", () => {
     await render(<ComposerMediaStep items={[]} {...baseProps} />, { wrapper });
 
     expect(screen.getByTestId("composer-step-media")).toBeTruthy();
+    expect(screen.getByRole("header", { name: "Add media" })).toBeTruthy();
     expect(screen.getByText("Add media")).toBeTruthy();
     expect(screen.getByText("0/4 selected")).toBeTruthy();
     expect(screen.getByTestId("composer-media-add")).toBeTruthy();

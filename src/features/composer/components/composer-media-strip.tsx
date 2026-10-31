@@ -53,6 +53,9 @@ export function ComposerMediaStrip({ items, onRemove, editable = true }: Compose
             {item.kind === "video" ? (
               <View
                 testID={`composer-media-video-${index}`}
+                accessible
+                accessibilityRole="image"
+                accessibilityLabel={`Video ${index + 1}${duration ? `, ${duration}` : ""}`}
                 style={[
                   styles.videoThumb,
                   { borderRadius: theme.radius.md, backgroundColor: theme.color.surfaceMuted },
@@ -73,6 +76,8 @@ export function ComposerMediaStrip({ items, onRemove, editable = true }: Compose
                 style={[styles.thumb, { borderRadius: theme.radius.md }]}
                 contentFit="cover"
                 transition={200}
+                accessible
+                accessibilityLabel={`Photo ${index + 1}`}
               />
             )}
             {editable ? (

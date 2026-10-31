@@ -46,6 +46,7 @@ describe("ComposerMediaStrip", () => {
       wrapper,
     });
     expect(screen.getByTestId("composer-media-video-0")).toBeTruthy();
+    expect(screen.getByLabelText("Video 1, 1:05")).toBeTruthy();
     expect(screen.getByText("1:05")).toBeTruthy();
   });
 

@@ -14,6 +14,13 @@ export function logComposerPost(): void {
   logger.debug("[composer] post attempt");
 }
 
+export function logComposerStep(
+  step: "media" | "details",
+  trigger: "next" | "back" | "text-only",
+): void {
+  logger.debug("[composer] step", { step, trigger });
+}
+
 export function logComposerSuccess(postId: string): void {
   logger.debug("[composer] post success", { postId });
 }

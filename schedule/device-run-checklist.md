@@ -36,7 +36,7 @@ Nguồn: `schedules/production-social-foundation.md`. Code Phase 0–13 đã imp
 
 - [ ] 5 tab native hiện đúng: home, search, create, inbox, profile
 - [ ] Chưa login không thấy tab
-- [ ] Tab Create (`disabled` + `tabPress` listener): mở `/(modals)/composer` dạng `formSheet`, dismiss về tab cũ
+- [ ] Tab Create (`disabled` + `tabPress` listener): mở `/(modals)/composer` dạng `fullScreenModal`, dismiss về tab cũ
 - [ ] `media-viewer` mở dạng `modal`
 - [ ] `/post/abc` đã login không crash (placeholder đọc `usePost`)
 - [ ] `/user/abc` không crash
@@ -115,22 +115,28 @@ Chỉ tick khi tất cả đúng:
 
 Khi đó mới mở F1–F5.
 
-## 11. F1 — Composer (text + 0–4 ảnh + offline queue)
+## 11. F1 / Composer staged — device gate
 
-Nguồn: `schedule/f1-composer-plan.md`. Chạy trên Android dev-client, build có mock
-(`EXPO_PUBLIC_API_MOCK=true`) hoặc staging phục vụ `POST /posts` + `POST /uploads`.
+Nguồn: [`schedule/composer-staged-plan.md`](./composer-staged-plan.md). Chạy trên Android dev-client, build có mock
+(`EXPO_PUBLIC_API_MOCK=true`) hoặc staging phục vụ `POST /posts` + `POST /uploads` (video qua `?kind=video`).
 
-- [ ] Tab Create → sheet `composer` (`formSheet`) mở, keyboard hiện, autofocus vào `composer-input`
+- [ ] Tab Create → modal full-screen `composer` mở ở **Media step** (`composer-step-media`), chưa mở keyboard
+- [ ] `Chỉ viết chữ` (`composer-text-only-button`) → **Details step** (`composer-step-details`), autofocus `composer-input`
 - [ ] Gõ 10 chữ → Post → dismiss về tab cũ, feed prepend bài mới ngay (không refetch full), mở detail đọc được
-- [ ] Counter `n/280`; body rỗng → nút Post disabled; Zod fail → lỗi inline đỏ (`composer-error`)
-- [ ] Chọn 1–4 ảnh (`composer-media-add`) → preview strip (`composer-media-thumb-{i}`), xóa từng ảnh (`composer-media-remove-{i}`); quá 4 bị chặn ở UI
-- [ ] Bấm Post khi có ảnh → hiện `Uploading…` (`composer-uploading`), Post disabled, xong prepend bài có ảnh
-- [ ] Từ chối quyền library → im lặng, không crash, vẫn post text được
-- [ ] Gõ dở → kill app → mở lại: text còn (draft `composer:draft`); note re-pick hiện nếu lần trước có ảnh
-- [ ] Tắt mạng → Post → badge `Queued — will send when online` (`composer-queued-badge`); bật mạng → drain 1 lần, feed có đúng 1 bài mới
+- [ ] Header Details: `Back` (`composer-back-button`) về Media; Android hardware back cũng về Media; back lần 2 đóng modal
+- [ ] Counter `n/280`; draft trống → Post disabled; caption rỗng + có media → Post enabled (media-only)
+- [ ] Chọn 1–4 ảnh (`composer-media-add`) → preview `composer-media-thumb-{i}`, xoá `composer-media-remove-{i}`, quá 4 bị chặn
+- [ ] Chọn 1 video (`composer-media-video-add`) hoặc quay (`composer-media-video-record`) → preview `composer-media-video-0` có icon play + duration
+- [ ] Video >90s hoặc >100MB → lỗi inline `composer-media-limit-error`, không thêm vào danh sách
+- [ ] Đã có ảnh → nút video ẩn; đã có video → nút ảnh ẩn; không trộn được
+- [ ] Bấm Post khi có media → `Uploading…` (`composer-uploading`), Post disabled, xong prepend bài có media đúng kind (ảnh/video)
+- [ ] Media-only: Post với caption rỗng → feed/detail hiện media, không có khoảng trống body rỗng
+- [ ] Từ chối quyền library/camera/mic → im lặng, không crash, vẫn post text được
+- [ ] Gõ/chọn dở → kill app → mở lại: draft có nội dung → vào thẳng Details; note re-pick (`composer-repick-note`) nếu media cũ
+- [ ] Tắt mạng → Post → badge `Queued — will send when online` (`composer-queued-badge`); bật mạng → drain 1 lần, feed đúng 1 bài (ảnh + video)
 - [ ] Job hỏng > 5 attempts → `dead`, xem được qua `listDeadJobs`
 - [ ] Grep gate: `rg "from '@/features/feed" src/features/composer` → 0; `rg setQueryData src/features/composer` → 0
-- [ ] Maestro (khi có build `e2e-test`): `maestro test e2e/flows/composer.yaml` pass
+- [ ] Maestro (khi có build `e2e-test`): `maestro test e2e/flows/composer.yaml` và `composer-steps.yaml` pass
 
 ## 12. Interaction UX upgrade — device gate
 

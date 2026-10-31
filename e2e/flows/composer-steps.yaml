@@ -1,0 +1,50 @@
+# Maestro E2E — composer staged navigation (P1–P5).
+#
+# 1. Sign in (mock) and open the composer from the Create tab
+# 2. Media step is the entry point; its controls are visible
+# 3. `composer-text-only-button` skips to Details
+# 4. `composer-back-button` returns to Media without losing the step
+# 5. `composer-dismiss-button` closes the full-screen modal
+#
+# Run locally: maestro test e2e/flows/composer-steps.yaml
+# Media/video picking is not scripted (OS picker); see composer.yaml caveats.
+
+appId: com.example.titan.dev
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "sign-in-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 30000
+- tapOn: "Create"
+- extendedWaitUntil:
+    visible:
+      id: "composer-step-media"
+    timeout: 15000
+- assertVisible:
+    id: "composer-media-add"
+- assertVisible:
+    id: "composer-media-video-add"
+- assertVisible:
+    id: "composer-text-only-button"
+- tapOn:
+    id: "composer-text-only-button"
+- extendedWaitUntil:
+    visible:
+      id: "composer-step-details"
+    timeout: 15000
+- tapOn:
+    id: "composer-back-button"
+- extendedWaitUntil:
+    visible:
+      id: "composer-step-media"
+    timeout: 15000
+- tapOn:
+    id: "composer-dismiss-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 15000

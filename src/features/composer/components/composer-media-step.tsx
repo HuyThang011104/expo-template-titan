@@ -47,7 +47,7 @@ export function ComposerMediaStep({
     <View style={styles.root} testID="composer-step-media">
       <View style={styles.content}>
         <View style={styles.intro}>
-          <Text variant="h3">Add media</Text>
+          <Text variant="h3" accessibilityRole="header">Add media</Text>
           <Text variant="caption" color="textSecondary">
             Choose up to {maxMedia} photos or one video, then add a caption on the next step.
           </Text>
@@ -101,6 +101,7 @@ export function ComposerMediaStep({
           variant="caption"
           color="textSecondary"
           style={styles.count}
+          accessibilityLiveRegion="polite"
           testID="composer-media-count"
         >
           {isVideo ? "1 video selected" : `${items.length}/${maxMedia} selected`}
@@ -128,6 +129,7 @@ export function ComposerMediaStep({
           <Pressable
             testID="composer-text-only-button"
             accessibilityRole="button"
+            accessibilityLabel="Write text only"
             onPress={onTextOnly}
             style={styles.textOnly}
           >

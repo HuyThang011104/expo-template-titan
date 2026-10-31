@@ -70,6 +70,12 @@ export function ComposerDetailsStep({
 
         <ComposerMediaStrip items={items} onRemove={onRemoveMedia} editable={!busy} />
 
+        {hasMedia && body.trim().length === 0 ? (
+          <Text variant="caption" color="textSecondary" testID="composer-caption-optional">
+            Caption is optional when you add media.
+          </Text>
+        ) : null}
+
         {isUploading ? (
           <Text variant="caption" color="textSecondary" testID="composer-uploading">
             Uploading…

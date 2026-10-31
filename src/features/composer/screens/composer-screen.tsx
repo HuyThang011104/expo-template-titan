@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { BackHandler, Platform, StyleSheet } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
-import { logComposerOpen, logComposerPost } from "../analytics";
+import { logComposerOpen, logComposerPost, logComposerStep } from "../analytics";
 import { ComposerDetailsStep } from "../components/composer-details-step";
 import { ComposerMediaStep } from "../components/composer-media-step";
 import { useComposerDraft } from "../hooks/use-composer-draft";
@@ -102,6 +102,7 @@ function ComposerSteps({ draft }: { draft: ComposerDraftState }) {
   useEffect(() => {
     if (step !== "details" || Platform.OS === "web") return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      logComposerStep("media", "back");
       setStep("media");
       return true;
     });
@@ -208,6 +209,7 @@ function ComposerSteps({ draft }: { draft: ComposerDraftState }) {
             disabled={!hasMedia}
             style={{ borderRadius: theme.radius.full }}
             onPress={() => {
+              logComposerStep("details", "next");
               setStep("details");
             }}
           />
@@ -221,6 +223,7 @@ function ComposerSteps({ draft }: { draft: ComposerDraftState }) {
             accessibilityLabel="Back to media"
             testID="composer-back-button"
             onPress={() => {
+              logComposerStep("media", "back");
               setStep("media");
             }}
           />
@@ -265,6 +268,7 @@ function ComposerSteps({ draft }: { draft: ComposerDraftState }) {
             }}
             onRemove={handleRemovePhoto}
             onTextOnly={() => {
+              logComposerStep("details", "text-only");
               setStep("details");
             }}
             error={media.error}
@@ -282,6 +286,7 @@ function ComposerSteps({ draft }: { draft: ComposerDraftState }) {
             onRemoveMedia={handleRemovePhoto}
             hasMedia={hasMedia}
             onChangeMedia={() => {
+              logComposerStep("media", "back");
               setStep("media");
             }}
             maxLength={COMPOSER_MAX_LENGTH}
