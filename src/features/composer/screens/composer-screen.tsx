@@ -1,11 +1,12 @@
 import { router, Stack } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
-import { BackHandler, Platform, Pressable, StyleSheet, View } from "react-native";
+import { BackHandler, Platform, StyleSheet } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
 import { logComposerOpen, logComposerPost } from "../analytics";
-import { ComposerMediaStrip } from "../components/composer-media-strip";
+import { ComposerDetailsStep } from "../components/composer-details-step";
+import { ComposerMediaStep } from "../components/composer-media-step";
 import { useComposerDraft } from "../hooks/use-composer-draft";
 import { useComposerMedia } from "../hooks/use-composer-media";
 import { useComposerCreatePost } from "../mutations/use-create-post";
@@ -18,17 +19,7 @@ import { parseRichText } from "@/entities/post";
 import { canTagUser, getUserByHandleData, useMe } from "@/entities/user";
 import { findBlockedMentionHandles } from "@/shared/lib/mention-gate";
 import { takePhoto } from "@/shared/media/picker";
-import {
-  Avatar,
-  Button,
-  ComposerInput,
-  CounterRing,
-  IconButton,
-  LoadingState,
-  Screen,
-  Text,
-  useTheme,
-} from "@/shared/ui";
+import { Button, IconButton, LoadingState, Screen, useTheme } from "@/shared/ui";
 
 export type ComposerStep = "media" | "details";
 
@@ -236,170 +227,51 @@ function ComposerSteps({ draft }: { draft: ComposerDraftState }) {
         ),
       };
 
+  const mediaUris = media.items.map((asset) => asset.uri);
+
   return (
     <Screen testID="composer-screen">
       <Stack.Screen options={headerOptions} />
       <ComposerKeyboardAvoidingView>
         {isMediaStep ? (
-          <View style={styles.root} testID="composer-step-media">
-            <View style={[styles.content, styles.mediaStep]}>
-              <View style={styles.mediaIntro}>
-                <Text variant="h3">Add photos</Text>
-                <Text variant="caption" color="textSecondary">
-                  Choose up to {COMPOSER_MAX_MEDIA} photos, then add a caption on the next step.
-                </Text>
-              </View>
-
-              <View style={styles.mediaActions}>
-                <Button
-                  title="Choose from library"
-                  icon="image"
-                  variant="secondary"
-                  fullWidth
-                  disabled={!media.canAddMore}
-                  testID="composer-media-add"
-                  onPress={() => {
-                    void handleAddPhoto();
-                  }}
-                />
-                <Button
-                  title="Take a photo"
-                  icon="camera"
-                  variant="secondary"
-                  fullWidth
-                  disabled={!media.canAddMore}
-                  testID="composer-camera"
-                  onPress={() => {
-                    void handleTakePhoto();
-                  }}
-                />
-              </View>
-
-              <ComposerMediaStrip
-                uris={media.items.map((asset) => asset.uri)}
-                onRemove={handleRemovePhoto}
-              />
-
-              <Text
-                variant="caption"
-                color="textSecondary"
-                style={styles.mediaCount}
-                testID="composer-media-count"
-              >
-                {media.items.length}/{COMPOSER_MAX_MEDIA} selected
-              </Text>
-
-              {!hasMedia ? (
-                <Pressable
-                  testID="composer-text-only-button"
-                  accessibilityRole="button"
-                  onPress={() => {
-                    setStep("details");
-                  }}
-                  style={styles.textOnly}
-                >
-                  <Text variant="link">Write text only</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          </View>
+          <ComposerMediaStep
+            uris={mediaUris}
+            maxMedia={COMPOSER_MAX_MEDIA}
+            canAddMore={media.canAddMore}
+            onAdd={() => {
+              void handleAddPhoto();
+            }}
+            onTakePhoto={() => {
+              void handleTakePhoto();
+            }}
+            onRemove={handleRemovePhoto}
+            onTextOnly={() => {
+              setStep("details");
+            }}
+          />
         ) : (
-          <View style={styles.root} testID="composer-step-details">
-            <View style={styles.content}>
-              <View style={styles.bodyRow}>
-                <Avatar
-                  displayName={me.data?.displayName ?? "You"}
-                  avatarUrl={me.data?.avatarUrl ?? null}
-                  size={40}
-                  testID="composer-avatar"
-                />
-                <ComposerInput
-                  value={body}
-                  onChangeText={(next) => {
-                    setBody(next);
-                    if (error) setError(null);
-                  }}
-                  placeholder="What's happening?"
-                  maxLength={COMPOSER_MAX_LENGTH}
-                  editable={!busy}
-                  autoFocus
-                  testID="composer-input"
-                  accessibilityLabel="Post body"
-                  style={styles.input}
-                />
-              </View>
-
-              <ComposerMediaStrip
-                uris={media.items.map((asset) => asset.uri)}
-                onRemove={handleRemovePhoto}
-                editable={!busy}
-              />
-
-              {isUploading ? (
-                <Text variant="caption" color="textSecondary" testID="composer-uploading">
-                  Uploading…
-                </Text>
-              ) : null}
-
-              {showRepickNote ? (
-                <Text variant="caption" color="textSecondary" testID="composer-repick-note">
-                  Photos from last time may need re-picking (tmp files don&apos;t survive restart).
-                </Text>
-              ) : null}
-
-              {error ? (
-                <Text
-                  variant="caption"
-                  color="danger"
-                  testID="composer-error"
-                  accessibilityRole="alert"
-                >
-                  {error}
-                </Text>
-              ) : null}
-
-              {queued ? (
-                <Text variant="caption" color="textSecondary" testID="composer-queued-badge">
-                  Queued — will send when online.
-                </Text>
-              ) : null}
-            </View>
-
-            <View
-              testID="composer-toolbar"
-              style={[
-                styles.toolbar,
-                {
-                  backgroundColor: theme.color.surface,
-                  borderTopColor: theme.color.border,
-                },
-              ]}
-            >
-              <Pressable
-                testID="composer-edit-media-button"
-                accessibilityRole="button"
-                accessibilityLabel={hasMedia ? "Change photos" : "Add photos"}
-                onPress={() => {
-                  setStep("media");
-                }}
-                style={styles.toolbarAction}
-              >
-                <Text variant="label" color="primary">
-                  {hasMedia ? "Change photos" : "Add photos"}
-                </Text>
-              </Pressable>
-              <View style={styles.toolbarSpacer} />
-              <View style={styles.counterSlot}>
-                <CounterRing
-                  value={trimmed.length}
-                  max={COMPOSER_MAX_LENGTH}
-                  warnFrom={260 / 280}
-                  testID="composer-counter"
-                  accessibilityLabel={`${COMPOSER_MAX_LENGTH - trimmed.length} characters remaining`}
-                />
-              </View>
-            </View>
-          </View>
+          <ComposerDetailsStep
+            displayName={me.data?.displayName ?? "You"}
+            avatarUrl={me.data?.avatarUrl ?? null}
+            body={body}
+            onChangeBody={(next) => {
+              setBody(next);
+              if (error) setError(null);
+            }}
+            uris={mediaUris}
+            onRemoveMedia={handleRemovePhoto}
+            hasMedia={hasMedia}
+            onChangeMedia={() => {
+              setStep("media");
+            }}
+            maxLength={COMPOSER_MAX_LENGTH}
+            trimmedLength={trimmed.length}
+            busy={busy}
+            isUploading={isUploading}
+            showRepickNote={showRepickNote}
+            error={error}
+            queued={queued}
+          />
         )}
       </ComposerKeyboardAvoidingView>
     </Screen>
@@ -417,58 +289,5 @@ export function handleDismiss(): void {
 const styles = StyleSheet.create({
   avoid: {
     flex: 1,
-  },
-  root: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    gap: 12,
-    padding: 16,
-  },
-  mediaStep: {
-    justifyContent: "center",
-  },
-  mediaIntro: {
-    gap: 4,
-  },
-  mediaActions: {
-    gap: 8,
-  },
-  mediaCount: {
-    textAlign: "center",
-  },
-  textOnly: {
-    alignSelf: "center",
-    paddingVertical: 8,
-  },
-  bodyRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-  },
-  input: {
-    flex: 1,
-  },
-  toolbar: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  toolbarAction: {
-    paddingVertical: 6,
-    paddingRight: 8,
-  },
-  toolbarSpacer: {
-    flex: 1,
-  },
-  counterSlot: {
-    width: 28,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center",
   },
 });
