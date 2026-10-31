@@ -18,7 +18,7 @@ const baseProps = {
   avatarUrl: null,
   body: "Hello",
   onChangeBody: jest.fn(),
-  uris: [],
+  items: [],
   onRemoveMedia: jest.fn(),
   hasMedia: false,
   onChangeMedia: jest.fn(),

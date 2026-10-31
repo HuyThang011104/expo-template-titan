@@ -1623,16 +1623,22 @@ function splitIdPath(path: string): { base: string; id: string | null } {
   return { base: path, id: null };
 }
 
-function mockUploadResponse(): Response {
-  const stamp = Date.now().toString(36);
-  return jsonResponse(
-    {
-      mediaId: `m-new-${stamp}`,
-      url: `https://picsum.photos/seed/upload-${stamp}/800/600`,
-      kind: "image",
-    },
-    200,
-  );
+const MOCK_VIDEO_URL =
+  "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4";
+
+let mockUploadSeq = 0;
+const mockUploads = new Map<string, { kind: "image" | "video"; url: string }>();
+
+function mockUploadResponse(kind: "image" | "video"): Response {
+  // Sequence keeps ids unique when two uploads land in the same millisecond.
+  const stamp = `${Date.now().toString(36)}-${mockUploadSeq++}`;
+  const mediaId = `m-new-${stamp}`;
+  const url =
+    kind === "video"
+      ? MOCK_VIDEO_URL
+      : `https://picsum.photos/seed/upload-${stamp}/800/600`;
+  mockUploads.set(mediaId, { kind, url });
+  return jsonResponse({ mediaId, url, kind }, 200);
 }
 
 function mockCreatePostResponse(bodyText: string | null): Response {
@@ -1651,19 +1657,21 @@ function mockCreatePostResponse(bodyText: string | null): Response {
   if (body.length < 1 || body.length > 280 || !Array.isArray(mediaIds) || mediaIds.length > 4) {
     return jsonResponse({ message: "[mock] Invalid create-post input" }, 400);
   }
-  const media = (mediaIds as unknown[]).slice(0, 4).map((id, index) => ({
-    kind: "image",
-    url: `https://picsum.photos/seed/new-${Date.now()}-${index}/800/600`,
-    _id: typeof id === "string" ? id : undefined,
-  }));
-  // Strip the echo helper before responding; Post schema allows only kind+url.
-  const cleanMedia = media.map(({ kind, url }) => ({ kind, url }));
+  const media = (mediaIds as unknown[]).slice(0, 4).map((id, index) => {
+    const uploaded = typeof id === "string" ? mockUploads.get(id) : undefined;
+    return (
+      uploaded ?? {
+        kind: "image" as const,
+        url: `https://picsum.photos/seed/new-${Date.now()}-${index}/800/600`,
+      }
+    );
+  });
   return jsonResponse(
     {
       id: `feed-p-new-${Date.now().toString(36)}`,
       authorId: mockUsers[0]?.id ?? "u-1",
       body,
-      media: cleanMedia,
+      media,
       likeCount: 0,
       likedByMe: false,
       createdAt: new Date().toISOString(),
@@ -1833,7 +1841,7 @@ function defaultEntityResponse(
     // Multipart upload target (F1.2 composer media). The client sends
     // `FormData`, so there is no JSON body to validate — always succeed.
     if (path === "/uploads") {
-      return mockUploadResponse();
+      return mockUploadResponse(query["kind"] === "video" ? "video" : "image");
     }
     const likeMatch = /^\/posts\/([^/]+)\/like$/.exec(path);
     if (likeMatch?.[1]) {

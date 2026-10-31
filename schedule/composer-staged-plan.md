@@ -1,6 +1,6 @@
 # Plan Composer — Staged composer (media-first) + video MVP
 
-> Trạng thái: **P1–P2 implemented (step shell + extracted media/details steps) — device QA pending; P3+ chưa làm**
+> Trạng thái: **P1–P3 implemented (step shell, extracted steps, video MVP) — device QA pending; P4+ chưa làm**
 > Ngày: 2026-10-31
 > Phạm vi: composer 2 bước trong 1 route, full-screen modal, ảnh + video
 > Nền tảng: Expo SDK 57, React Native 0.86, New Architecture
@@ -143,16 +143,15 @@ type ComposerStep = "media" | "details";
 
 **Outbox `post.create`**
 
-- Payload mới: `{ body: string, media: { uri: string; kind: "image" | "video"; mimeType: string }[] }`.
-- Backward-compat: nhận legacy `{ body, localUris }`, map sang `media` bằng `guessMimeType` (thêm `mp4`, `mov`, `webm`, `m4v`).
-- `parsePostCreatePayload` bỏ điều kiện body min 1; cho phép body rỗng khi `media.length > 0`.
+- **P3 implemented**: giữ payload `{ body, localUris }`; `uploadMedia` gửi `?kind=video`; `outbox-sender` suy ra mime/kind từ đuôi file (`mp4`, `mov`, `m4v`, `webm`) và re-upload đúng video.
+- **P4**: payload mới `{ body: string, media: { uri: string; kind: "image" | "video"; mimeType: string }[] }` (giữ kind/mime rõ ràng), backward-compat `localUris`; bỏ điều kiện body min 1 khi `media.length > 0`.
 - `toPickedMedia(ref)` set đúng `kind` + `mimeType`; `width/height = 0` như hiện tại.
 - `handlePostCreateJob` upload tuần tự như cũ; `createPostRemote` không đổi.
-- `localUris` cũ trong test cần cập nhật theo payload mới.
+- Khi đổi payload ở P4, cập nhật test `localUris` theo shape mới.
 
 **API**
 
-- Không thêm endpoint. `POST /posts { body, mediaIds }` giữ nguyên; `body` có thể rỗng khi có media.
+- Không thêm endpoint. `POST /posts { body, mediaIds }` giữ nguyên; P4 mới cho `body` rỗng khi có media.
 - `/uploads` dùng chung cho ảnh + video. Xác nhận backend trả URL phát được cho video (xem Open questions).
 
 **Mock**

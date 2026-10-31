@@ -72,7 +72,8 @@ export const endpoints = {
     return cursor ? `${base}?cursor=${encode(cursor)}` : base;
   },
   repost: (id: string) => `/posts/${encode(id)}/repost`,
-  uploadSessions: () => "/uploads",
+  uploadSessions: (kind?: "image" | "video") =>
+    kind === "video" ? "/uploads?kind=video" : "/uploads",
   devices: () => "/devices",
   conversation: (id: string) => `/conversations/${encode(id)}`,
   conversationMessages: (id: string, cursor?: string | null) =>

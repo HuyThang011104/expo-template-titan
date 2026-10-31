@@ -40,6 +40,10 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   webp: "image/webp",
   heic: "image/heic",
   heif: "image/heif",
+  mp4: "video/mp4",
+  mov: "video/quicktime",
+  m4v: "video/x-m4v",
+  webm: "video/webm",
 };
 
 function guessMimeType(uri: string): string {
@@ -49,10 +53,18 @@ function guessMimeType(uri: string): string {
 
 /**
  * Rebuilds an uploadable asset from a persisted uri. Dimensions are unknown
- * after a restart — the uploader only needs `uri` + `mimeType`.
+ * after a restart — the uploader only needs `uri` + `mimeType`, and the mime
+ * decides image vs video for re-upload.
  */
 function toPickedMedia(uri: string): PickedMedia {
-  return { uri, width: 0, height: 0, kind: "image", mimeType: guessMimeType(uri) };
+  const mimeType = guessMimeType(uri);
+  return {
+    uri,
+    width: 0,
+    height: 0,
+    kind: mimeType.startsWith("video/") ? "video" : "image",
+    mimeType,
+  };
 }
 
 /**

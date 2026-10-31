@@ -7,9 +7,15 @@
  */
 
 import { parseCreatePostInput, type CreatePostInput } from "@/entities/post";
+import type { PickedMedia } from "@/shared/media";
 
 export const COMPOSER_MAX_LENGTH = 280;
 export const COMPOSER_MAX_MEDIA = 4;
+export const COMPOSER_MAX_VIDEO = 1;
+export const COMPOSER_MAX_VIDEO_DURATION_MS = 90_000;
+export const COMPOSER_MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+export const COMPOSER_MEDIA_MIXED_MESSAGE =
+  "Choose either one video or up to 4 photos, not both.";
 
 export type ComposerValidation =
   | { ok: true; value: CreatePostInput }
@@ -40,4 +46,32 @@ export function validateComposerInput(body: string, mediaIds: string[]): Compose
   const parsed = parseCreatePostInput({ body, mediaIds });
   if (parsed) return { ok: true, value: parsed };
   return validateComposerBody(body);
+}
+
+export type ComposerVideoMeta = {
+  durationMs: number;
+  fileSize: number | null;
+};
+
+/** Video limits (P3): one video, ≤90s, ≤100MB. */
+export function validateComposerVideo(meta: ComposerVideoMeta): string | null {
+  if (meta.durationMs > COMPOSER_MAX_VIDEO_DURATION_MS) {
+    return `Video must be ${COMPOSER_MAX_VIDEO_DURATION_MS / 1000} seconds or shorter.`;
+  }
+  if (meta.fileSize !== null && meta.fileSize > COMPOSER_MAX_VIDEO_BYTES) {
+    return `Video must be ${COMPOSER_MAX_VIDEO_BYTES / (1024 * 1024)}MB or smaller.`;
+  }
+  return null;
+}
+
+/** Session media rules (P3): 1 video XOR up to 4 photos, never mixed. */
+export function validateComposerMedia(media: PickedMedia[]): string | null {
+  const videos = media.filter((asset) => asset.kind === "video");
+  const images = media.filter((asset) => asset.kind === "image");
+  if (videos.length > 0 && images.length > 0) return COMPOSER_MEDIA_MIXED_MESSAGE;
+  if (videos.length > COMPOSER_MAX_VIDEO) return "Attach at most one video.";
+  if (images.length > COMPOSER_MAX_MEDIA) {
+    return `Attach at most ${COMPOSER_MAX_MEDIA} photos.`;
+  }
+  return null;
 }

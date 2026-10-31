@@ -14,6 +14,7 @@ import {
   COMPOSER_MAX_LENGTH,
   COMPOSER_MAX_MEDIA,
   validateComposerBody,
+  validateComposerMedia,
 } from "../validation";
 import { parseRichText } from "@/entities/post";
 import { canTagUser, getUserByHandleData, useMe } from "@/entities/user";
@@ -48,8 +49,8 @@ function ComposerKeyboardAvoidingView({ children }: { children: ReactNode }) {
  *   (caption + preview). A draft with content resumes on `details`.
  * - Chrome lives in the native header: `Dismiss` on media, `Next`; `Back`
  *   and `Post` on details (F1/F2, PF3.1).
- * - Media step: library + camera, up to 4 photos, preview strip, plus a
- *   text-only shortcut so text posts stay one tap away.
+ * - Media step: library + camera, up to 4 photos or one video (≤90s/≤100MB),
+ *   preview strip, plus a text-only shortcut so text posts stay one tap away.
  * - Details: text 1–280 chars, media preview/remove, counter ring.
  * - Pick → upload each via `uploadMedia` → `POST /posts` → prepend feed page 0
  *   → clear draft → dismiss.
@@ -127,6 +128,18 @@ function ComposerSteps({ draft }: { draft: ComposerDraftState }) {
     setLocalUris(next.map((asset) => asset.uri));
   }
 
+  async function handleAddVideo(): Promise<void> {
+    setError(null);
+    const next = await media.pickVideo();
+    setLocalUris(next.map((asset) => asset.uri));
+  }
+
+  async function handleRecordVideo(): Promise<void> {
+    setError(null);
+    const next = await media.recordVideo();
+    setLocalUris(next.map((asset) => asset.uri));
+  }
+
   function handleRemovePhoto(index: number): void {
     const next = media.removeAt(index);
     setLocalUris(next.map((asset) => asset.uri));
@@ -136,8 +149,9 @@ function ComposerSteps({ draft }: { draft: ComposerDraftState }) {
   async function handlePost(): Promise<void> {
     setError(null);
     setQueued(false);
-    if (media.items.length > COMPOSER_MAX_MEDIA) {
-      setError(`Attach at most ${COMPOSER_MAX_MEDIA} photos.`);
+    const mediaCheck = validateComposerMedia(media.items);
+    if (mediaCheck) {
+      setError(mediaCheck);
       return;
     }
     const textCheck = validateComposerBody(body);
@@ -227,27 +241,33 @@ function ComposerSteps({ draft }: { draft: ComposerDraftState }) {
         ),
       };
 
-  const mediaUris = media.items.map((asset) => asset.uri);
-
   return (
     <Screen testID="composer-screen">
       <Stack.Screen options={headerOptions} />
       <ComposerKeyboardAvoidingView>
         {isMediaStep ? (
           <ComposerMediaStep
-            uris={mediaUris}
+            items={media.items}
             maxMedia={COMPOSER_MAX_MEDIA}
-            canAddMore={media.canAddMore}
-            onAdd={() => {
+            canAddImages={media.canAddImages}
+            canAddVideo={media.canAddVideo}
+            onAddImages={() => {
               void handleAddPhoto();
             }}
             onTakePhoto={() => {
               void handleTakePhoto();
             }}
+            onAddVideo={() => {
+              void handleAddVideo();
+            }}
+            onRecordVideo={() => {
+              void handleRecordVideo();
+            }}
             onRemove={handleRemovePhoto}
             onTextOnly={() => {
               setStep("details");
             }}
+            error={media.error}
           />
         ) : (
           <ComposerDetailsStep
@@ -258,7 +278,7 @@ function ComposerSteps({ draft }: { draft: ComposerDraftState }) {
               setBody(next);
               if (error) setError(null);
             }}
-            uris={mediaUris}
+            items={media.items}
             onRemoveMedia={handleRemovePhoto}
             hasMedia={hasMedia}
             onChangeMedia={() => {

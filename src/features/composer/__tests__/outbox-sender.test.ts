@@ -77,6 +77,14 @@ describe("handlePostCreateJob", () => {
     const ids = readFeedIds();
     expect(getPostData(queryClient, ids[0] ?? "")?.media).toHaveLength(1);
   });
+
+  it("keeps video uris as video media on re-upload", async () => {
+    await handlePostCreateJob(JSON.stringify({ body: "video drain", localUris: ["file:///v.mp4"] }), {
+      fetchImpl: mockFetchImpl(),
+    });
+    const ids = readFeedIds();
+    expect(getPostData(queryClient, ids[0] ?? "")?.media[0]?.kind).toBe("video");
+  });
 });
 
 describe("dispatchComposerOutboxJob", () => {

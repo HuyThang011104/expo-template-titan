@@ -6,7 +6,7 @@
 import * as ImagePicker from "expo-image-picker";
 
 import { logger } from "../observability/logger";
-import { ensureCameraAccess, ensurePhotoLibraryAccess } from "../permissions";
+import { ensureCameraAccess, ensureMicrophoneAccess, ensurePhotoLibraryAccess } from "../permissions";
 
 export type PickedMediaKind = "image" | "video";
 
@@ -100,6 +100,26 @@ export async function takePhoto(options: PickOptions = {}): Promise<PickedMedia 
     return collectAssets(result)[0] ?? null;
   } catch {
     logger.warn("[media] camera capture failed");
+    return null;
+  }
+}
+
+/** Camera video capture (OS camera); capped by `videoMaxDuration` seconds. */
+export async function takeVideo(
+  options: { videoMaxDuration?: number } = {},
+): Promise<PickedMedia | null> {
+  if ((await ensureCameraAccess()) !== "granted") return null;
+  if ((await ensureMicrophoneAccess()) !== "granted") return null;
+  try {
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["videos"],
+      allowsMultipleSelection: false,
+      videoMaxDuration: options.videoMaxDuration ?? 90,
+      exif: false,
+    });
+    return collectAssets(result)[0] ?? null;
+  } catch {
+    logger.warn("[media] camera video capture failed");
     return null;
   }
 }

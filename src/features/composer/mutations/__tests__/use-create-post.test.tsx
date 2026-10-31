@@ -129,6 +129,30 @@ describe("useComposerCreatePost", () => {
     expect(mockedEnqueue).not.toHaveBeenCalled();
   });
 
+  it("submitWithMedia keeps a video upload as video media", async () => {
+    const { wrapper, qc, fetchImpl } = setup();
+    const { result } = await renderHook(() => useComposerCreatePost({ fetchImpl }), {
+      wrapper,
+    });
+
+    let postId = "";
+    await act(async () => {
+      const out = await result.current.submitWithMedia("video post", [
+        {
+          uri: "file:///v.mp4",
+          width: 1280,
+          height: 720,
+          kind: "video",
+          mimeType: "video/mp4",
+        },
+      ]);
+      if (out.status !== "posted") throw new Error("expected posted");
+      postId = out.postId;
+    });
+
+    expect(getPostData(qc, postId)?.media[0]?.kind).toBe("video");
+  });
+
   it("offline upload enqueues post.create with localUris", async () => {
     const offlineFetch = (async () => {
       throw new ApiError({ status: null, code: "NETWORK", url: "/uploads", message: "offline" });

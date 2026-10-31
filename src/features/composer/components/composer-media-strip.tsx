@@ -1,28 +1,40 @@
 /**
- * Composer media strip (F1.2).
+ * Composer media strip (F1.2 + P3 video).
  *
- * Horizontal `expo-image` previews of the session picks with a per-thumb
- * remove button. Pure presentational — picking/uploading live in
+ * Horizontal previews of the session picks with a per-thumb remove button.
+ * Images use `expo-image`; videos show a play placeholder + duration (no
+ * player in the strip). Pure presentational — picking/uploading live in
  * `useComposerMedia` / `useComposerCreatePost`.
  */
 
 import { Image } from "expo-image";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
-import { Icon } from "@/shared/ui";
+import type { PickedMedia } from "@/shared/media";
+import { Icon, Text } from "@/shared/ui";
 import { useTheme } from "@/shared/ui/theme/use-theme";
 
 export type ComposerMediaStripProps = {
-  uris: string[];
+  items: PickedMedia[];
   onRemove: (index: number) => void;
   editable?: boolean;
 };
 
 const THUMB_SIZE = 72;
 
-export function ComposerMediaStrip({ uris, onRemove, editable = true }: ComposerMediaStripProps) {
+function formatDuration(durationMs: number | null | undefined): string | null {
+  if (typeof durationMs !== "number" || !Number.isFinite(durationMs) || durationMs <= 0) {
+    return null;
+  }
+  const totalSeconds = Math.round(durationMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+export function ComposerMediaStrip({ items, onRemove, editable = true }: ComposerMediaStripProps) {
   const theme = useTheme();
-  if (uris.length === 0) return null;
+  if (items.length === 0) return null;
   return (
     <ScrollView
       horizontal
@@ -30,31 +42,53 @@ export function ComposerMediaStrip({ uris, onRemove, editable = true }: Composer
       testID="composer-media-strip"
       contentContainerStyle={styles.row}
     >
-      {uris.map((uri, index) => (
-        <View
-          key={`${uri}-${index}`}
-          testID={`composer-media-thumb-${index}`}
-          style={styles.thumbWrap}
-        >
-          <Image
-            source={{ uri }}
-            style={[styles.thumb, { borderRadius: theme.radius.md }]}
-            contentFit="cover"
-            transition={200}
-          />
-          {editable ? (
-            <Pressable
-              testID={`composer-media-remove-${index}`}
-              accessibilityRole="button"
-              accessibilityLabel={`Remove photo ${index + 1}`}
-              onPress={() => onRemove(index)}
-              style={[styles.remove, { backgroundColor: theme.color.surfaceMuted }]}
-            >
-              <Icon name="close" size="sm" color="textPrimary" />
-            </Pressable>
-          ) : null}
-        </View>
-      ))}
+      {items.map((item, index) => {
+        const duration = formatDuration(item.duration);
+        return (
+          <View
+            key={`${item.uri}-${index}`}
+            testID={`composer-media-thumb-${index}`}
+            style={styles.thumbWrap}
+          >
+            {item.kind === "video" ? (
+              <View
+                testID={`composer-media-video-${index}`}
+                style={[
+                  styles.videoThumb,
+                  { borderRadius: theme.radius.md, backgroundColor: theme.color.surfaceMuted },
+                ]}
+              >
+                <Icon name="play" size="lg" color="textSecondary" decorative />
+                {duration ? (
+                  <View style={[styles.duration, { backgroundColor: theme.color.surface }]}>
+                    <Text variant="caption" color="textPrimary">
+                      {duration}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : (
+              <Image
+                source={{ uri: item.uri }}
+                style={[styles.thumb, { borderRadius: theme.radius.md }]}
+                contentFit="cover"
+                transition={200}
+              />
+            )}
+            {editable ? (
+              <Pressable
+                testID={`composer-media-remove-${index}`}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove media ${index + 1}`}
+                onPress={() => onRemove(index)}
+                style={[styles.remove, { backgroundColor: theme.color.surfaceMuted }]}
+              >
+                <Icon name="close" size="sm" color="textPrimary" />
+              </Pressable>
+            ) : null}
+          </View>
+        );
+      })}
     </ScrollView>
   );
 }
@@ -72,6 +106,20 @@ const styles = StyleSheet.create({
   thumb: {
     width: THUMB_SIZE,
     height: THUMB_SIZE,
+  },
+  videoThumb: {
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  duration: {
+    position: "absolute",
+    right: 4,
+    bottom: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
   },
   remove: {
     position: "absolute",

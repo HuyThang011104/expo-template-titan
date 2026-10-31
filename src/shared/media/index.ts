@@ -5,6 +5,7 @@ export {
   normalizeAsset,
   pickFromLibrary,
   takePhoto,
+  takeVideo,
   type LibraryKind,
   type PickOptions,
   type PickedMedia,

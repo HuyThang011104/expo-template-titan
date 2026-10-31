@@ -1,5 +1,5 @@
 /**
- * Tests for F1.2 `useComposerMedia` (session picks, images-only, capped at 4).
+ * Tests for `useComposerMedia` (session picks: one video XOR up to 4 photos).
  *
  * The native picker is stubbed; denial resolves `[]` silently per the kernel.
  */
@@ -8,20 +8,28 @@ import { act, renderHook } from "@testing-library/react-native";
 
 import { useComposerMedia } from "../use-composer-media";
 
+const mockGetRecordingPermissionsAsync = jest.fn();
+const mockRequestRecordingPermissionsAsync = jest.fn();
+
 jest.mock("expo-audio", () => ({
-  getRecordingPermissionsAsync: jest.fn(),
-  requestRecordingPermissionsAsync: jest.fn(),
+  getRecordingPermissionsAsync: (...args: unknown[]) =>
+    mockGetRecordingPermissionsAsync(...args),
+  requestRecordingPermissionsAsync: (...args: unknown[]) =>
+    mockRequestRecordingPermissionsAsync(...args),
 }));
 
 const mockLaunchImageLibraryAsync = jest.fn();
+const mockLaunchCameraAsync = jest.fn();
 const mockGetMediaLibraryPermissionsAsync = jest.fn();
 const mockRequestMediaLibraryPermissionsAsync = jest.fn();
+const mockGetCameraPermissionsAsync = jest.fn();
+const mockRequestCameraPermissionsAsync = jest.fn();
 
 jest.mock("expo-image-picker", () => ({
   launchImageLibraryAsync: (...args: unknown[]) => mockLaunchImageLibraryAsync(...args),
-  launchCameraAsync: jest.fn(),
-  getCameraPermissionsAsync: jest.fn(),
-  requestCameraPermissionsAsync: jest.fn(),
+  launchCameraAsync: (...args: unknown[]) => mockLaunchCameraAsync(...args),
+  getCameraPermissionsAsync: (...args: unknown[]) => mockGetCameraPermissionsAsync(...args),
+  requestCameraPermissionsAsync: (...args: unknown[]) => mockRequestCameraPermissionsAsync(...args),
   getMediaLibraryPermissionsAsync: (...args: unknown[]) =>
     mockGetMediaLibraryPermissionsAsync(...args),
   requestMediaLibraryPermissionsAsync: (...args: unknown[]) =>
@@ -32,13 +40,25 @@ function imageAsset(uri: string) {
   return { uri, width: 100, height: 100, mimeType: "image/jpeg" };
 }
 
+function videoAsset(uri: string, duration = 1500, fileSize = 1024) {
+  return { uri, width: 1280, height: 720, mimeType: "video/mp4", duration, fileSize };
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockGetMediaLibraryPermissionsAsync.mockResolvedValue({ granted: true, canAskAgain: true });
   mockRequestMediaLibraryPermissionsAsync.mockResolvedValue({ granted: true });
+  mockGetCameraPermissionsAsync.mockResolvedValue({ granted: true, canAskAgain: true });
+  mockRequestCameraPermissionsAsync.mockResolvedValue({ granted: true });
+  mockGetRecordingPermissionsAsync.mockResolvedValue({ granted: true, canAskAgain: true });
+  mockRequestRecordingPermissionsAsync.mockResolvedValue({ granted: true });
   mockLaunchImageLibraryAsync.mockResolvedValue({
     canceled: false,
     assets: [imageAsset("file:///a.jpg")],
+  });
+  mockLaunchCameraAsync.mockResolvedValue({
+    canceled: false,
+    assets: [videoAsset("file:///cam.mp4")],
   });
 });
 
@@ -51,6 +71,7 @@ describe("useComposerMedia", () => {
     });
     expect(next).toHaveLength(1);
     expect(result.current.count).toBe(1);
+    expect(result.current.mode).toBe("images");
     expect(mockLaunchImageLibraryAsync).toHaveBeenCalledWith(
       expect.objectContaining({ allowsMultipleSelection: true, quality: 0.8 }),
     );
@@ -64,7 +85,7 @@ describe("useComposerMedia", () => {
       assets: [
         imageAsset("file:///1.jpg"),
         imageAsset("file:///2.jpg"),
-        { uri: "file:///v.mp4", width: 0, height: 0, mimeType: "video/mp4" },
+        videoAsset("file:///v.mp4"),
         imageAsset("file:///3.jpg"),
         imageAsset("file:///4.jpg"),
         imageAsset("file:///5.jpg"),
@@ -87,6 +108,82 @@ describe("useComposerMedia", () => {
     });
     expect(result.current.count).toBe(0);
     expect(mockLaunchImageLibraryAsync).not.toHaveBeenCalled();
+  });
+
+  it("picks one video and locks the photo actions", async () => {
+    mockLaunchImageLibraryAsync.mockResolvedValue({
+      canceled: false,
+      assets: [videoAsset("file:///v.mp4")],
+    });
+    const { result } = await renderHook(() => useComposerMedia());
+    await act(async () => {
+      await result.current.pickVideo();
+    });
+
+    expect(result.current.count).toBe(1);
+    expect(result.current.mode).toBe("video");
+    expect(result.current.canAddImages).toBe(false);
+    expect(result.current.canAddVideo).toBe(false);
+    expect(mockLaunchImageLibraryAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ allowsMultipleSelection: false }),
+    );
+    const options = mockLaunchImageLibraryAsync.mock.calls[0]?.[0] as { mediaTypes?: unknown };
+    expect(options.mediaTypes).toEqual(["videos"]);
+  });
+
+  it("rejects a video longer than 90 seconds", async () => {
+    mockLaunchImageLibraryAsync.mockResolvedValue({
+      canceled: false,
+      assets: [videoAsset("file:///long.mp4", 91_000)],
+    });
+    const { result } = await renderHook(() => useComposerMedia());
+    await act(async () => {
+      await result.current.pickVideo();
+    });
+
+    expect(result.current.count).toBe(0);
+    expect(result.current.error).toBe("Video must be 90 seconds or shorter.");
+  });
+
+  it("rejects a video larger than 100MB", async () => {
+    mockLaunchImageLibraryAsync.mockResolvedValue({
+      canceled: false,
+      assets: [videoAsset("file:///big.mp4", 1500, 100 * 1024 * 1024 + 1)],
+    });
+    const { result } = await renderHook(() => useComposerMedia());
+    await act(async () => {
+      await result.current.pickVideo();
+    });
+
+    expect(result.current.count).toBe(0);
+    expect(result.current.error).toBe("Video must be 100MB or smaller.");
+  });
+
+  it("refuses video once photos are picked", async () => {
+    const { result } = await renderHook(() => useComposerMedia());
+    await act(async () => {
+      await result.current.pickMore();
+    });
+    await act(async () => {
+      await result.current.pickVideo();
+    });
+
+    expect(result.current.count).toBe(1);
+    expect(result.current.mode).toBe("images");
+    expect(result.current.error).toBe("Choose either one video or up to 4 photos, not both.");
+  });
+
+  it("records a video with the OS camera capped at 90s", async () => {
+    const { result } = await renderHook(() => useComposerMedia());
+    await act(async () => {
+      await result.current.recordVideo();
+    });
+
+    expect(mockLaunchCameraAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ mediaTypes: ["videos"], videoMaxDuration: 90 }),
+    );
+    expect(result.current.count).toBe(1);
+    expect(result.current.mode).toBe("video");
   });
 
   it("addAsset appends a captured image and reports the new list", async () => {

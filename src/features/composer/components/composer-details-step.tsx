@@ -8,6 +8,7 @@
 
 import { Pressable, StyleSheet, View } from "react-native";
 
+import type { PickedMedia } from "@/shared/media";
 import { Avatar, ComposerInput, CounterRing, Text, useTheme } from "@/shared/ui";
 
 import { ComposerMediaStrip } from "./composer-media-strip";
@@ -17,7 +18,7 @@ export type ComposerDetailsStepProps = {
   avatarUrl: string | null;
   body: string;
   onChangeBody: (text: string) => void;
-  uris: string[];
+  items: PickedMedia[];
   onRemoveMedia: (index: number) => void;
   hasMedia: boolean;
   onChangeMedia: () => void;
@@ -35,7 +36,7 @@ export function ComposerDetailsStep({
   avatarUrl,
   body,
   onChangeBody,
-  uris,
+  items,
   onRemoveMedia,
   hasMedia,
   onChangeMedia,
@@ -67,7 +68,7 @@ export function ComposerDetailsStep({
           />
         </View>
 
-        <ComposerMediaStrip uris={uris} onRemove={onRemoveMedia} editable={!busy} />
+        <ComposerMediaStrip items={items} onRemove={onRemoveMedia} editable={!busy} />
 
         {isUploading ? (
           <Text variant="caption" color="textSecondary" testID="composer-uploading">
@@ -77,7 +78,7 @@ export function ComposerDetailsStep({
 
         {showRepickNote ? (
           <Text variant="caption" color="textSecondary" testID="composer-repick-note">
-            Photos from last time may need re-picking (tmp files don&apos;t survive restart).
+            Media from last time may need re-picking (tmp files don&apos;t survive restart).
           </Text>
         ) : null}
 
