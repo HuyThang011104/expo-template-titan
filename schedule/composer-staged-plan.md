@@ -1,6 +1,6 @@
 # Plan Composer — Staged composer (media-first) + video MVP
 
-> Trạng thái: **Draft — chưa implement**
+> Trạng thái: **P1 implemented (step shell + full-screen modal) — device QA pending; P2+ chưa làm**
 > Ngày: 2026-10-31
 > Phạm vi: composer 2 bước trong 1 route, full-screen modal, ảnh + video
 > Nền tảng: Expo SDK 57, React Native 0.86, New Architecture

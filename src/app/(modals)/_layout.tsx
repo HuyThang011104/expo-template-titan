@@ -3,8 +3,8 @@ import { Stack } from "expo-router";
 /**
  * Modal group.
  * `presentation` is set per screen here; root only sets `headerShown: false`.
- * Composer = `formSheet`, media-viewer = `modal`, report = `formSheet`,
- * edit-post = `formSheet` (G1.3 text edit), edit-profile = `formSheet`.
+ * Composer = `fullScreenModal` (staged media-first flow), media-viewer = `modal`,
+ * report = `formSheet`, edit-post = `formSheet` (G1.3 text edit), edit-profile = `formSheet`.
  * Settings lives in `(shared)/settings` as a stack, not here (G2.3/G2.4).
  */
 export default function ModalsLayout() {
@@ -12,7 +12,7 @@ export default function ModalsLayout() {
     <Stack>
       <Stack.Screen
         name="composer"
-        options={{ presentation: "formSheet", title: "New post", headerShown: true }}
+        options={{ presentation: "fullScreenModal", title: "New post", headerShown: true }}
       />
       <Stack.Screen
         name="media-viewer"

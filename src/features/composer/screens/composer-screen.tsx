@@ -1,7 +1,7 @@
 import { router, Stack } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { BackHandler, Platform, Pressable, StyleSheet, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
 import { logComposerOpen, logComposerPost } from "../analytics";
@@ -24,10 +24,15 @@ import {
   ComposerInput,
   CounterRing,
   IconButton,
+  LoadingState,
   Screen,
   Text,
   useTheme,
 } from "@/shared/ui";
+
+export type ComposerStep = "media" | "details";
+
+type ComposerDraftState = ReturnType<typeof useComposerDraft>;
 
 /**
  * Keyboard scope mirroring `KeyboardScope` in `app-providers.tsx`: the
@@ -46,14 +51,17 @@ function ComposerKeyboardAvoidingView({ children }: { children: ReactNode }) {
 }
 
 /**
- * Composer screen (F1.4 polish).
+ * Composer screen (F1.4 polish, staged flow).
  *
- * - Chrome lives in the native header: `close` left, pill `Post` right (F1/F2).
- * - Pinned toolbar: library + camera icon buttons; `CounterRing` reserves a
- *   slot on the right and appears from 260/280 (F1/F2, PD1/PD2).
- * - Text 1–280 chars + 0–4 images (`images` only, `allowsMultiple`, `quality 0.8`).
- * - Pick → preview strip → upload each via `uploadMedia` → `POST /posts` →
- *   prepend feed page 0 → clear draft → dismiss.
+ * - Two steps in one route: `media` (pick images first) then `details`
+ *   (caption + preview). A draft with content resumes on `details`.
+ * - Chrome lives in the native header: `Dismiss` on media, `Next`; `Back`
+ *   and `Post` on details (F1/F2, PF3.1).
+ * - Media step: library + camera, up to 4 photos, preview strip, plus a
+ *   text-only shortcut so text posts stay one tap away.
+ * - Details: text 1–280 chars, media preview/remove, counter ring.
+ * - Pick → upload each via `uploadMedia` → `POST /posts` → prepend feed page 0
+ *   → clear draft → dismiss.
  * - Draft persists text + local uris; tmp files may vanish after kill — the
  *   screen warns that photos may need re-picking.
  * - Offline anywhere → outbox `post.create` with `localUris`, badge
@@ -64,24 +72,56 @@ function ComposerKeyboardAvoidingView({ children }: { children: ReactNode }) {
  *   on route change) plus `logComposerOpen` for the feature event.
  */
 export function ComposerScreen() {
-  const theme = useTheme();
-  const qc = useQueryClient();
-  const me = useMe();
-  const { body, setBody, localUris, setLocalUris, loaded, clear } = useComposerDraft();
-  const media = useComposerMedia();
-  const { submitWithMedia, isPending, isUploading } = useComposerCreatePost();
-  const [error, setError] = useState<string | null>(null);
-  const [queued, setQueued] = useState(false);
+  const draft = useComposerDraft();
 
   useEffect(() => {
     logComposerOpen();
   }, []);
 
+  if (!draft.loaded) {
+    return (
+      <Screen testID="composer-screen">
+        <LoadingState label="Loading draft" testID="composer-draft-loading" />
+      </Screen>
+    );
+  }
+
+  return <ComposerSteps draft={draft} />;
+}
+
+/**
+ * Mounted only after the draft has loaded, so the first step can be derived
+ * from stored content without a state-sync effect (draft content → Details).
+ */
+function ComposerSteps({ draft }: { draft: ComposerDraftState }) {
+  const theme = useTheme();
+  const qc = useQueryClient();
+  const me = useMe();
+  const { body, setBody, localUris, setLocalUris, clear } = draft;
+  const media = useComposerMedia();
+  const { submitWithMedia, isPending, isUploading } = useComposerCreatePost();
+  const [step, setStep] = useState<ComposerStep>(() =>
+    draft.body.trim().length > 0 || draft.localUris.length > 0 ? "details" : "media",
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [queued, setQueued] = useState(false);
+
+  // Android hardware back steps Details → Media; a second back dismisses.
+  useEffect(() => {
+    if (step !== "details" || Platform.OS === "web") return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      setStep("media");
+      return true;
+    });
+    return () => subscription.remove();
+  }, [step]);
+
   const trimmed = body.trim();
   const overLimit = trimmed.length > COMPOSER_MAX_LENGTH;
   const busy = isPending || isUploading;
-  const canPost = loaded && trimmed.length > 0 && !overLimit && !busy;
-  const showRepickNote = loaded && localUris.length > 0 && media.items.length === 0;
+  const canPost = trimmed.length > 0 && !overLimit && !busy;
+  const hasMedia = media.items.length > 0;
+  const showRepickNote = localUris.length > 0 && media.items.length === 0;
   const postLabel = isUploading ? "Uploading…" : isPending ? "Posting…" : "Post";
 
   async function handleAddPhoto(): Promise<void> {
@@ -142,143 +182,225 @@ export function ComposerScreen() {
     }
   }
 
+  const isMediaStep = step === "media";
+  const headerOptions = isMediaStep
+    ? {
+        headerLeft: () => (
+          <IconButton
+            icon="close"
+            size="sm"
+            accessibilityLabel="Dismiss"
+            testID="composer-dismiss-button"
+            onPress={handleDismiss}
+          />
+        ),
+        headerRight: () => (
+          <Button
+            title="Next"
+            variant="primary"
+            size="sm"
+            testID="composer-next-button"
+            disabled={!hasMedia}
+            style={{ borderRadius: theme.radius.full }}
+            onPress={() => {
+              setStep("details");
+            }}
+          />
+        ),
+      }
+    : {
+        headerLeft: () => (
+          <IconButton
+            icon="back"
+            size="sm"
+            accessibilityLabel="Back to media"
+            testID="composer-back-button"
+            onPress={() => {
+              setStep("media");
+            }}
+          />
+        ),
+        headerRight: () => (
+          <Button
+            title={postLabel}
+            variant="primary"
+            size="sm"
+            testID="composer-post-button"
+            disabled={!canPost}
+            loading={busy}
+            style={{ borderRadius: theme.radius.full }}
+            onPress={() => {
+              void handlePost();
+            }}
+          />
+        ),
+      };
+
   return (
     <Screen testID="composer-screen">
-      <Stack.Screen
-        options={{
-          headerLeft: () => (
-            <IconButton
-              icon="close"
-              size="sm"
-              accessibilityLabel="Dismiss"
-              testID="composer-dismiss-button"
-              onPress={handleDismiss}
-            />
-          ),
-          headerRight: () => (
-            <Button
-              title={postLabel}
-              variant="primary"
-              size="sm"
-              testID="composer-post-button"
-              disabled={!canPost}
-              loading={busy}
-              style={{ borderRadius: theme.radius.full }}
-              onPress={() => {
-                void handlePost();
-              }}
-            />
-          ),
-        }}
-      />
+      <Stack.Screen options={headerOptions} />
       <ComposerKeyboardAvoidingView>
-        <View style={styles.root}>
-          <View style={styles.content}>
-            <View style={styles.bodyRow}>
-              <Avatar
-                displayName={me.data?.displayName ?? "You"}
-                avatarUrl={me.data?.avatarUrl ?? null}
-                size={40}
-                testID="composer-avatar"
+        {isMediaStep ? (
+          <View style={styles.root} testID="composer-step-media">
+            <View style={[styles.content, styles.mediaStep]}>
+              <View style={styles.mediaIntro}>
+                <Text variant="h3">Add photos</Text>
+                <Text variant="caption" color="textSecondary">
+                  Choose up to {COMPOSER_MAX_MEDIA} photos, then add a caption on the next step.
+                </Text>
+              </View>
+
+              <View style={styles.mediaActions}>
+                <Button
+                  title="Choose from library"
+                  icon="image"
+                  variant="secondary"
+                  fullWidth
+                  disabled={!media.canAddMore}
+                  testID="composer-media-add"
+                  onPress={() => {
+                    void handleAddPhoto();
+                  }}
+                />
+                <Button
+                  title="Take a photo"
+                  icon="camera"
+                  variant="secondary"
+                  fullWidth
+                  disabled={!media.canAddMore}
+                  testID="composer-camera"
+                  onPress={() => {
+                    void handleTakePhoto();
+                  }}
+                />
+              </View>
+
+              <ComposerMediaStrip
+                uris={media.items.map((asset) => asset.uri)}
+                onRemove={handleRemovePhoto}
               />
-              <ComposerInput
-                value={body}
-                onChangeText={(next) => {
-                  setBody(next);
-                  if (error) setError(null);
-                }}
-                placeholder="What's happening?"
-                maxLength={COMPOSER_MAX_LENGTH}
-                editable={!busy}
-                autoFocus
-                testID="composer-input"
-                accessibilityLabel="Post body"
-                style={styles.input}
-              />
-            </View>
 
-            <ComposerMediaStrip
-              uris={media.items.map((asset) => asset.uri)}
-              onRemove={handleRemovePhoto}
-              editable={!busy}
-            />
-
-            {isUploading ? (
-              <Text variant="caption" color="textSecondary" testID="composer-uploading">
-                Uploading…
-              </Text>
-            ) : null}
-
-            {showRepickNote ? (
-              <Text variant="caption" color="textSecondary" testID="composer-repick-note">
-                Photos from last time may need re-picking (tmp files don&apos;t survive restart).
-              </Text>
-            ) : null}
-
-            {error ? (
               <Text
                 variant="caption"
-                color="danger"
-                testID="composer-error"
-                accessibilityRole="alert"
+                color="textSecondary"
+                style={styles.mediaCount}
+                testID="composer-media-count"
               >
-                {error}
+                {media.items.length}/{COMPOSER_MAX_MEDIA} selected
               </Text>
-            ) : null}
 
-            {queued ? (
-              <Text variant="caption" color="textSecondary" testID="composer-queued-badge">
-                Queued — will send when online.
-              </Text>
-            ) : null}
-
-            {!loaded ? (
-              <Text variant="caption" color="textSecondary">
-                Loading draft…
-              </Text>
-            ) : null}
-          </View>
-
-          <View
-            testID="composer-toolbar"
-            style={[
-              styles.toolbar,
-              {
-                backgroundColor: theme.color.surface,
-                borderTopColor: theme.color.border,
-              },
-            ]}
-          >
-            <IconButton
-              icon="image"
-              accessibilityLabel="Add photo"
-              testID="composer-media-add"
-              disabled={!media.canAddMore || busy}
-              onPress={() => {
-                void handleAddPhoto();
-              }}
-            />
-            <IconButton
-              icon="camera"
-              accessibilityLabel="Take photo"
-              testID="composer-camera"
-              disabled={!media.canAddMore || busy}
-              onPress={() => {
-                void handleTakePhoto();
-              }}
-            />
-            <View style={styles.toolbarSpacer} />
-            <View style={styles.counterSlot}>
-              <CounterRing
-                value={trimmed.length}
-                max={COMPOSER_MAX_LENGTH}
-                warnFrom={260 / 280}
-                testID="composer-counter"
-                accessibilityLabel={`${COMPOSER_MAX_LENGTH - trimmed.length} characters remaining`}
-              />
+              {!hasMedia ? (
+                <Pressable
+                  testID="composer-text-only-button"
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setStep("details");
+                  }}
+                  style={styles.textOnly}
+                >
+                  <Text variant="link">Write text only</Text>
+                </Pressable>
+              ) : null}
             </View>
           </View>
-        </View>
+        ) : (
+          <View style={styles.root} testID="composer-step-details">
+            <View style={styles.content}>
+              <View style={styles.bodyRow}>
+                <Avatar
+                  displayName={me.data?.displayName ?? "You"}
+                  avatarUrl={me.data?.avatarUrl ?? null}
+                  size={40}
+                  testID="composer-avatar"
+                />
+                <ComposerInput
+                  value={body}
+                  onChangeText={(next) => {
+                    setBody(next);
+                    if (error) setError(null);
+                  }}
+                  placeholder="What's happening?"
+                  maxLength={COMPOSER_MAX_LENGTH}
+                  editable={!busy}
+                  autoFocus
+                  testID="composer-input"
+                  accessibilityLabel="Post body"
+                  style={styles.input}
+                />
+              </View>
+
+              <ComposerMediaStrip
+                uris={media.items.map((asset) => asset.uri)}
+                onRemove={handleRemovePhoto}
+                editable={!busy}
+              />
+
+              {isUploading ? (
+                <Text variant="caption" color="textSecondary" testID="composer-uploading">
+                  Uploading…
+                </Text>
+              ) : null}
+
+              {showRepickNote ? (
+                <Text variant="caption" color="textSecondary" testID="composer-repick-note">
+                  Photos from last time may need re-picking (tmp files don&apos;t survive restart).
+                </Text>
+              ) : null}
+
+              {error ? (
+                <Text
+                  variant="caption"
+                  color="danger"
+                  testID="composer-error"
+                  accessibilityRole="alert"
+                >
+                  {error}
+                </Text>
+              ) : null}
+
+              {queued ? (
+                <Text variant="caption" color="textSecondary" testID="composer-queued-badge">
+                  Queued — will send when online.
+                </Text>
+              ) : null}
+            </View>
+
+            <View
+              testID="composer-toolbar"
+              style={[
+                styles.toolbar,
+                {
+                  backgroundColor: theme.color.surface,
+                  borderTopColor: theme.color.border,
+                },
+              ]}
+            >
+              <Pressable
+                testID="composer-edit-media-button"
+                accessibilityRole="button"
+                accessibilityLabel={hasMedia ? "Change photos" : "Add photos"}
+                onPress={() => {
+                  setStep("media");
+                }}
+                style={styles.toolbarAction}
+              >
+                <Text variant="label" color="primary">
+                  {hasMedia ? "Change photos" : "Add photos"}
+                </Text>
+              </Pressable>
+              <View style={styles.toolbarSpacer} />
+              <View style={styles.counterSlot}>
+                <CounterRing
+                  value={trimmed.length}
+                  max={COMPOSER_MAX_LENGTH}
+                  warnFrom={260 / 280}
+                  testID="composer-counter"
+                  accessibilityLabel={`${COMPOSER_MAX_LENGTH - trimmed.length} characters remaining`}
+                />
+              </View>
+            </View>
+          </View>
+        )}
       </ComposerKeyboardAvoidingView>
     </Screen>
   );
@@ -304,6 +426,22 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 16,
   },
+  mediaStep: {
+    justifyContent: "center",
+  },
+  mediaIntro: {
+    gap: 4,
+  },
+  mediaActions: {
+    gap: 8,
+  },
+  mediaCount: {
+    textAlign: "center",
+  },
+  textOnly: {
+    alignSelf: "center",
+    paddingVertical: 8,
+  },
   bodyRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -319,6 +457,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  toolbarAction: {
+    paddingVertical: 6,
+    paddingRight: 8,
   },
   toolbarSpacer: {
     flex: 1,
