@@ -36,7 +36,14 @@ describe("parseCreatePostInput", () => {
     });
   });
 
-  it("rejects empty body, overlong body, and >4 media (no throw)", () => {
+  it("accepts an empty caption when media is attached", () => {
+    expect(parseCreatePostInput({ body: "   ", mediaIds: ["m1"] })).toEqual({
+      body: "",
+      mediaIds: ["m1"],
+    });
+  });
+
+  it("rejects empty caption without media, overlong body, and >4 media (no throw)", () => {
     expect(parseCreatePostInput({ body: "   ", mediaIds: [] })).toBeNull();
     expect(parseCreatePostInput({ body: "x".repeat(281), mediaIds: [] })).toBeNull();
     expect(parseCreatePostInput({ body: "ok", mediaIds: ["1", "2", "3", "4", "5"] })).toBeNull();
@@ -52,6 +59,15 @@ describe("createPostRemote (mock)", () => {
     expect(post?.body).toBe("hello feed");
     expect(post?.likeCount).toBe(0);
     expect(post?.likedByMe).toBe(false);
+  });
+
+  it("creates a media-only post with an empty caption", async () => {
+    const post = await createPostRemote("", ["m1"], {
+      fetchImpl: createMockFetch({ delayMs: 0 }),
+    });
+    expect(post).not.toBeNull();
+    expect(post?.body).toBe("");
+    expect(post?.media).toHaveLength(1);
   });
 
   it("throws on invalid input (mock 400)", async () => {

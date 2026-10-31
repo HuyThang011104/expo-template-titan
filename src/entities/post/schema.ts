@@ -69,10 +69,14 @@ export function parseFeedWireItem(data: unknown): FeedWireItem | null {
   return shaped.data;
 }
 
-export const createPostInputSchema = z.object({
-  body: z.string().trim().min(1).max(280),
-  mediaIds: z.array(z.string().min(1)).max(4),
-});
+export const createPostInputSchema = z
+  .object({
+    body: z.string().trim().max(280),
+    mediaIds: z.array(z.string().min(1)).max(4),
+  })
+  .refine((input) => input.body.length > 0 || input.mediaIds.length > 0, {
+    message: "A post needs text or media.",
+  });
 
 export type CreatePostInput = z.infer<typeof createPostInputSchema>;
 

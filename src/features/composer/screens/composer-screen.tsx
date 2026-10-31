@@ -13,7 +13,7 @@ import { useComposerCreatePost } from "../mutations/use-create-post";
 import {
   COMPOSER_MAX_LENGTH,
   COMPOSER_MAX_MEDIA,
-  validateComposerBody,
+  validateComposerContent,
   validateComposerMedia,
 } from "../validation";
 import { parseRichText } from "@/entities/post";
@@ -111,8 +111,8 @@ function ComposerSteps({ draft }: { draft: ComposerDraftState }) {
   const trimmed = body.trim();
   const overLimit = trimmed.length > COMPOSER_MAX_LENGTH;
   const busy = isPending || isUploading;
-  const canPost = trimmed.length > 0 && !overLimit && !busy;
   const hasMedia = media.items.length > 0;
+  const canPost = (trimmed.length > 0 || hasMedia) && !overLimit && !busy;
   const showRepickNote = localUris.length > 0 && media.items.length === 0;
   const postLabel = isUploading ? "Uploading…" : isPending ? "Posting…" : "Post";
 
@@ -154,14 +154,14 @@ function ComposerSteps({ draft }: { draft: ComposerDraftState }) {
       setError(mediaCheck);
       return;
     }
-    const textCheck = validateComposerBody(body);
-    if (!textCheck.ok) {
-      setError(textCheck.error);
+    const contentCheck = validateComposerContent(body, media.items.length);
+    if (!contentCheck.ok) {
+      setError(contentCheck.error);
       return;
     }
     // G2.3: respect mentioned users' tagAudience before sending.
     const viewerId = me.data?.id ?? "";
-    const handles = parseRichText(textCheck.value.body)
+    const handles = parseRichText(contentCheck.body)
       .filter((segment) => segment.kind === "mention")
       .map((segment) => (segment.kind === "mention" ? segment.handle : ""));
     const blocked = findBlockedMentionHandles(
@@ -175,7 +175,7 @@ function ComposerSteps({ draft }: { draft: ComposerDraftState }) {
     }
     logComposerPost();
     try {
-      const result = await submitWithMedia(textCheck.value.body, media.items);
+      const result = await submitWithMedia(contentCheck.body, media.items);
       if (result.status === "queued") {
         setQueued(true);
         return;

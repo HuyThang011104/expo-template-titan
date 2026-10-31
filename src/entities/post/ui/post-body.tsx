@@ -49,6 +49,10 @@ export function PostBody({
   const [overflowing, setOverflowing] = useState(false);
   const segments = useMemo(() => parseRichText(body), [body]);
 
+  // Media-only posts (P4) have no caption: render nothing instead of an empty
+  // Text block (which would add a gap above/below the media).
+  if (body.trim().length === 0) return null;
+
   function handleTextLayout(event: NativeSyntheticEvent<TextLayoutEventData>): void {
     if (expanded || overflowing) return;
     if (event.nativeEvent.lines.length >= clampLines) setOverflowing(true);

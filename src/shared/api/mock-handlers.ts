@@ -1654,7 +1654,12 @@ function mockCreatePostResponse(bodyText: string | null): Response {
   } catch {
     return jsonResponse({ message: "[mock] Invalid JSON" }, 400);
   }
-  if (body.length < 1 || body.length > 280 || !Array.isArray(mediaIds) || mediaIds.length > 4) {
+  if (
+    body.length > 280 ||
+    !Array.isArray(mediaIds) ||
+    mediaIds.length > 4 ||
+    (body.length === 0 && mediaIds.length === 0)
+  ) {
     return jsonResponse({ message: "[mock] Invalid create-post input" }, 400);
   }
   const media = (mediaIds as unknown[]).slice(0, 4).map((id, index) => {

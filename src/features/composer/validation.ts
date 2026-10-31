@@ -21,6 +21,37 @@ export type ComposerValidation =
   | { ok: true; value: CreatePostInput }
   | { ok: false; error: string };
 
+export type ComposerContentValidation =
+  | { ok: true; body: string }
+  | { ok: false; error: string };
+
+/**
+ * Validate the final post content (P4): text 1–280 and/or media (one video XOR
+ * up to 4 photos). Empty caption is allowed when media is attached.
+ */
+export function validateComposerContent(
+  body: string,
+  mediaCount: number,
+): ComposerContentValidation {
+  if (mediaCount > COMPOSER_MAX_MEDIA) {
+    return { ok: false, error: `Attach at most ${COMPOSER_MAX_MEDIA} media items.` };
+  }
+  const trimmed = body.trim();
+  if (trimmed.length > COMPOSER_MAX_LENGTH) {
+    return { ok: false, error: `Posts are limited to ${COMPOSER_MAX_LENGTH} characters.` };
+  }
+  if (trimmed.length === 0 && mediaCount === 0) {
+    return { ok: false, error: "Write something or add media." };
+  }
+  const parsed = parseCreatePostInput({
+    body: trimmed,
+    // Only the count matters here; the screen sends the real upload ids.
+    mediaIds: Array.from({ length: mediaCount }, (_, index) => `local-${index}`),
+  });
+  if (!parsed) return { ok: false, error: "That content isn't valid." };
+  return { ok: true, body: parsed.body };
+}
+
 /**
  * Validate text-only composer body (`mediaIds: []`).
  * Returns the trimmed `CreatePostInput` or an inline message.
@@ -37,15 +68,16 @@ export function validateComposerBody(body: string): ComposerValidation {
 }
 
 /**
- * Generic validator for future media support (F1.2 keeps `mediaIds <= 4`).
+ * Validator for id-based media (kept for API parity/tests). Delegates to the
+ * content validator so media-only posts pass when `mediaIds` is non-empty.
  */
 export function validateComposerInput(body: string, mediaIds: string[]): ComposerValidation {
   if (mediaIds.length > COMPOSER_MAX_MEDIA) {
-    return { ok: false, error: `Attach at most ${COMPOSER_MAX_MEDIA} photos.` };
+    return { ok: false, error: `Attach at most ${COMPOSER_MAX_MEDIA} media items.` };
   }
-  const parsed = parseCreatePostInput({ body, mediaIds });
-  if (parsed) return { ok: true, value: parsed };
-  return validateComposerBody(body);
+  const content = validateComposerContent(body, mediaIds.length);
+  if (!content.ok) return content;
+  return { ok: true, value: { body: content.body, mediaIds } };
 }
 
 export type ComposerVideoMeta = {

@@ -89,7 +89,11 @@ export function parsePostCreatePayload(raw: string): ComposerOutboxPayload {
   ) {
     throw new Error("[composer] Invalid post.create payload: bad localUris");
   }
-  const valid = parseCreatePostInput({ body, mediaIds: [] });
+  const valid = parseCreatePostInput({
+    body,
+    // P4: media-only posts allow an empty caption; only the count matters here.
+    mediaIds: localUris.map((_, index) => `local-${index}`),
+  });
   if (!valid) throw new Error("[composer] Invalid post.create payload: bad body");
   return { body: valid.body, localUris };
 }

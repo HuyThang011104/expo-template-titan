@@ -8,6 +8,7 @@ import {
   COMPOSER_MAX_VIDEO_BYTES,
   COMPOSER_MAX_VIDEO_DURATION_MS,
   validateComposerBody,
+  validateComposerContent,
   validateComposerInput,
   validateComposerMedia,
   validateComposerVideo,
@@ -39,6 +40,34 @@ describe("validateComposerInput", () => {
   it("rejects more than 4 media ids", () => {
     const result = validateComposerInput("ok", ["1", "2", "3", "4", "5"]);
     expect(result.ok).toBe(false);
+  });
+
+  it("accepts a media-only post with an empty caption", () => {
+    const result = validateComposerInput("   ", ["m1"]);
+    expect(result).toEqual({ ok: true, value: { body: "", mediaIds: ["m1"] } });
+  });
+});
+
+describe("validateComposerContent", () => {
+  it("accepts text-only and media-only content", () => {
+    expect(validateComposerContent("  hello  ", 0)).toEqual({ ok: true, body: "hello" });
+    expect(validateComposerContent("", 1)).toEqual({ ok: true, body: "" });
+    expect(validateComposerContent("   ", 4)).toEqual({ ok: true, body: "" });
+  });
+
+  it("rejects empty content without media, overlong text, and too much media", () => {
+    expect(validateComposerContent("   ", 0)).toEqual({
+      ok: false,
+      error: "Write something or add media.",
+    });
+    expect(validateComposerContent("x".repeat(COMPOSER_MAX_LENGTH + 1), 1)).toEqual({
+      ok: false,
+      error: `Posts are limited to ${COMPOSER_MAX_LENGTH} characters.`,
+    });
+    expect(validateComposerContent("ok", 5)).toEqual({
+      ok: false,
+      error: "Attach at most 4 media items.",
+    });
   });
 });
 
