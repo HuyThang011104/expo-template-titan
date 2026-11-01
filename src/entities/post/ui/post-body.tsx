@@ -4,7 +4,7 @@
  * Dumb: renders `parseRichText` segments as nested `Text` (plain text never
  * gets a press handler, so it can't mis-tap; spans flow inline, so lines
  * never break). Mention/hashtag navigation is feature-owned via callbacks
- * (same pattern as `onSafetyPress`). Links ask for confirmation in a sheet
+ * (same pattern as `onRepostPress`). Links ask for confirmation in a sheet
  * before opening the browser.
  */
 

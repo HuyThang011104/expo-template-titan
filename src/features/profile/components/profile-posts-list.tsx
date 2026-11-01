@@ -9,7 +9,7 @@
 import type { FlashListRef } from "@shopify/flash-list";
 import { router } from "expo-router";
 import type { ReactElement, Ref } from "react";
-import { StyleSheet, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
+import { Alert, StyleSheet, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 
 import { PostCard } from "@/entities/post";
 import { SaveButton } from "@/entities/saved";
@@ -67,8 +67,8 @@ function ProfilePostItem({
       onMediaPress={(index) => {
         router.push(hrefs.mediaViewer(postId, index));
       }}
-      onSafetyPress={() => {
-        router.push(hrefs.report("post", postId));
+      onRepostPress={() => {
+        Alert.alert("Repost", "Reposting is coming soon.");
       }}
       onOwnerEditPress={() => {
         router.push(hrefs.editPost(postId));
@@ -79,7 +79,7 @@ function ProfilePostItem({
       onHashtagPress={(tag) => {
         router.push(hrefs.hashtag(tag));
       }}
-      saveAffordance={<SaveButton postId={postId} />}
+      saveAffordance={<SaveButton postId={postId} variant="row" />}
     />
   );
 }

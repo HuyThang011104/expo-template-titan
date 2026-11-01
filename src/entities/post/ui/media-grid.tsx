@@ -21,8 +21,10 @@ import type { PostMedia } from "../model";
 export type MediaGridProps = {
   media: PostMedia[];
   onPress?: (index: number) => void;
-  /** Cap for the single-media ratio. Defaults to 420. */
+  /** Cap for the single-media ratio. Defaults to 420; ignored by `feed`. */
   maxHeight?: number;
+  /** `feed` is edge-to-edge with no radius; `card` keeps the inset frame. */
+  variant?: "feed" | "card";
   testID?: string;
 };
 
@@ -33,13 +35,19 @@ export function MediaGrid({
   media,
   onPress,
   maxHeight = SINGLE_MAX_HEIGHT,
+  variant = "card",
   testID,
 }: MediaGridProps) {
   const theme = useTheme();
 
   if (media.length === 0) return null;
 
-  const gap = theme.space[1];
+  const gap = variant === "feed" ? 2 : theme.space[1];
+  const radius = variant === "feed" ? 0 : theme.radius.md;
+  const singleStyle =
+    variant === "feed"
+      ? { aspectRatio: SINGLE_ASPECT_RATIO, borderRadius: 0 }
+      : { aspectRatio: SINGLE_ASPECT_RATIO, maxHeight, borderRadius: radius };
 
   if (media.length === 1) {
     return (
@@ -50,11 +58,7 @@ export function MediaGrid({
           count={1}
           onPress={onPress}
           testID={testID ? `${testID}-0` : undefined}
-          style={{
-            aspectRatio: SINGLE_ASPECT_RATIO,
-            maxHeight,
-            borderRadius: theme.radius.md,
-          }}
+          style={singleStyle}
         />
       </View>
     );
@@ -71,7 +75,7 @@ export function MediaGrid({
             count={media.length}
             onPress={onPress}
             testID={testID ? `${testID}-${index}` : undefined}
-            style={[styles.cell, { borderRadius: theme.radius.md }]}
+            style={[styles.cell, { borderRadius: radius }]}
           />
         ))}
       </View>
@@ -87,7 +91,7 @@ export function MediaGrid({
           count={3}
           onPress={onPress}
           testID={testID ? `${testID}-0` : undefined}
-          style={[styles.largeCell, { borderRadius: theme.radius.md }]}
+          style={[styles.largeCell, { borderRadius: radius }]}
         />
         <View style={[styles.column, { gap }]}>
           {media.slice(1).map((item, offset) => {
@@ -100,7 +104,7 @@ export function MediaGrid({
                 count={3}
                 onPress={onPress}
                 testID={testID ? `${testID}-${index}` : undefined}
-                style={[styles.smallCell, { borderRadius: theme.radius.md }]}
+                style={[styles.smallCell, { borderRadius: radius }]}
               />
             );
           })}
@@ -118,7 +122,7 @@ export function MediaGrid({
           count={media.length}
           onPress={onPress}
           testID={testID ? `${testID}-0` : undefined}
-          style={[styles.cell, { borderRadius: theme.radius.md }]}
+          style={[styles.cell, { borderRadius: radius }]}
         />
         <MediaTile
           item={media[2]}
@@ -126,7 +130,7 @@ export function MediaGrid({
           count={media.length}
           onPress={onPress}
           testID={testID ? `${testID}-2` : undefined}
-          style={[styles.cell, { borderRadius: theme.radius.md }]}
+          style={[styles.cell, { borderRadius: radius }]}
         />
       </View>
       <View style={[styles.column, { gap }]}>
@@ -136,7 +140,7 @@ export function MediaGrid({
           count={media.length}
           onPress={onPress}
           testID={testID ? `${testID}-1` : undefined}
-          style={[styles.cell, { borderRadius: theme.radius.md }]}
+          style={[styles.cell, { borderRadius: radius }]}
         />
         <MediaTile
           item={media[3]}
@@ -144,7 +148,7 @@ export function MediaGrid({
           count={media.length}
           onPress={onPress}
           testID={testID ? `${testID}-3` : undefined}
-          style={[styles.cell, { borderRadius: theme.radius.md }]}
+          style={[styles.cell, { borderRadius: radius }]}
         />
       </View>
     </View>
@@ -167,10 +171,7 @@ function MediaTile({ item, index, count, onPress, style, testID }: MediaTileProp
   const videoTestID = testID ? `${testID}-video` : undefined;
 
   const content = video ? (
-    <View
-      testID={videoTestID}
-      style={[styles.videoTile, { backgroundColor: theme.color.overlay }]}
-    >
+    <View testID={videoTestID} style={[styles.videoTile, { backgroundColor: theme.color.overlay }]}>
       <View style={[styles.playBadge, { backgroundColor: theme.color.primary }]}>
         <Icon name="play" size="md" color="onPrimary" decorative />
       </View>

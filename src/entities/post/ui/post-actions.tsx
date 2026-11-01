@@ -1,13 +1,13 @@
 /**
  * Post action row — the single row under every card.
  *
- * Spec: docs/feel-spec.md §4.1 (F14). `comment` is icon-only (the feature
- * opens detail with `focus=comment`), `like` shows the count only when > 0,
- * then a spacer pushes `share`/`save` to the right. Like fills + haptic +
- * spring pop on like only (F3, F10 — reduce motion drops the spring).
+ * Spec: docs/feel-spec.md §4.1 (F14). Four equal icon actions: Like,
+ * Comment, Repost, Share. Like shows its count only when > 0; Save lives in
+ * the three-dot options sheet. Like fills + haptic + spring pop (F3, F10 —
+ * reduce motion drops the spring). Repost is a feature-owned callback until
+ * the server endpoint lands.
  */
 
-import type { ReactNode } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
@@ -29,16 +29,35 @@ export type PostActionsProps = {
   postId: string;
   testID?: string;
   onCommentPress?: () => void;
-  /** Cross-entity by design: the feature injects `<SaveButton postId />`. */
-  saveAffordance?: ReactNode;
+  /** Feature-owned until the repost endpoint exists. */
+  onRepostPress?: () => void;
 };
 
-export function PostActions({
-  postId,
-  testID,
-  onCommentPress,
-  saveAffordance,
-}: PostActionsProps) {
+type PlainActionProps = {
+  icon: "comment" | "repost";
+  testID: string;
+  accessibilityLabel: string;
+  onPress?: () => void;
+};
+
+function PlainAction({ icon, testID, accessibilityLabel, onPress }: PlainActionProps) {
+  const theme = useTheme();
+
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      hitSlop={theme.space[1]}
+      onPress={onPress}
+      style={styles.action}
+    >
+      <Icon name={icon} size="md" color="textSecondary" decorative />
+    </Pressable>
+  );
+}
+
+export function PostActions({ postId, testID, onCommentPress, onRepostPress }: PostActionsProps) {
   const likeTestID = testID ?? `like-button-${postId}`;
   const theme = useTheme();
   const postQuery = usePost(postId);
@@ -50,7 +69,6 @@ export function PostActions({
     transform: [{ scale: pop.value }],
   }));
 
-  // Null when used standalone without a cached post; never crashes.
   const post = postQuery.data;
   if (!post) return null;
 
@@ -72,59 +90,54 @@ export function PostActions({
   }
 
   return (
-    <View style={styles.row}>
-      <View style={[styles.group, { gap: theme.space[2] }]}>
-        {onCommentPress ? (
-          <Pressable
-            testID={`comment-button-${postId}`}
-            accessibilityRole="button"
-            accessibilityLabel="Comment"
-            hitSlop={theme.space[1]}
-            onPress={onCommentPress}
-            style={styles.touch}
+    <View style={[styles.row, { borderTopColor: theme.color.border }]}>
+      <PressableScale
+        testID={likeTestID}
+        accessibilityRole="button"
+        accessibilityLabel={liked ? "Unlike" : "Like"}
+        accessibilityState={{ selected: liked, busy: likeMutation.isPending }}
+        disabled={likeMutation.isPending}
+        hitSlop={theme.space[1]}
+        onPress={handleLike}
+        style={styles.action}
+      >
+        <Animated.View style={popStyle}>
+          <Icon
+            name={liked ? "heartFill" : "heart"}
+            size="md"
+            color={liked ? "danger" : "textSecondary"}
+            decorative
+          />
+        </Animated.View>
+        {post.likeCount > 0 ? (
+          <Text
+            variant="label"
+            color={liked ? "danger" : "textSecondary"}
+            numberOfLines={1}
+            style={styles.count}
           >
-            <Icon name="comment" size="md" color="textSecondary" decorative />
-          </Pressable>
+            {formatCompact(post.likeCount)}
+          </Text>
         ) : null}
+      </PressableScale>
 
-        <PressableScale
-          testID={likeTestID}
-          accessibilityRole="button"
-          accessibilityLabel={liked ? "Unlike" : "Like"}
-          accessibilityState={{ selected: liked, busy: likeMutation.isPending }}
-          disabled={likeMutation.isPending}
-          hitSlop={theme.space[1]}
-          onPress={handleLike}
-          style={styles.touch}
-        >
-          <View style={styles.likeRow}>
-            <Animated.View style={popStyle}>
-              <Icon
-                name={liked ? "heartFill" : "heart"}
-                size="md"
-                color={liked ? "danger" : "textSecondary"}
-                decorative
-              />
-            </Animated.View>
-            {post.likeCount > 0 ? (
-              <Text
-                variant="label"
-                color={liked ? "danger" : "textSecondary"}
-                style={styles.count}
-              >
-                {formatCompact(post.likeCount)}
-              </Text>
-            ) : null}
-          </View>
-        </PressableScale>
-      </View>
+      {onCommentPress ? (
+        <PlainAction
+          icon="comment"
+          testID={`comment-button-${postId}`}
+          accessibilityLabel="Comment"
+          onPress={onCommentPress}
+        />
+      ) : null}
 
-      <View style={styles.spacer} />
+      <PlainAction
+        icon="repost"
+        testID={`repost-button-${postId}`}
+        accessibilityLabel="Repost"
+        onPress={onRepostPress}
+      />
 
-      <View style={[styles.group, { gap: theme.space[2] }]}>
-        <PostShareButton postId={postId} />
-        {saveAffordance}
-      </View>
+      <PostShareButton postId={postId} />
     </View>
   );
 }
@@ -133,24 +146,17 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 4,
   },
-  group: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  spacer: {
+  action: {
     flex: 1,
-  },
-  touch: {
     minHeight: 44,
-    minWidth: 44,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-  },
-  likeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+    gap: 6,
+    paddingHorizontal: 2,
   },
   count: {
     fontVariant: ["tabular-nums"],

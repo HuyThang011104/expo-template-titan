@@ -4,10 +4,11 @@
  * Takes `postId` and reads the canonical `usePost` + `usePostAuthor`.
  * Renders the author header inline to respect the boundary.
  *
- * Spec: docs/feel-spec.md §4.1 (F5, F6, F14). Default surface is a flat row
- * on `background` with a hairline divider on the bottom (feed/search/profile);
- * `surface="card"` keeps the old framed look. Navigation and the comment
- * affordance are feature-owned callbacks — the entity never imports a router.
+ * Spec: docs/feel-spec.md §4.1 (F5, F6, F14). The default feed surface is a
+ * flat row on `background` with a hairline divider: header/body/actions are
+ * inset 16, media is full-bleed with no radius. `surface="card"` keeps the
+ * framed look (inset + rounded media). Navigation and the comment/repost
+ * affordances are feature-owned callbacks — the entity never imports a router.
  */
 
 import type { ReactNode } from "react";
@@ -15,12 +16,13 @@ import { useRef } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { formatRelative } from "@/shared/lib/date";
-import { Avatar, Card, Icon, PressableScale, Skeleton, Text, useTheme } from "@/shared/ui";
+import { Avatar, Card, PressableScale, Skeleton, Text, useTheme } from "@/shared/ui";
 
 import { usePost, usePostAuthor, useViewerId } from "../queries";
 import { MediaGrid } from "./media-grid";
 import { PostActions } from "./post-actions";
 import { PostBody } from "./post-body";
+import { PostOptionsSheet, type PostOptionsSheetHandle } from "./post-options-sheet";
 import { PostOwnerMenu, type PostOwnerMenuHandle } from "./post-owner-menu";
 import { PostVideo } from "./post-video";
 
@@ -39,29 +41,26 @@ export type PostCardProps = {
   onCommentPress?: () => void;
   /** Media affordance (F16): feature opens the viewer with `{ postId, index }`. */
   onMediaPress?: (index: number) => void;
-  /**
-   * Safety entry point (F6). The card stays dumb: it only renders the
-   * `...` affordance and calls back — navigation to `/report` is wired
-   * by each feature screen, never by the entity.
-   */
-  onSafetyPress?: () => void;
-  safetyTestID?: string;
+  /** Repost affordance (F14). Backend lands later; feature owns the callback. */
+  onRepostPress?: () => void;
+  /** Options sheet hide row (F14). Feature filters the post out locally. */
+  onHidePress?: () => void;
   /**
    * Owner entry point (G1.3). When the viewer owns the post and this is
-   * provided, the card renders the owner `...` menu (Sửa/Xóa) instead of
-   * the safety one. Non-owners never see it; unknown viewer hides it
+   * provided, the card renders the owner `...` menu (Sửa/Xóa) instead of the
+   * viewer options sheet. Non-owners never see it; unknown viewer hides it
    * (fail-closed until `useMe` warms the `me` entry).
    */
   onOwnerEditPress?: () => void;
   /**
    * Save affordance (G1.4). Cross-entity by design (`entities/saved` owns
-   * the state), so features inject `<SaveButton postId />` — same pattern
-   * as `onSafetyPress`. Share renders inline (post-owned).
+   * the state), so features inject `<SaveButton variant="row" postId />`
+   * and it renders inside the options sheet — not the action row.
    */
   saveAffordance?: ReactNode;
   /**
    * Rich-text navigation (G1.5). Mention/hashtag taps are feature-owned
-   * (same pattern as `onSafetyPress`); links confirm in-sheet before the
+   * (same pattern as the other callbacks); links confirm in-sheet before the
    * browser opens. Omitted callbacks render spans without a press handler.
    */
   onMentionPress?: (handle: string) => void;
@@ -118,8 +117,8 @@ export function PostCard({
   disablePressAnimation = false,
   onCommentPress,
   onMediaPress,
-  onSafetyPress,
-  safetyTestID,
+  onRepostPress,
+  onHidePress,
   onOwnerEditPress,
   saveAffordance,
   onMentionPress,
@@ -131,6 +130,7 @@ export function PostCard({
   const postQuery = usePost(postId);
   const viewerId = useViewerId();
   const ownerMenuRef = useRef<PostOwnerMenuHandle>(null);
+  const optionsMenuRef = useRef<PostOptionsSheetHandle>(null);
 
   if (postQuery.isPending) {
     return (
@@ -152,61 +152,74 @@ export function PostCard({
   const isOwner = !!viewerId && viewerId === post.authorId;
   const [firstMedia] = post.media;
   const singleVideo = post.media.length === 1 && firstMedia?.kind === "video";
+  const isFlat = surface === "flat";
+  const sectionStyle = isFlat ? styles.sectionInset : undefined;
 
   function handleLongPress(): void {
     if (isOwner && onOwnerEditPress) {
       ownerMenuRef.current?.open();
       return;
     }
-    onSafetyPress?.();
+    optionsMenuRef.current?.open();
   }
 
   const content = (
     <>
-      <View style={styles.headerRow}>
+      <View style={[styles.headerRow, sectionStyle]}>
         <View style={styles.headerFlex}>
           <PostAuthorHeader authorId={post.authorId} timeLabel={formatRelative(post.createdAt)} />
         </View>
         {isOwner && onOwnerEditPress ? (
-          <PostOwnerMenu postId={postId} onEditPress={onOwnerEditPress} ref={ownerMenuRef} />
-        ) : onSafetyPress ? (
-          <Pressable
-            testID={safetyTestID ?? `safety-menu-${postId}`}
-            accessibilityRole="button"
-            accessibilityLabel="Post options"
-            hitSlop={8}
-            onPress={onSafetyPress}
-            style={styles.safetyTouch}
-          >
-            <Icon name="more" size="md" color="textSecondary" decorative />
-          </Pressable>
-        ) : null}
+          <PostOwnerMenu
+            postId={postId}
+            onEditPress={onOwnerEditPress}
+            saveAffordance={saveAffordance}
+            ref={ownerMenuRef}
+          />
+        ) : (
+          <PostOptionsSheet
+            postId={postId}
+            onHidePress={onHidePress}
+            saveAffordance={saveAffordance}
+            ref={optionsMenuRef}
+          />
+        )}
       </View>
-      <PostBody
-        postId={postId}
-        body={post.body}
-        onMentionPress={onMentionPress}
-        onHashtagPress={onHashtagPress}
-      />
+      {post.body.trim().length > 0 ? (
+        <View style={sectionStyle}>
+          <PostBody
+            postId={postId}
+            body={post.body}
+            onMentionPress={onMentionPress}
+            onHashtagPress={onHashtagPress}
+          />
+        </View>
+      ) : null}
       {singleVideo && firstMedia ? (
-        <PostVideo
-          postId={postId}
-          mediaUrl={firstMedia.url}
-          isActive={isVideoActive ?? true}
-        />
+        <View style={isFlat ? styles.mediaBleed : undefined}>
+          <PostVideo
+            postId={postId}
+            mediaUrl={firstMedia.url}
+            isActive={isVideoActive ?? true}
+            rounded={!isFlat}
+          />
+        </View>
       ) : post.media.length > 0 ? (
         <MediaGrid
           media={post.media}
+          variant={isFlat ? "feed" : "card"}
           onPress={onMediaPress}
           testID={`media-grid-${postId}`}
         />
       ) : null}
-      <PostActions
-        postId={postId}
-        testID={`like-button-${postId}`}
-        onCommentPress={onCommentPress}
-        saveAffordance={saveAffordance}
-      />
+      <View style={sectionStyle}>
+        <PostActions
+          postId={postId}
+          testID={`like-button-${postId}`}
+          onCommentPress={onCommentPress}
+          onRepostPress={onRepostPress}
+        />
+      </View>
     </>
   );
 
@@ -268,12 +281,17 @@ export function PostCard({
 const styles = StyleSheet.create({
   flat: {
     gap: 8,
-    paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   card: {
     gap: 8,
+  },
+  sectionInset: {
+    paddingHorizontal: 16,
+  },
+  mediaBleed: {
+    width: "100%",
   },
   headerRow: {
     flexDirection: "row",
@@ -281,12 +299,6 @@ const styles = StyleSheet.create({
   },
   headerFlex: {
     flex: 1,
-  },
-  safetyTouch: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
   },
   authorRow: {
     flexDirection: "row",

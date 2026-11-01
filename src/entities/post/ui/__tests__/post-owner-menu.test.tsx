@@ -1,8 +1,8 @@
 /**
  * Tests for the G1.3 owner menu on `PostCard`.
  *
- * - The owner sees `...` → Sửa/Xóa and never the safety menu.
- * - Non-owners see the safety menu and never the owner one (fail-closed when
+ * - The owner sees `...` → Sửa/Xóa and never the viewer options sheet.
+ * - Non-owners see the options sheet and never the owner one (fail-closed when
  *   the viewer is unknown too).
  * - The seeded `me` entry is written directly (no `entities/user` import,
  *   even in tests).
@@ -65,22 +65,17 @@ function seedViewer(qc: QueryClient, id: string): void {
 }
 
 describe("PostCard owner menu", () => {
-  it("owner sees Sửa/Xóa and no safety menu", async () => {
+  it("owner sees Sửa/Xóa and no options sheet", async () => {
     const qc = createQueryClient();
     seedViewer(qc, "u-1");
     hydrateFeedItem(qc, { post: mockPost1, author: authorU1 });
 
-    await render(
-      <PostCard
-        postId="p-1"
-        onSafetyPress={() => {}}
-        onOwnerEditPress={() => {}}
-      />,
-      { wrapper: makeWrapper(qc) },
-    );
+    await render(<PostCard postId="p-1" onOwnerEditPress={() => {}} />, {
+      wrapper: makeWrapper(qc),
+    });
 
     expect(screen.getByTestId("post-menu-p-1")).toBeTruthy();
-    expect(screen.queryByTestId("safety-menu-p-1")).toBeNull();
+    expect(screen.queryByTestId("post-options-p-1")).toBeNull();
 
     fireEvent.press(screen.getByTestId("post-menu-p-1"));
     await waitFor(() => {
@@ -89,21 +84,16 @@ describe("PostCard owner menu", () => {
     expect(screen.getByTestId("post-delete-open-p-1")).toBeTruthy();
   });
 
-  it("non-owner sees safety menu and no owner menu", async () => {
+  it("non-owner sees the options sheet and no owner menu", async () => {
     const qc = createQueryClient();
     seedViewer(qc, "u-1");
     hydrateFeedItem(qc, { post: mockPost2, author: authorU2 });
 
-    await render(
-      <PostCard
-        postId="p-2"
-        onSafetyPress={() => {}}
-        onOwnerEditPress={() => {}}
-      />,
-      { wrapper: makeWrapper(qc) },
-    );
+    await render(<PostCard postId="p-2" onOwnerEditPress={() => {}} />, {
+      wrapper: makeWrapper(qc),
+    });
 
-    expect(screen.getByTestId("safety-menu-p-2")).toBeTruthy();
+    expect(screen.getByTestId("post-options-p-2")).toBeTruthy();
     expect(screen.queryByTestId("post-menu-p-2")).toBeNull();
   });
 
@@ -111,17 +101,12 @@ describe("PostCard owner menu", () => {
     const qc = createQueryClient();
     hydrateFeedItem(qc, { post: mockPost1, author: authorU1 });
 
-    await render(
-      <PostCard
-        postId="p-1"
-        onSafetyPress={() => {}}
-        onOwnerEditPress={() => {}}
-      />,
-      { wrapper: makeWrapper(qc) },
-    );
+    await render(<PostCard postId="p-1" onOwnerEditPress={() => {}} />, {
+      wrapper: makeWrapper(qc),
+    });
 
     await waitFor(() => {
-      expect(screen.getByTestId("safety-menu-p-1")).toBeTruthy();
+      expect(screen.getByTestId("post-options-p-1")).toBeTruthy();
     });
     expect(screen.queryByTestId("post-menu-p-1")).toBeNull();
   });

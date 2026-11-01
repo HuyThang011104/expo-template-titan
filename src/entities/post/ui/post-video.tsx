@@ -19,10 +19,18 @@ export type PostVideoProps = {
   postId: string;
   mediaUrl: string;
   isActive?: boolean;
+  /** Feed cards render full-bleed with no radius. */
+  rounded?: boolean;
   testID?: string;
 };
 
-export function PostVideo({ postId, mediaUrl, isActive = true, testID }: PostVideoProps) {
+export function PostVideo({
+  postId,
+  mediaUrl,
+  isActive = true,
+  rounded = true,
+  testID,
+}: PostVideoProps) {
   const theme = useTheme();
   const [userPaused, setUserPaused] = useState(false);
   const [muted, setMuted] = useState(true);
@@ -40,7 +48,7 @@ export function PostVideo({ postId, mediaUrl, isActive = true, testID }: PostVid
 
   return (
     <View testID={testID ?? `post-video-${postId}`} style={styles.wrap}>
-      <SharedVideoView uri={mediaUrl} shouldPlay={shouldPlay} muted={muted} />
+      <SharedVideoView uri={mediaUrl} shouldPlay={shouldPlay} muted={muted} rounded={rounded} />
       <View style={styles.overlay} pointerEvents="box-none">
         <PressableScale
           testID={`video-toggle-${postId}`}
@@ -52,12 +60,7 @@ export function PostVideo({ postId, mediaUrl, isActive = true, testID }: PostVid
           style={styles.touch}
         >
           <View style={[styles.pill, { backgroundColor: theme.color.primary }]}>
-            <Icon
-              name={shouldPlay ? "pause" : "play"}
-              size="md"
-              color="onPrimary"
-              decorative
-            />
+            <Icon name={shouldPlay ? "pause" : "play"} size="md" color="onPrimary" decorative />
           </View>
         </PressableScale>
         <PressableScale
@@ -70,12 +73,7 @@ export function PostVideo({ postId, mediaUrl, isActive = true, testID }: PostVid
           style={styles.touch}
         >
           <View style={[styles.pill, { backgroundColor: theme.color.primary }]}>
-            <Icon
-              name={muted ? "volumeOff" : "volume"}
-              size="md"
-              color="onPrimary"
-              decorative
-            />
+            <Icon name={muted ? "volumeOff" : "volume"} size="md" color="onPrimary" decorative />
           </View>
         </PressableScale>
       </View>

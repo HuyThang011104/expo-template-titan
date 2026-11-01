@@ -109,11 +109,10 @@ describe("PostCard press", () => {
     expect(onMediaPress).toHaveBeenCalledWith(0);
   });
 
-  it("non-owner long-press calls the safety entry point", async () => {
+  it("non-owner long-press opens the options sheet", async () => {
     const qc = createQueryClient();
     seedViewer(qc, "u-1");
     hydrateFeedItem(qc, { post: mockPost2, author: authorU2 });
-    const onSafetyPress = jest.fn();
 
     await render(
       <PostCard
@@ -121,12 +120,13 @@ describe("PostCard press", () => {
         testID="post-card-p-2"
         onPress={() => {}}
         onOwnerEditPress={() => {}}
-        onSafetyPress={onSafetyPress}
       />,
       { wrapper: makeWrapper(qc) },
     );
 
     fireEvent(screen.getByTestId("post-card-p-2"), "longPress");
-    expect(onSafetyPress).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(screen.getByTestId("post-options-sheet-p-2")).toBeTruthy();
+    });
   });
 });

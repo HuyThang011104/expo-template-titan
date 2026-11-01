@@ -13,7 +13,7 @@ import { router, useFocusEffect } from "expo-router";
 import { FlashList } from "@shopify/flash-list";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
-import { AppState, StyleSheet } from "react-native";
+import { Alert, AppState, StyleSheet } from "react-native";
 
 import { PostCard, getPostData } from "@/entities/post";
 import { SaveButton } from "@/entities/saved";
@@ -36,10 +36,12 @@ function FeedItem({
   postId,
   prefetchPost,
   isVideoActive,
+  onHidePress,
 }: {
   postId: string;
   prefetchPost: (id: string) => void;
   isVideoActive: boolean;
+  onHidePress: () => void;
 }) {
   return (
     <PostCard
@@ -60,9 +62,10 @@ function FeedItem({
       onMediaPress={(index) => {
         router.push(hrefs.mediaViewer(postId, index));
       }}
-      onSafetyPress={() => {
-        router.push(hrefs.report("post", postId));
+      onRepostPress={() => {
+        Alert.alert("Repost", "Reposting is coming soon.");
       }}
+      onHidePress={onHidePress}
       onOwnerEditPress={() => {
         router.push(hrefs.editPost(postId));
       }}
@@ -72,7 +75,7 @@ function FeedItem({
       onHashtagPress={(tag) => {
         router.push(hrefs.hashtag(tag));
       }}
-      saveAffordance={<SaveButton postId={postId} />}
+      saveAffordance={<SaveButton postId={postId} variant="row" />}
     />
   );
 }
@@ -103,6 +106,7 @@ export function FeedList({
 }: FeedListProps) {
   const queryClient = useQueryClient();
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
+  const [hiddenIds, setHiddenIds] = useState<ReadonlySet<string>>(() => new Set());
 
   // Leaving the tab (e.g. opening detail) pauses the active video.
   useFocusEffect(
@@ -133,19 +137,31 @@ export function FeedList({
         const id = entry.item;
         viewableIds.push(id);
         const mediaKind = getPostData(queryClient, id)?.media[0]?.kind;
-        kindById.set(id, mediaKind === "video" ? "video" : mediaKind === "image" ? "image" : "none");
+        kindById.set(
+          id,
+          mediaKind === "video" ? "video" : mediaKind === "image" ? "image" : "none",
+        );
       }
       setActiveVideoId(pickActiveVideoId(viewableIds, kindById));
     },
     [queryClient],
   );
 
+  const visiblePostIds = postIds.filter((id) => !hiddenIds.has(id));
+
   return (
     <FlashList
       testID="feed-list"
-      data={postIds}
+      data={visiblePostIds}
       renderItem={({ item }) => (
-        <FeedItem postId={item} prefetchPost={prefetchPost} isVideoActive={item === activeVideoId} />
+        <FeedItem
+          postId={item}
+          prefetchPost={prefetchPost}
+          isVideoActive={item === activeVideoId}
+          onHidePress={() => {
+            setHiddenIds((current) => new Set(current).add(item));
+          }}
+        />
       )}
       keyExtractor={(id) => id}
       onEndReached={onEndReached}

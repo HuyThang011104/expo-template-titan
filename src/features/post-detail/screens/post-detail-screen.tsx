@@ -1,18 +1,13 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
+import { Alert } from "react-native";
 
 import { PostCard, usePost } from "@/entities/post";
 import { SaveButton } from "@/entities/saved";
 import { getViewBlockReason, useMe, useRelationship } from "@/entities/user";
 import { hrefs } from "@/shared/navigation/hrefs";
-import {
-  DetailPage,
-  EmptyState,
-  ErrorState,
-  LoadingState,
-  Screen,
-} from "@/shared/ui";
+import { DetailPage, EmptyState, ErrorState, LoadingState, Screen } from "@/shared/ui";
 
 import { CommentComposer, type ReplyTarget } from "../components/comment-composer";
 import { CommentsList } from "../components/comments-list";
@@ -49,9 +44,7 @@ function PostDetailBody({ postId, focusComment }: { postId: string; focusComment
   const me = useMe();
   const rel = useRelationship(authorId);
   const [replyTo, setReplyTo] = useState<ReplyTarget | null>(null);
-  const [expandedReplyIds, setExpandedReplyIds] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
+  const [expandedReplyIds, setExpandedReplyIds] = useState<ReadonlySet<string>>(() => new Set());
 
   const toggleReplies = useCallback((parentId: string) => {
     setExpandedReplyIds((current) => {
@@ -147,8 +140,8 @@ function PostDetailBody({ postId, focusComment }: { postId: string; focusComment
             onMediaPress={(index) => {
               router.push(hrefs.mediaViewer(postId, index));
             }}
-            onSafetyPress={() => {
-              router.push(hrefs.report("post", postId));
+            onRepostPress={() => {
+              Alert.alert("Repost", "Reposting is coming soon.");
             }}
             onOwnerEditPress={() => {
               router.push(hrefs.editPost(postId));
@@ -159,7 +152,7 @@ function PostDetailBody({ postId, focusComment }: { postId: string; focusComment
             onHashtagPress={(tag) => {
               router.push(hrefs.hashtag(tag));
             }}
-            saveAffordance={<SaveButton postId={postId} />}
+            saveAffordance={<SaveButton postId={postId} variant="row" />}
           />
         }
         onReplyPress={(target) => {

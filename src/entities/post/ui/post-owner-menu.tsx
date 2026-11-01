@@ -8,7 +8,7 @@
  * a router or another feature).
  */
 
-import { useImperativeHandle, useState, type Ref } from "react";
+import { useImperativeHandle, useState, type ReactNode, type Ref } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { Button, Icon, Sheet, Text } from "@/shared/ui";
@@ -24,6 +24,8 @@ export type PostOwnerMenuProps = {
   postId: string;
   onEditPress: () => void;
   testID?: string;
+  /** Cross-entity by design; the feature injects `<SaveButton variant="row" />`. */
+  saveAffordance?: ReactNode;
   /** Injected for tests; defaults to the app client. */
   fetchImpl?: typeof fetch;
   /** React 19 ref-as-prop; lets `PostCard` open the sheet on long-press. */
@@ -34,6 +36,7 @@ export function PostOwnerMenu({
   postId,
   onEditPress,
   testID,
+  saveAffordance,
   fetchImpl,
   ref,
 }: PostOwnerMenuProps) {
@@ -115,6 +118,7 @@ export function PostOwnerMenu({
           </View>
         ) : (
           <View style={styles.rows}>
+            {saveAffordance}
             <Pressable
               testID={`post-edit-button-${postId}`}
               accessibilityRole="button"

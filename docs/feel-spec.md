@@ -39,7 +39,7 @@
 | F3 | Nguyên lý số 3 | **Feedback everywhere**: mọi interaction lặp lại (like, post, send, follow) có press feedback + haptic theo bảng §6 | Thêm `expo-haptics` (infra dep — Q2 đã chốt) |
 | F4 | Motion engine | Reanimated 4 + token `motion` hiện có; navigation vẫn dùng animation native của Stack | Không thêm lib animation |
 | F5 | Feed row style | **Flat row + hairline divider** (X/Threads), không Card viền ở feed; Card giữ cho chỗ khác nếu cần | PostCard đổi vỏ, giữ API và testID |
-| F6 | Media | Tỉ lệ **cố định** (API chỉ có `url`, không có `width/height`): 1 ảnh 4:5 + `maxHeight 420`; grid ô vuông 1–4 ảnh; hết fixed 200px. Video trong grid = tile tối + icon `play` | `MediaGrid` mới trong `entities/post/ui` |
+| F6 | Media | **Full-bleed** trong feed: sát 2 mép, không radius; 1 ảnh `4:5` full width (bỏ cap 420); grid 1–4 ảnh full width, gap 2, không radius. Video full-bleed, không radius. Chỉ `surface="card"` giữ media inset + radius | `MediaGrid` variant `feed`/`card` |
 | F7 | `expo-haptics` | Thêm (dep duy nhất của wave này) | Q2 (§11) |
 | F8 | `expo-blur` | **Chưa thêm** ở wave này; cân nhắc ở wave sau cho media-viewer/overlay | Giữ scope gọn |
 | F9 | `@expo/ui` / `expo-glass-effect` | **Không dùng ở wave này** (đã cài nhưng chưa import; @expo/ui phân mảnh iOS/Android, glass chỉ iOS 26). Revisit sau | Không xoá dep, chỉ để yên |
@@ -47,7 +47,7 @@
 | F11 | testID & Maestro | Không đổi testID hiện có; phần tử mới thêm testID mới; Maestro sửa cùng PR | Feed/composer flows không vỡ |
 | F12 | Profile header title transition (Q7 cũ) | **Trong wave** — title native crossfade `@handle` → displayName khi khối identity cuộn qua header; scroll-driven, không setState mỗi frame | Đổi cấu trúc profile: header overlay dùng chung ngoài pager |
 | F13 | Notification media thumbnail (Q8 cũ) | **Trong wave** — thumbnail 44px lấy từ canonical post cache, không fetch thêm | Row inbox thêm trailing thumbnail |
-| F14 | Action row counts | Like hiện count khi `> 0` (ẩn `0`); comment/share/save **icon-only** — model không có `commentCount`/share/save count | §4.1 |
+| F14 | Action row | 4 icon chia đều, **icon-only**: Like (heart + count), Comment, Repost, Share. Like hiện count khi `> 0`; comment count optional (backend có `commentCount`, mobile model sẽ bổ sung sau); Save chuyển vào sheet 3 chấm | §4.1 |
 | F15 | Sticky profile tabs + horizontal pager | Header dùng chung dựng bằng `scrollY` (dùng chung cơ chế Q7), dừng khi tabs chạm top; overlay tabs crossfade tại đúng vị trí đó; Posts/Saved dùng native pager để tap và swipe, mỗi page giữ offset riêng | §4.4, PF4.3 |
 | F16 | Media viewer dữ liệu + gesture | Params `{ postId, index }`; đọc canonical cache, thiếu thì `usePost`; ở scale 1 kéo dọc để dismiss, scale > 1 chỉ pan/zoom; route `gestureEnabled: false` để tránh cạnh tranh dismiss | §4.10, §7.1 |
 
@@ -67,7 +67,7 @@
 
 - Không đổi navigation structure (NativeTabs, groups, hrefs, deep link giữ nguyên).
 - Không thêm UI kit, không đổi token màu/chữ (thuộc `design-system.md`).
-- Không làm tính năng mới (repost, poll, GIF, story...). Chỉ anatomy cho tính năng đã có.
+- Không làm tính năng mới (poll, GIF, story...). Riêng nút **Repost** được dựng UI shell trong wave này; hành vi server để phase sau (xem §4.1).
 - Không làm tablet layout, không shell web riêng.
 - Không dùng `@expo/ui`/glass ở wave này (F9).
 - Không đổi backend/API.
@@ -119,30 +119,36 @@
 Vị trí dùng: Home feed, Search results, Hashtag, Profile lists. Một vỏ duy nhất.
 
 ```text
-┌─ PostCard (flat row, nền background, ngang cách padding 4) ─────┐
+┌─ PostCard (flat row, nền background, full-bleed media) ─────────┐
 │ [Avatar 40] DisplayName        @handle · 2h              [more] │  ← header row, 1 dòng
 │ body text (body variant, clamp 8 dòng)                          │
-│ media (MediaGrid, tỉ lệ cố định, radius.md)                     │
+│ media full-bleed, không radius, sát 2 mép                       │
 │ ─────────────────────────────────────────────────────────────── │
-│ [comment]       [like] N                     [share]  [save]    │  ← action row, duy nhất
+│  [heart] N        [comment]          [repost]          [share]  │  ← 4 icon chia đều
 └─────────────────────────────────────────────────────────────────┘
   ← hairline divider `border` giữa 2 card (thay separator 8px)
 ```
 
 Quy tắc:
 
-1. **Header row**: `Avatar 40` + cột (displayName `labelStrong`, `@handle · time` `caption textSecondary`) + `IconButton more` (owner menu / safety menu — giữ logic hiện có). Timestamp **chuyển lên header** (không còn ở đáy card).
+1. **Header row**: `Avatar 40` + cột (displayName `labelStrong`, `@handle · time` `caption textSecondary`) + `IconButton more`. Timestamp **nằm ở header** (không còn ở đáy card). `more` mở bottom sheet (§7.3).
 2. **Body**: `Text body`; feed **clamp 8 dòng** + affordance "more" mở rộng tại chỗ.
-3. **Media** (MediaGrid — `entities/post/ui`):
-   - `PostMedia` chỉ có `{ kind, url }` → **không có aspect thật**. 1 ảnh: `aspectRatio 4/5`, `maxHeight 420`, `contentFit="cover"`. Grid: ô vuông.
-   - 2 ảnh: 2 cột vuông. 3 ảnh: 1 lớn + 2 nhỏ. 4 ảnh: lưới 2×2. Gap `space[1]`, `radius.md`.
-   - Video: 1 video → giữ `PostVideo`; video nằm trong grid → tile tối + icon `play` (không có poster URL).
+3. **Media** (MediaGrid — `entities/post/ui`), variant `feed`:
+   - **Full-bleed**: container card không padding ngang; media sát 2 mép, `borderRadius: 0`.
+   - 1 ảnh: `width: 100%`, `aspectRatio 4/5`, **bỏ `maxHeight 420`**, `contentFit="cover"`.
+   - 2 ảnh: 2 cột vuông. 3 ảnh: 1 lớn + 2 nhỏ. 4 ảnh: lưới 2×2. Gap `2`, không radius.
+   - Video: 1 video → `PostVideo` full-bleed (16:9, không radius); video trong grid → tile tối + icon `play`.
    - Bấm media → media-viewer (§4.10) với `{ postId, index }`.
-4. **Action row — duy nhất 1 hàng**: `comment` (icon-only; mở detail + focus composer), `like` (icon + count, **ẩn khi `0`**), spacer, `share` (icon-only), `save` (icon-only, `saveAffordance`). Hit area 44.
-5. **Like**: fill `danger` + haptic light + spring pop (§6.2). Unlike: không haptic.
-6. Video: giữ `PostVideo` + `activeVideoId`; overlay control dùng icon mới (§8), hết glyph `▶/🔇`.
-7. Long-press card → mở cùng overflow menu với `more` (§7.3).
-8. Giữ nguyên: API props, testID `post-card-<id>`/`like-button-<id>`, canonical `usePost`, callback pattern (`onSafetyPress`/`onOwnerEditPress`/`saveAffordance`).
+   - `surface="card"` giữ media inset + `radius.md` như cũ.
+4. **Action row — 4 icon chia đều** (`flex: 1`, icon-only, không label): `Like` (heart + count, **ẩn count khi `0`**), `Comment`, `Repost`, `Share`. Hit area ≥ 44, hairline top. Like active: `danger` + haptic + spring pop (§6.2).
+5. **Save** không còn trong action row; render trong sheet 3 chấm (inject `saveAffordance`, `SaveButton variant="row"`).
+6. **Repost**: UI shell + callback feature-owned (`onRepostPress`). Chưa gọi backend trong wave này; nếu chưa có server thì tap hiển thị thông báo "sắp có" thay vì im lặng.
+7. **Options sheet (3 chấm)** — không có report:
+   - Non-owner: `Save / Unsave`, `Hide post` (feature-owned, local list), `Cancel`.
+   - Owner: `Edit post`, `Delete post`, `Save / Unsave`.
+   - Mở từ `more` **và** long-press card. Không điều hướng sang `/report` từ feed/search/profile/post-detail.
+8. Video: giữ `PostVideo` + `activeVideoId`; overlay control dùng icon mới (§8), hết glyph `▶/🔇`.
+9. Giữ nguyên: canonical `usePost`, testID `post-card-<id>`/`like-button-<id>`, callback pattern (`onOwnerEditPress`/`onCommentPress`/`onMediaPress`/`onRepostPress`/`saveAffordance`). `onSafetyPress` bị bỏ khỏi PostCard.
 
 ### 4.2 Composer — F1, F2
 
@@ -381,9 +387,10 @@ Một cơ chế duy nhất: `react-native-keyboard-controller` `KeyboardAvoiding
 
 ### 7.3 Overflow & share
 
-1. Overflow menu (post/user/chat/report) = shared `Sheet` adapter backed by `@expo/ui/community/bottom-sheet`, content là list `ListItem`; mở từ cả `more` button lẫn long-press card.
-2. Share: giữ native share sheet hiện tại của `PostShareButton`.
-3. Confirm phá dữ liệu (xoá post, sign out): native `Alert` (đúng design-system §6.4).
+1. Overflow menu (post/user/chat) = shared `Sheet` adapter backed by `@expo/ui/community/bottom-sheet`, content là list `ListItem`; mở từ cả `more` button lẫn long-press card.
+2. **Post overflow không có report**: non-owner chỉ `Save/Unsave` + `Hide post`; owner thêm `Edit/Delete`. Report route vẫn tồn tại nhưng không còn entry point từ feed/search/profile/post-detail.
+3. Share: giữ native share sheet hiện tại của `PostShareButton`.
+4. Confirm phá dữ liệu (xoá post, sign out): native `Alert` (đúng design-system §6.4).
 
 ### 7.4 Blur/glass
 
@@ -402,7 +409,8 @@ Thêm vào `icon-map.ts` (mỗi name đủ 3 platform, test key parity tự ch�
 | `volume` | `speaker.wave.2.fill` | `volume_up` | video unmute |
 | `volumeOff` | `speaker.slash.fill` | `volume_off` | video mute |
 | `reply` | `arrowshape.turn.up.left` | `reply` | comment reply (nếu cần icon; hiện chữ "Reply" — chỉ thêm khi dùng) |
-| `flag` | `flag` | `flag` | report entry trong overflow |
+| `repost` | `arrow.2.squarepath` | `repeat` | action Repost (§4.1) |
+| `flag` | `flag` | `flag` | report entry trong overflow (không dùng ở feed) |
 | `at` | `at` | `alternate_email` | mention affordance (nếu cần) |
 
 Nguyên tắc: chỉ thêm icon khi có call site thật trong cùng PR (không speculative icon).
@@ -462,8 +470,9 @@ Không còn câu hỏi mở. Mapping để tra cứu:
 | File hiện tại | Thay đổi chính |
 |---|---|
 | `composer/screens/composer-screen.tsx` | Bỏ header body + h1; `Input` → `ComposerInput`; toolbar icon; counter-ring; header options |
-| `entities/post/ui/post-card.tsx` | Flat row, timestamp lên header, `MediaGrid`, 1 action row, like pop + haptic |
-| `entities/post/ui/post-actions.tsx` | Thêm comment slot; `PressableScale`; haptic |
+| `entities/post/ui/post-card.tsx` | Flat row, timestamp lên header, media full-bleed, options sheet 3 chấm (không report), like pop + haptic |
+| `entities/post/ui/post-actions.tsx` | 4 icon chia đều (Like/Comment/Repost/Share), icon-only + count, `PressableScale`; Save chuyển vào sheet |
+| `entities/post/ui/post-options-sheet.tsx` (mới) | Sheet Save/Hide cho non-owner; owner dùng menu Sửa/Xóa |
 | `entities/comment/ui/comment-row.tsx` | Thêm Avatar 32; action giữ; indent 40 |
 | `features/post-detail/components/comment-composer.tsx` | Pill `ComposerInput` + `IconButton send` |
 | `features/profile/screens/profile-screen.tsx` | Header dùng chung ngoài pager + spacer trong list; stats row; pill action; overflow more (headerRight); Sign out vào Sheet |

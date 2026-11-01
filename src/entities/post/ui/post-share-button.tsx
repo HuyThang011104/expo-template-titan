@@ -64,6 +64,7 @@ export function PostShareButton({ postId, testID, schemeOverride, shareFn }: Pos
 
 const styles = StyleSheet.create({
   root: {
+    flex: 1,
     alignItems: "flex-start",
   },
   touch: {
@@ -71,5 +72,6 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: "center",
     justifyContent: "center",
+    alignSelf: "center",
   },
 });

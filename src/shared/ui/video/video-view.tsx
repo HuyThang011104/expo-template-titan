@@ -20,6 +20,8 @@ export type SharedVideoViewProps = {
   shouldPlay: boolean;
   muted?: boolean;
   posterUrl?: string | null;
+  /** Feed cards render full-bleed with no radius. */
+  rounded?: boolean;
   testID?: string;
 };
 
@@ -28,6 +30,7 @@ export function SharedVideoView({
   shouldPlay,
   muted = true,
   posterUrl,
+  rounded = true,
   testID,
 }: SharedVideoViewProps) {
   const theme = useTheme();
@@ -61,7 +64,10 @@ export function SharedVideoView({
         testID={testID}
         style={[
           styles.frame,
-          { backgroundColor: theme.color.backgroundElement, borderRadius: theme.radius.md },
+          {
+            backgroundColor: theme.color.backgroundElement,
+            borderRadius: rounded ? theme.radius.md : 0,
+          },
         ]}
         accessibilityLabel="Video unavailable"
       >
@@ -77,7 +83,10 @@ export function SharedVideoView({
       testID={testID}
       style={[
         styles.frame,
-        { backgroundColor: theme.color.backgroundElement, borderRadius: theme.radius.md },
+        {
+          backgroundColor: theme.color.backgroundElement,
+          borderRadius: rounded ? theme.radius.md : 0,
+        },
       ]}
     >
       <VideoView

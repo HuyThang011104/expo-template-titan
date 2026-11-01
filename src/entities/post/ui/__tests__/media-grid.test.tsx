@@ -55,6 +55,15 @@ describe("MediaGrid", () => {
     expect(screen.getByTestId("grid-0").props.accessibilityLabel).toBe("Media 1 of 1");
   });
 
+  it("renders a single image full-bleed with no radius or height cap in feed mode", async () => {
+    await renderGrid([image("https://example.com/a.jpg")], { variant: "feed" });
+
+    const style = styleOf("grid-0");
+    expect(style.aspectRatio).toBe(4 / 5);
+    expect(style.borderRadius).toBe(0);
+    expect(style.maxHeight).toBeUndefined();
+  });
+
   it("renders two square columns", async () => {
     await renderGrid([image("https://example.com/a.jpg"), image("https://example.com/b.jpg")]);
 
