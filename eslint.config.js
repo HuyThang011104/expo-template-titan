@@ -68,6 +68,13 @@ module.exports = [
     },
   },
   {
-    ignores: ["dist/*", "node_modules/*", ".expo/*", "documentation/**", "packages/create-expo-titan/**"],
+    ignores: [
+      "dist/*",
+      "node_modules/*",
+      ".expo/*",
+      "documentation/**",
+      "packages/create-expo-titan/**",
+      "src/shared/api/gen/**",
+    ],
   },
 ];

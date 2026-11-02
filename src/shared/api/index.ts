@@ -3,6 +3,7 @@ export { createAuthFetch, type AuthFetchOptions, type TokenReader } from "./auth
 export { client, request, type HttpMethod, type RequestOptions } from "./client";
 export { absoluteUrl, apiBaseUrl, endpoints, realtimeUrl, wsBaseUrl } from "./endpoints";
 export { ApiError, isApiError, type ApiErrorCode } from "./errors";
+export { unwrapApiEnvelope, type ApiEnvelope } from "./envelope";
 export {
   createMockFetch,
   type MockFetchOptions,
