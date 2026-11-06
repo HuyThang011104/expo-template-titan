@@ -13,7 +13,8 @@ export type TextComponentProps = TextProps & {
 
 /**
  * Token-based text. `link` is body typography in the primary color.
- * Legacy `smallBold` maps to `small` with weight 700.
+ * New variants (`display`…`overline`) are the canonical scale; the legacy
+ * `title`/`subtitle`/`small` variants keep their old metrics until P3.
  */
 export function Text({ variant = "body", color, style, ...rest }: TextComponentProps) {
   const theme = useTheme();
@@ -24,7 +25,7 @@ export function Text({ variant = "body", color, style, ...rest }: TextComponentP
       ? theme.color[color]
       : variant === "link"
         ? theme.color.primary
-        : theme.color.text;
+        : theme.color.textPrimary;
 
   return (
     <RNText
@@ -34,6 +35,7 @@ export function Text({ variant = "body", color, style, ...rest }: TextComponentP
           fontSize: base.fontSize,
           lineHeight: base.lineHeight,
           fontWeight: base.fontWeight as TextStyle["fontWeight"],
+          letterSpacing: "letterSpacing" in base ? base.letterSpacing : undefined,
         },
         style,
       ]}

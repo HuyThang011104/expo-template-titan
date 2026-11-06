@@ -1,0 +1,35 @@
+# Maestro E2E — notifications inbox list (F5).
+#
+# 1. Cold boot with cleared state lands on sign-in when logged out
+# 2. Sign in (mock — `sign-in-button` sets the dev session)
+# 3. Open the Inbox tab, see `inbox-screen` + `inbox-list`
+# 4. First row (`notification-row-n-1`, unread like) is visible
+#
+# Run locally (app installed on emulator/simulator):
+#   maestro test e2e/flows/notifications.yaml
+# On EAS: `.eas/workflows/e2e.yml` builds the `e2e-test` profile
+# (mock backend via EXPO_PUBLIC_API_MOCK) and runs this flow on it.
+#
+# Requires a build serving `GET /notifications` (mock covers it with
+# 25 deterministic items + `n-fail`; `n-1` is an unread like with a
+# post target). Tapping through to post detail is covered by unit
+# tests (`markRead` + `resolveNotificationHref`); the flow stops at
+# the visible row so a tap cannot flake on navigation timing.
+
+appId: com.example.titan.dev
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "sign-in-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 30000
+- tapOn: "Inbox"
+- extendedWaitUntil:
+    visible:
+      id: "inbox-list"
+    timeout: 15000
+- assertVisible:
+    id: "notification-row-n-1"

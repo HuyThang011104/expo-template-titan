@@ -18,26 +18,80 @@ export const endpoints = {
   session: () => "/auth/session",
   refresh: () => "/auth/refresh",
   me: () => "/users/me",
+  updateMe: () => "/users/me",
+  updatePrivacy: () => "/users/me/privacy",
   user: (id: string) => `/users/${encode(id)}`,
   userByHandle: (handle: string) => `/users/handle/${encode(handle)}`,
   userPosts: (id: string, cursor?: string | null) =>
     cursor ? `/users/${encode(id)}/posts?cursor=${encode(cursor)}` : `/users/${encode(id)}/posts`,
   followers: (id: string) => `/users/${encode(id)}/followers`,
+  userFollowers: (id: string, cursor?: string | null) =>
+    cursor
+      ? `/users/${encode(id)}/followers?cursor=${encode(cursor)}`
+      : `/users/${encode(id)}/followers`,
+  userFollowing: (id: string, cursor?: string | null) =>
+    cursor
+      ? `/users/${encode(id)}/following?cursor=${encode(cursor)}`
+      : `/users/${encode(id)}/following`,
+  followUser: (id: string) => `/users/${encode(id)}/follow`,
+  unfollowUser: (id: string) => `/users/${encode(id)}/unfollow`,
+  followRequests: (cursor?: string | null) =>
+    cursor ? `/follow-requests?cursor=${encode(cursor)}` : "/follow-requests",
+  approveFollowRequest: (followerId: string) =>
+    `/follow-requests/${encode(followerId)}/approve`,
+  rejectFollowRequest: (followerId: string) =>
+    `/follow-requests/${encode(followerId)}/reject`,
+  userRelationship: (id: string) => `/users/${encode(id)}/relationship`,
+  blockUser: (id: string) => `/users/${encode(id)}/block`,
+  unblockUser: (id: string) => `/users/${encode(id)}/unblock`,
+  muteUser: (id: string) => `/users/${encode(id)}/mute`,
+  unmuteUser: (id: string) => `/users/${encode(id)}/unmute`,
+  reports: () => "/reports",
   post: (id: string) => `/posts/${encode(id)}`,
   createPost: () => "/posts",
   homeFeed: (cursor?: string | null) =>
     cursor ? `/feed/home?cursor=${encode(cursor)}` : "/feed/home",
+  search: (q: string, cursor?: string | null) => {
+    const base = `/search?q=${encode(q.trim())}`;
+    return cursor ? `${base}&cursor=${encode(cursor)}` : base;
+  },
+  trending: () => "/trending",
   likePost: (id: string) => `/posts/${encode(id)}/like`,
+  postComments: (postId: string, cursor?: string | null) =>
+    cursor
+      ? `/posts/${encode(postId)}/comments?cursor=${encode(cursor)}`
+      : `/posts/${encode(postId)}/comments`,
+  createComment: (postId: string) => `/posts/${encode(postId)}/comments`,
+  likeComment: (id: string) => `/comments/${encode(id)}/like`,
+  savedPosts: (cursor?: string | null) =>
+    cursor ? `/saved?cursor=${encode(cursor)}` : "/saved",
+  savePost: (id: string) => `/saved/${encode(id)}`,
+  unsavePost: (id: string) => `/saved/${encode(id)}`,
+  hashtag: (tag: string, cursor?: string | null) => {
+    const base = `/hashtag/${encode(tag.trim().toLowerCase())}`;
+    return cursor ? `${base}?cursor=${encode(cursor)}` : base;
+  },
   repost: (id: string) => `/posts/${encode(id)}/repost`,
-  uploadSessions: () => "/uploads",
+  uploadSessions: (kind?: "image" | "video") =>
+    kind === "video" ? "/uploads?kind=video" : "/uploads",
   devices: () => "/devices",
   conversation: (id: string) => `/conversations/${encode(id)}`,
   conversationMessages: (id: string, cursor?: string | null) =>
     cursor
       ? `/conversations/${encode(id)}/messages?cursor=${encode(cursor)}`
       : `/conversations/${encode(id)}/messages`,
+  conversationRead: (id: string) => `/conversations/${encode(id)}/read`,
+  userPresence: (id: string) => `/users/${encode(id)}/presence`,
   notifications: (cursor?: string | null) =>
     cursor ? `/notifications?cursor=${encode(cursor)}` : "/notifications",
+  markNotificationRead: (id: string) => `/notifications/${encode(id)}/read`,
+  notifPrefs: () => "/notif-prefs",
+  sessions: () => "/sessions",
+  revokeSession: (id: string) => `/sessions/${encode(id)}`,
+  changePassword: () => "/auth/change-password",
+  deactivate: () => "/users/me/deactivate",
+  deleteMe: () => "/users/me",
+  exportMe: () => "/users/me/export",
 };
 
 /** Absolute URL for non-`client` callers (upload targets, link previews). */

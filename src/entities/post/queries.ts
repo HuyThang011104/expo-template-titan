@@ -12,8 +12,21 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { logger } from "@/shared/observability/logger";
 import { queryKeys } from "@/shared/query";
 
-import { createPostRemote, fetchPost, fetchUserPostsRemote, likePostRemote } from "./api";
-import { addCreatedPost, hydrateFeedItem, likePost } from "./cache";
+import {
+  createPostRemote,
+  deletePostRemote,
+  fetchPost,
+  fetchUserPostsRemote,
+  likePostRemote,
+  updatePostRemote,
+} from "./api";
+import {
+  addCreatedPost,
+  deletePost,
+  hydrateFeedItem,
+  likePost,
+  updatePost,
+} from "./cache";
 import type { CreatePostInput } from "./schema";
 import type { FeedWireItem } from "./model";
 
@@ -55,6 +68,61 @@ export function useCreatePost(opts: QueryFetchOptions = {}) {
     onSuccess: (post) => {
       addCreatedPost(qc, post);
     },
+  });
+}
+
+/**
+ * Viewer id for owner checks, read from the canonical `me` entry written by
+ * `entities/user` (`useMe`). Cache-only on purpose: this entity never
+ * fetches or writes the full user — screens that show owner menus warm the
+ * entry with `useMe` (feed, search already do for headers; detail does).
+ * `undefined` means unknown → owner menus stay hidden (fail-closed).
+ * Same key-read discipline as `usePostAuthor` (local structural type, never
+ * an `entities/user` import).
+ */
+export function useViewerId(): string | undefined {
+  const qc = useQueryClient();
+  const query = useQuery({
+    queryKey: queryKeys.me,
+    queryFn: async (): Promise<{ id: string }> => {
+      const cached = qc.getQueryData<{ id: unknown }>(queryKeys.me);
+      if (cached && typeof cached.id === "string" && cached.id.length > 0) {
+        return { id: cached.id };
+      }
+      throw new Error("[post] Unknown viewer");
+    },
+    staleTime: 30_000,
+    retry: false,
+  });
+  return query.data?.id;
+}
+
+/** Edit own post (text-only); server wins on the canonical entry. */
+export function useUpdatePost(
+  id: string,
+  opts: QueryFetchOptions & { updateRemote?: typeof updatePostRemote } = {},
+) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) =>
+      updatePost(qc, id, body, {
+        updateRemote:
+          opts.updateRemote ?? ((postId, text) => updatePostRemote(postId, text, opts)),
+      }),
+  });
+}
+
+/** Delete own post; strips the id from every loaded list on success. */
+export function useDeletePost(
+  id: string,
+  opts: QueryFetchOptions & { deleteRemote?: typeof deletePostRemote } = {},
+) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      deletePost(qc, id, {
+        deleteRemote: opts.deleteRemote ?? ((postId) => deletePostRemote(postId, opts)),
+      }),
   });
 }
 

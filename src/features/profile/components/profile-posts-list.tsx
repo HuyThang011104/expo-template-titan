@@ -6,12 +6,15 @@
  * mirroring `features/feed/components/feed-list`.
  */
 
-import { Link } from "expo-router";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import type { FlashListRef } from "@shopify/flash-list";
+import { router } from "expo-router";
+import type { ReactElement, Ref } from "react";
+import { Alert, StyleSheet, type NativeScrollEvent, type NativeSyntheticEvent } from "react-native";
 
 import { PostCard } from "@/entities/post";
+import { SaveButton } from "@/entities/saved";
 import { hrefs } from "@/shared/navigation/hrefs";
-import { AppList, Text, useTheme } from "@/shared/ui";
+import { AppAnimatedList, EmptyState, LoadingState } from "@/shared/ui";
 
 import { logProfileOpenDetail } from "../analytics";
 
@@ -23,6 +26,19 @@ export type ProfilePostsListProps = {
   onEndReached: () => void;
   onRefresh: () => void;
   prefetchPost: (id: string) => void;
+  /** Spacer matching the shared header overlay height. */
+  header?: ReactElement | null;
+  /** Android refresh spinner offset (profile overlay header height). */
+  progressViewOffset?: number;
+  /** Overrides the default empty state (pending/error/private body). */
+  emptyComponent?: ReactElement | null;
+  /** Loading footer owned by the page so each pager tab has its own state. */
+  footer?: ReactElement | null;
+  /** Q7 (PF4.2): one shared-value write per scroll frame. */
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  scrollEventThrottle?: number;
+  /** PF4.3: screen-owned handle for tab-switch scroll resets. */
+  listRef?: Ref<FlashListRef<string>>;
   testID?: string;
 };
 
@@ -34,24 +50,48 @@ function ProfilePostItem({
   prefetchPost: (id: string) => void;
 }) {
   return (
-    <Link href={hrefs.post(postId)} asChild>
-      <Pressable
-        onPressIn={() => {
-          logProfileOpenDetail(postId);
-          prefetchPost(postId);
-        }}
-      >
-        <PostCard postId={postId} testID={`post-card-${postId}`} />
-      </Pressable>
-    </Link>
+    <PostCard
+      postId={postId}
+      testID={`post-card-${postId}`}
+      disablePressAnimation
+      onPress={() => {
+        router.push(hrefs.post(postId));
+      }}
+      onPressIn={() => {
+        logProfileOpenDetail(postId);
+        prefetchPost(postId);
+      }}
+      onCommentPress={() => {
+        router.push(hrefs.post(postId, "comment"));
+      }}
+      onMediaPress={(index) => {
+        router.push(hrefs.mediaViewer(postId, index));
+      }}
+      onRepostPress={() => {
+        Alert.alert("Repost", "Reposting is coming soon.");
+      }}
+      onOwnerEditPress={() => {
+        router.push(hrefs.editPost(postId));
+      }}
+      onMentionPress={(handle) => {
+        router.push(hrefs.user(handle));
+      }}
+      onHashtagPress={(tag) => {
+        router.push(hrefs.hashtag(tag));
+      }}
+      saveAffordance={<SaveButton postId={postId} variant="row" />}
+    />
   );
 }
 
 function ProfilePostsEmpty() {
   return (
-    <View style={styles.empty}>
-      <Text variant="body">No posts yet.</Text>
-    </View>
+    <EmptyState
+      icon="image"
+      title="No posts yet"
+      description="Posts you share will appear here."
+      testID="profile-empty"
+    />
   );
 }
 
@@ -63,10 +103,18 @@ export function ProfilePostsList({
   onEndReached,
   onRefresh,
   prefetchPost,
+  header,
+  progressViewOffset,
+  emptyComponent,
+  footer,
+  onScroll,
+  scrollEventThrottle,
+  listRef,
   testID = "profile-list",
 }: ProfilePostsListProps) {
   return (
-    <AppList
+    <AppAnimatedList
+      ref={listRef}
       testID={testID}
       data={postIds}
       renderItem={({ item }) => <ProfilePostItem postId={item} prefetchPost={prefetchPost} />}
@@ -76,23 +124,24 @@ export function ProfilePostsList({
       }}
       onRefresh={onRefresh}
       refreshing={isRefetching}
-      ListEmptyComponent={<ProfilePostsEmpty />}
+      progressViewOffset={progressViewOffset}
+      onScroll={onScroll}
+      scrollEventThrottle={scrollEventThrottle}
+      showsVerticalScrollIndicator={false}
+      ListHeaderComponent={header ?? null}
+      ListEmptyComponent={emptyComponent ?? <ProfilePostsEmpty />}
+      ListFooterComponent={footer ?? null}
     />
   );
 }
 
 const styles = StyleSheet.create({
-  empty: {
-    alignItems: "center",
-    padding: 24,
-  },
   footer: {
-    padding: 16,
+    paddingVertical: 16,
   },
 });
 
 export function ProfilePostsFooter({ visible }: { visible: boolean }) {
-  const theme = useTheme();
   if (!visible) return null;
-  return <ActivityIndicator color={theme.color.primary} style={styles.footer} />;
+  return <LoadingState label="Loading more posts" style={styles.footer} />;
 }

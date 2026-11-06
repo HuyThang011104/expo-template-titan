@@ -1,0 +1,55 @@
+# Maestro E2E — save to profile Saved tab + share affordance (G1.4).
+#
+# 1. Cold boot with cleared state lands on sign-in when logged out
+# 2. Sign in (mock — `sign-in-button` sets the dev session)
+# 3. Feed visible (`feed-list`); `feed-p-1` starts unsaved with
+#    `save-button-feed-p-1` + `share-button-feed-p-1` on its card
+# 4. Tap Save → `Saved` label flips on the same card (optimistic)
+# 5. Open the Profile tab → `profile-tab-saved` → `saved-list` shows
+#    `post-card-feed-p-1` (shared canonical entry, no extra fetch)
+#
+# Run locally (app installed on emulator/simulator):
+#   maestro test e2e/flows/save-share.yaml
+# On EAS: `.eas/workflows/e2e.yml` builds the `e2e-test` profile
+# (mock backend via EXPO_PUBLIC_API_MOCK) and runs this flow on it.
+#
+# Requires a build serving `POST /saved/:id` + `GET /saved` (mock seeds
+# `feed-p-2` saved). Unsave-rollback, the system sheet payload
+# (`<scheme>://post/<id>`), and cold-start deep links are covered by unit
+# tests (`saved.test.ts`, `post-share-button.test.tsx`, `share.test.ts`);
+# tapping Share opens the OS sheet, which Maestro cannot assert.
+
+appId: com.example.titan.dev
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "sign-in-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "save-button-feed-p-1"
+    timeout: 15000
+- assertVisible:
+    id: "share-button-feed-p-1"
+- tapOn:
+    id: "save-button-feed-p-1"
+- extendedWaitUntil:
+    visible: "Saved"
+    timeout: 15000
+- tapOn: "Profile"
+- extendedWaitUntil:
+    visible:
+      id: "profile-screen"
+    timeout: 15000
+- tapOn:
+    id: "profile-tab-saved"
+- extendedWaitUntil:
+    visible:
+      id: "saved-list"
+    timeout: 15000
+- assertVisible:
+    id: "post-card-feed-p-1"

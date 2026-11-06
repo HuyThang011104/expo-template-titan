@@ -1,0 +1,44 @@
+# Maestro E2E — tappable hashtag → tag page (G1.5).
+#
+# 1. Cold boot with cleared state lands on sign-in when logged out
+# 2. Sign in (mock — `sign-in-button` sets the dev session)
+# 3. Feed visible (`feed-list`); `feed-p-3` carries the `#travel` seed
+#    (`hashtag-travel-feed-p-3` on its body span)
+# 4. Tap the tag → `/hashtag/travel` (`hashtag-screen` + `hashtag-title`)
+#    listing `post-card-feed-p-3`
+#
+# Run locally (app installed on emulator/simulator):
+#   maestro test e2e/flows/hashtag.yaml
+# On EAS: `.eas/workflows/e2e.yml` builds the `e2e-test` profile
+# (mock backend via EXPO_PUBLIC_API_MOCK) and runs this flow on it.
+#
+# Requires a build serving `GET /hashtag/:tag` (mock matches `#tag` in
+# bodies). Mention taps (→ user detail, unknown → `User không tồn tại`)
+# and link confirms (sheet → browser) are covered by unit tests
+# (`post-body.test.tsx`, `post-body-link.test.tsx`); the OS browser sheet
+# itself is not assertable in Maestro.
+
+appId: com.example.titan.dev
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "sign-in-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "hashtag-travel-feed-p-3"
+    timeout: 15000
+- tapOn:
+    id: "hashtag-travel-feed-p-3"
+- extendedWaitUntil:
+    visible:
+      id: "hashtag-screen"
+    timeout: 15000
+- assertVisible:
+    id: "hashtag-title"
+- assertVisible:
+    id: "search-post-card-feed-p-3"

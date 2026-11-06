@@ -2,13 +2,12 @@
  * User row.
  *
  * Takes `userId` and reads the canonical `useUser`; loading
- * shows a gray skeleton, error/null shows a fallback.
+ * shows a skeleton row, error/null shows a fallback.
  */
 
 import { StyleSheet, View } from "react-native";
 
-import { Text } from "@/shared/ui/text";
-import { useTheme } from "@/shared/ui/theme/use-theme";
+import { Skeleton, Text } from "@/shared/ui";
 
 import { useUser } from "../queries";
 import { Avatar } from "./avatar";
@@ -19,40 +18,15 @@ export type UserRowProps = {
 };
 
 export function UserRow({ userId, testID }: UserRowProps) {
-  const theme = useTheme();
   const query = useUser(userId);
 
   if (query.isPending) {
     return (
       <View style={styles.row} testID={testID}>
-        <View
-          style={[
-            styles.avatarSkeleton,
-            {
-              backgroundColor: theme.color.backgroundElement,
-              borderRadius: theme.radius.full,
-            },
-          ]}
-        />
+        <Skeleton width={40} height={40} radius="full" />
         <View style={styles.names}>
-          <View
-            style={[
-              styles.bar,
-              {
-                backgroundColor: theme.color.backgroundElement,
-                borderRadius: theme.radius.sm,
-              },
-            ]}
-          />
-          <View
-            style={[
-              styles.barShort,
-              {
-                backgroundColor: theme.color.backgroundElement,
-                borderRadius: theme.radius.sm,
-              },
-            ]}
-          />
+          <Skeleton width={120} height={14} />
+          <Skeleton width={80} height={12} style={styles.barShort} />
         </View>
       </View>
     );
@@ -60,7 +34,7 @@ export function UserRow({ userId, testID }: UserRowProps) {
 
   if (query.isError || !query.data) {
     return (
-      <Text variant="small" color="textSecondary" testID={testID}>
+      <Text variant="label" color="textSecondary" testID={testID}>
         Unknown user
       </Text>
     );
@@ -71,9 +45,7 @@ export function UserRow({ userId, testID }: UserRowProps) {
     <View style={styles.row} testID={testID}>
       <Avatar displayName={user.displayName} avatarUrl={user.avatarUrl} size={40} />
       <View style={styles.names}>
-        <Text variant="small" style={styles.displayName}>
-          {user.displayName}
-        </Text>
+        <Text variant="labelStrong">{user.displayName}</Text>
         <Text variant="caption" color="textSecondary">
           @{user.handle}
         </Text>
@@ -90,21 +62,9 @@ const styles = StyleSheet.create({
   names: {
     marginLeft: 12,
     justifyContent: "center",
-  },
-  displayName: {
-    fontWeight: "700",
-  },
-  avatarSkeleton: {
-    width: 40,
-    height: 40,
-  },
-  bar: {
-    width: 120,
-    height: 14,
+    gap: 4,
   },
   barShort: {
     width: 80,
-    height: 12,
-    marginTop: 6,
   },
 });

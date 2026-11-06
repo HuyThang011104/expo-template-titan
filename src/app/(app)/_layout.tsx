@@ -2,16 +2,26 @@ import { router, type ErrorBoundaryProps } from "expo-router";
 import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { useEffect } from "react";
 
+import { useInbox } from "@/features/inbox";
 import { captureError } from "@/shared/observability";
 import { ErrorScreen } from "@/shared/ui";
 
+function unreadLabel(count: number): string | null {
+  if (count <= 0) return null;
+  return count > 99 ? "99+" : String(count);
+}
+
 /**
  * Native tabs root with 5 tabs.
- * Create has no stack — `disabled` blocks the native switch
- * (still emits `tabPress`); the listener pushes the composer sheet.
- * TODO: refresh router typegen on the next online `expo start` so `/composer` appears.
+ * Create is `disabled` (blocks the native switch, still emits `tabPress`);
+ * the listener pushes the composer sheet. Its route lives at `/create` so it
+ * can never win the `/` match over `(home)` on cold start.
+ * The inbox badge reads the same entity-backed count as the Inbox screen; the
+ * whole layout unmounts on logout, so no fetch happens without a session.
  */
 export default function AppTabsLayout() {
+  const badge = unreadLabel(useInbox().unreadCount);
+
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="(home)">
@@ -40,6 +50,7 @@ export default function AppTabsLayout() {
       <NativeTabs.Trigger name="(inbox)">
         <NativeTabs.Trigger.Label>Inbox</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="tray.fill" md="inbox" />
+        {badge ? <NativeTabs.Trigger.Badge>{badge}</NativeTabs.Trigger.Badge> : null}
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="(profile)">
         <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>

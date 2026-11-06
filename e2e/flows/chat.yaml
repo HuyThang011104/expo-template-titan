@@ -1,0 +1,60 @@
+# Maestro E2E — chat 1-1 loop (G3.3).
+#
+# 1. Cold boot with cleared state lands on sign-in when logged out
+# 2. Sign in (mock — `sign-in-button` sets the dev session)
+# 3. Open the Inbox tab, tap `inbox-open-chats` to reach the thread list
+# 4. Open the first thread (`conversation-row-c-1`), see `chat-detail-screen`
+# 5. Type into `chat-input` and tap `chat-send-button`
+# 6. The new body is visible in the thread (optimistic `sending` -> `sent`);
+#    the `seen` flip needs the peer device, covered by unit tests
+#    (`markThreadRead` + `message.seen` channel handler).
+#
+# Run locally (app installed on emulator/simulator):
+#   maestro test e2e/flows/chat.yaml
+# On EAS: `.eas/workflows/e2e.yml` builds the `e2e-test` profile
+# (mock backend via EXPO_PUBLIC_API_MOCK) and runs this flow on it.
+#
+# Requires a build serving `GET /conversations` + `POST
+# /conversations/:id/messages` (mock covers both; `c-1` has 30 seeded
+# messages, `c-fail` forces send failure for rollback tests).
+#
+# Known caveats:
+# - Offline queue (`chat-queued-badge` -> outbox drain) needs airplane-mode
+#   toggling; verify by hand on the device checklist instead.
+# - Push-to-thread (`{ type: "message", conversationId }` -> `chats/[id]`,
+#   logged-out queue flush) is covered by unit tests
+#   (`resolveNotificationHref`, `navigateFromNotificationData`).
+
+appId: com.example.titan.dev
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "sign-in-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 30000
+- tapOn: "Inbox"
+- extendedWaitUntil:
+    visible:
+      id: "inbox-screen"
+    timeout: 15000
+- tapOn:
+    id: "inbox-open-chats"
+- extendedWaitUntil:
+    visible:
+      id: "chat-list"
+    timeout: 15000
+- tapOn:
+    id: "conversation-row-c-1"
+- extendedWaitUntil:
+    visible:
+      id: "chat-input"
+    timeout: 15000
+- tapOn:
+    id: "chat-input"
+- inputText: "Hello G3 from Maestro"
+- tapOn:
+    id: "chat-send-button"
+- assertVisible: "Hello G3 from Maestro"

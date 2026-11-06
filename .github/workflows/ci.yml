@@ -12,6 +12,8 @@ on:
       - "eslint.config.js"
       - "jest.config.json"
       - "src/**"
+      - "scripts/**"
+      - "openapi/**"
       - ".github/workflows/ci.yml"
   push:
     branches: ["main"]
@@ -23,6 +25,8 @@ on:
       - "eslint.config.js"
       - "jest.config.json"
       - "src/**"
+      - "scripts/**"
+      - "openapi/**"
       - ".github/workflows/ci.yml"
   workflow_dispatch:
 
@@ -44,6 +48,10 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Install (frozen lockfile)
         run: pnpm install --frozen-lockfile
+      - name: Verify backend contract snapshot
+        run: pnpm contract:verify
+      - name: Generate API client
+        run: pnpm codegen
       - name: Expo SDK compatibility check (warn-only)
         run: npx expo install --check
         continue-on-error: true
@@ -51,5 +59,7 @@ jobs:
         run: pnpm typecheck
       - name: Lint boundaries
         run: pnpm lint:boundaries
+      - name: Token guard
+        run: pnpm check:tokens
       - name: Test
         run: pnpm test -- --ci

@@ -47,6 +47,12 @@ describe("parsePostCreatePayload", () => {
     ).toEqual({ body: "hi", localUris: ["file:///a.jpg"] });
   });
 
+  it("accepts a media-only payload with an empty caption", () => {
+    expect(
+      parsePostCreatePayload(JSON.stringify({ body: "   ", localUris: ["file:///a.jpg"] })),
+    ).toEqual({ body: "", localUris: ["file:///a.jpg"] });
+  });
+
   it("throws on non-JSON, bad shape, bad body, and >4 uris", () => {
     expect(() => parsePostCreatePayload("nope")).toThrow();
     expect(() => parsePostCreatePayload(JSON.stringify(null))).toThrow();
@@ -75,6 +81,23 @@ describe("handlePostCreateJob", () => {
       fetchImpl: mockFetchImpl(),
     });
     const ids = readFeedIds();
+    expect(getPostData(queryClient, ids[0] ?? "")?.media).toHaveLength(1);
+  });
+
+  it("keeps video uris as video media on re-upload", async () => {
+    await handlePostCreateJob(JSON.stringify({ body: "video drain", localUris: ["file:///v.mp4"] }), {
+      fetchImpl: mockFetchImpl(),
+    });
+    const ids = readFeedIds();
+    expect(getPostData(queryClient, ids[0] ?? "")?.media[0]?.kind).toBe("video");
+  });
+
+  it("posts a media-only payload with an empty caption", async () => {
+    await handlePostCreateJob(JSON.stringify({ body: "", localUris: ["file:///a.jpg"] }), {
+      fetchImpl: mockFetchImpl(),
+    });
+    const ids = readFeedIds();
+    expect(getPostData(queryClient, ids[0] ?? "")?.body).toBe("");
     expect(getPostData(queryClient, ids[0] ?? "")?.media).toHaveLength(1);
   });
 });

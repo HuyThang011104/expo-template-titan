@@ -58,6 +58,39 @@ export async function createPostRemote(
   return parsePost(data);
 }
 
+/**
+ * PATCH `/posts/:id` with `{ body }` (text-only; media stays untouched) → `Post | null`.
+ * Throws on transport/HTTP errors (403 = not the owner); `null` only means
+ * the server payload failed schema validation.
+ */
+export async function updatePostRemote(
+  id: string,
+  body: string,
+  opts: FetchOptions = {},
+): Promise<Post | null> {
+  const data = await client.patch<unknown>(
+    endpoints.post(id),
+    { body },
+    { fetchImpl: opts.fetchImpl },
+  );
+  return parsePost(data);
+}
+
+/**
+ * DELETE `/posts/:id` → `true` on `{ ok: true }`.
+ * Throws on transport/HTTP errors (403 = not the owner).
+ */
+export async function deletePostRemote(id: string, opts: FetchOptions = {}): Promise<boolean> {
+  const data = await client.del<unknown>(endpoints.post(id), {
+    fetchImpl: opts.fetchImpl,
+  });
+  return (
+    data !== null &&
+    typeof data === "object" &&
+    (data as Record<string, unknown>)["ok"] === true
+  );
+}
+
 export type UserPostsPage = {
   items: FeedWireItem[];
   nextCursor: string | null;

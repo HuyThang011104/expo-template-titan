@@ -1,7 +1,20 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 
-import { colors, radius, spacing, typography, type Theme, type ThemeName } from "./tokens";
+import {
+  breakpoint,
+  colors,
+  elevation,
+  iconSize,
+  layout,
+  motion,
+  radius,
+  spacing,
+  typography,
+  type Theme,
+  type ThemeName,
+} from "./tokens";
 import { useColorScheme } from "./use-color-scheme";
+import { useThemePreferenceOptional } from "./theme-preference";
 
 const ThemeContext = createContext<Theme | null>(null);
 
@@ -18,17 +31,26 @@ function resolveName(scheme: string | null | undefined, fallback: ThemeName): Th
 
 export function ThemeProvider({ children, initialName }: ThemeProviderProps) {
   const scheme = useColorScheme();
+  // G2.4: explicit user choice wins; tests keep `initialName` behavior.
+  const preference = useThemePreferenceOptional()?.preference ?? "system";
 
   const value = useMemo<Theme>(() => {
-    const name = initialName ?? resolveName(scheme, "light");
+    const name =
+      initialName ??
+      (preference === "system" ? resolveName(scheme, "light") : preference);
     return {
       name,
       color: colors[name],
       space: spacing,
       radius,
       type: typography,
+      icon: iconSize,
+      elevation,
+      motion,
+      breakpoint,
+      layout,
     };
-  }, [initialName, scheme]);
+  }, [initialName, preference, scheme]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

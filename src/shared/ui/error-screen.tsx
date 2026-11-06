@@ -21,7 +21,7 @@ export function ErrorScreen({ error, onRetry, testID }: ErrorScreenProps) {
   const showDetail = typeof __DEV__ !== "undefined" && __DEV__;
 
   return (
-    <Screen testID={testID}>
+    <Screen header={false} testID={testID}>
       <View style={styles.content}>
         <Text variant="title">Something went wrong</Text>
         <Text variant="body">The screen crashed. Your data is safe — try again.</Text>

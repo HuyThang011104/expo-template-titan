@@ -1,0 +1,40 @@
+# Maestro E2E — search people + posts (F3).
+#
+# 1. Cold boot with cleared state lands on sign-in when logged out
+# 2. Sign in (mock — `sign-in-button` sets the dev session)
+# 3. Open the Search tab, see `search-screen` + `search-input`
+# 4. Type "ava" → matching user (`search-user-u-1`) and post results appear
+# 5. Clear via `search-clear-button` → hint returns, no fetch
+#
+# Run locally (app installed on emulator/simulator):
+#   maestro test e2e/flows/search.yaml
+# On EAS: `.eas/workflows/e2e.yml` builds the `e2e-test` profile
+# (mock backend via EXPO_PUBLIC_API_MOCK) and runs this flow on it.
+#
+# Requires a build serving `GET /search` (mock covers it by filtering
+# the 40-post / 8-user fixtures; `ava` matches user u-1 + their posts).
+
+appId: com.example.titan.dev
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "sign-in-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 30000
+- tapOn: "Search"
+- extendedWaitUntil:
+    visible:
+      id: "search-input"
+    timeout: 15000
+- tapOn:
+    id: "search-input"
+- inputText: "ava"
+- extendedWaitUntil:
+    visible:
+      id: "search-list"
+    timeout: 15000
+- assertVisible:
+    id: "search-user-u-1"

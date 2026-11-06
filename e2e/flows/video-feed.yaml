@@ -1,0 +1,35 @@
+# Maestro E2E — F7a video in feed.
+#
+# 1. Cold boot with cleared state lands on sign-in when logged out
+# 2. Sign in (mock — `sign-in-button` sets the dev session)
+# 3. Feed shows; scroll to the first deterministic video item (`feed-p-5`)
+# 4. Toggle play/pause + mute from their dedicated buttons
+#    (separate affordances — tapping the card opens detail instead)
+#
+# Run locally (app installed on emulator/simulator):
+#   maestro test e2e/flows/video-feed.yaml
+#
+# Requires a build serving `GET /feed/home` (mock or staging).
+# `feed-p-5` is the first video of the deterministic mock feed
+# (BigBuckBunny mp4); point at staging's first video when on staging.
+
+appId: com.example.titan.dev
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "sign-in-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "post-video-feed-p-5"
+    timeout: 30000
+- assertVisible:
+    id: "post-video-feed-p-5"
+- tapOn:
+    id: "video-toggle-feed-p-5"
+- tapOn:
+    id: "video-mute-feed-p-5"

@@ -25,6 +25,10 @@ export const REALTIME_EVENT_TYPES = [
   "like.updated",
   "comment.added",
   "message.added",
+  "message.seen",
+  "typing.started",
+  "typing.stopped",
+  "presence.updated",
   "notification.added",
 ] as const;
 

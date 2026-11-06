@@ -69,10 +69,14 @@ export function parseFeedWireItem(data: unknown): FeedWireItem | null {
   return shaped.data;
 }
 
-export const createPostInputSchema = z.object({
-  body: z.string().trim().min(1).max(280),
-  mediaIds: z.array(z.string().min(1)).max(4),
-});
+export const createPostInputSchema = z
+  .object({
+    body: z.string().trim().max(280),
+    mediaIds: z.array(z.string().min(1)).max(4),
+  })
+  .refine((input) => input.body.length > 0 || input.mediaIds.length > 0, {
+    message: "A post needs text or media.",
+  });
 
 export type CreatePostInput = z.infer<typeof createPostInputSchema>;
 
@@ -81,5 +85,19 @@ export function parseCreatePostInput(data: unknown): CreatePostInput | null {
   const result = createPostInputSchema.safeParse(data);
   if (result.success) return result.data;
   logger.warn("[entity] schema parse failed", { entity: "post-create-input" });
+  return null;
+}
+
+export const updatePostInputSchema = z.object({
+  body: z.string().trim().min(1).max(280),
+});
+
+export type UpdatePostInput = z.infer<typeof updatePostInputSchema>;
+
+/** Parse edit input → trimmed `UpdatePostInput | null` (media stays untouched). */
+export function parseUpdatePostInput(data: unknown): UpdatePostInput | null {
+  const result = updatePostInputSchema.safeParse(data);
+  if (result.success) return result.data;
+  logger.warn("[entity] schema parse failed", { entity: "post-update-input" });
   return null;
 }

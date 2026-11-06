@@ -30,6 +30,7 @@ export {
   logComposerFail,
   logComposerOpen,
   logComposerPost,
+  logComposerStep,
   logComposerSuccess,
 } from "./analytics";
 export {

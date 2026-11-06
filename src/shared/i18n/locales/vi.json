@@ -9,7 +9,20 @@
   "auth": {
     "signIn": "Đăng nhập",
     "signUp": "Đăng ký",
-    "signOut": "Đăng xuất"
+    "signOut": "Đăng xuất",
+    "signInTitle": "Chào mừng trở lại",
+    "signInSubtitle": "Đăng nhập để tiếp tục",
+    "signUpTitle": "Tạo tài khoản",
+    "signUpSubtitle": "Vài bước ngắn để bắt đầu",
+    "email": "Email",
+    "emailPlaceholder": "ban@example.com",
+    "password": "Mật khẩu",
+    "emailRequired": "Vui lòng nhập email",
+    "emailInvalid": "Email không hợp lệ",
+    "passwordRequired": "Vui lòng nhập mật khẩu",
+    "passwordTooShort": "Mật khẩu cần ít nhất 8 ký tự",
+    "noAccount": "Chưa có tài khoản?",
+    "haveAccount": "Đã có tài khoản?"
   },
   "feed": {
     "title": "Trang chủ",

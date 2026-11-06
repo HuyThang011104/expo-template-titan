@@ -43,6 +43,9 @@ GoogleService-Info.plist
 /android
 /ios
 
+# generated API client (rebuild from openapi/openapi.json via `pnpm codegen`)
+/src/shared/api/gen/
+
 # Docusaurus site (documentation/ has its own deps, installed via `pnpm --dir documentation install`)
 documentation/node_modules/
 documentation/build/

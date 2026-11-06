@@ -1,0 +1,55 @@
+# Maestro E2E — comments on post detail (G1.2).
+#
+# 1. Cold boot with cleared state lands on sign-in when logged out
+# 2. Sign in (mock — `sign-in-button` sets the dev session)
+# 3. Feed visible (`feed-list` + `post-card-feed-p-1`, public author u-2)
+# 4. Tap the card → `/post/feed-p-1` detail (`post-detail-screen`) with
+#    the seeded thread (`comments-list` + `comment-row-c-p1-01`)
+# 5. Type into `comment-input` → Send (`comment-send-button`) → the new
+#    top-level comment appears at the head of the list
+#
+# Run locally (app installed on emulator/simulator):
+#   maestro test e2e/flows/comments.yaml
+# On EAS: `.eas/workflows/e2e.yml` builds the `e2e-test` profile
+# (mock backend via EXPO_PUBLIC_API_MOCK) and runs this flow on it.
+#
+# Requires a build serving `GET /posts/:id/comments` + `POST /posts/:id/comments`
+# (mock seeds 12 top-level + 4 replies on `feed-p-1`, page 10). Reply nesting,
+# like-rollback, and the signed-out guard are covered by unit tests
+# (`comment-cache.test.ts`, `comment-composer.test.tsx`) — the detail route
+# is `Stack.Protected`, so logged-out users land on sign-in by construction.
+
+appId: com.example.titan.dev
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "sign-in-button"
+- extendedWaitUntil:
+    visible:
+      id: "feed-list"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "post-card-feed-p-1"
+    timeout: 15000
+- tapOn:
+    id: "post-card-feed-p-1"
+- extendedWaitUntil:
+    visible:
+      id: "post-detail-screen"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "comments-list"
+    timeout: 15000
+- assertVisible:
+    id: "comment-row-c-p1-01"
+- tapOn:
+    id: "comment-input"
+- inputText: "Great post!"
+- tapOn:
+    id: "comment-send-button"
+- extendedWaitUntil:
+    visible: "Great post!"
+    timeout: 15000

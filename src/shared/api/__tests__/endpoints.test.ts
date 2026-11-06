@@ -18,8 +18,36 @@ describe("endpoints", () => {
     expect(endpoints.homeFeed()).toBe("/feed/home");
     expect(endpoints.homeFeed(null)).toBe("/feed/home");
     expect(endpoints.homeFeed("a/b")).toBe("/feed/home?cursor=a%2Fb");
+    expect(endpoints.notifications()).toBe("/notifications");
     expect(endpoints.notifications("n2")).toBe("/notifications?cursor=n2");
     expect(endpoints.conversationMessages("c1")).toBe("/conversations/c1/messages");
+  });
+
+  it("builds the notification mark-read path with encoding", () => {
+    expect(endpoints.markNotificationRead("n-1")).toBe("/notifications/n-1/read");
+    expect(endpoints.markNotificationRead("n 2")).toBe("/notifications/n%202/read");
+  });
+
+  it("builds moderation paths with encoding", () => {
+    expect(endpoints.reports()).toBe("/reports");
+    expect(endpoints.userRelationship("u 1")).toBe("/users/u%201/relationship");
+    expect(endpoints.blockUser("u1")).toBe("/users/u1/block");
+    expect(endpoints.unblockUser("u1")).toBe("/users/u1/unblock");
+    expect(endpoints.muteUser("u1")).toBe("/users/u1/mute");
+    expect(endpoints.unmuteUser("u1")).toBe("/users/u1/unmute");
+  });
+
+  it("builds follow paths with encoding and optional cursors", () => {
+    expect(endpoints.followUser("u1")).toBe("/users/u1/follow");
+    expect(endpoints.unfollowUser("u 1")).toBe("/users/u%201/unfollow");
+    expect(endpoints.userFollowers("u1")).toBe("/users/u1/followers");
+    expect(endpoints.userFollowers("u1", "10")).toBe("/users/u1/followers?cursor=10");
+    expect(endpoints.userFollowing("u1")).toBe("/users/u1/following");
+    expect(endpoints.userFollowing("u1", null)).toBe("/users/u1/following");
+    expect(endpoints.followRequests()).toBe("/follow-requests");
+    expect(endpoints.followRequests("10")).toBe("/follow-requests?cursor=10");
+    expect(endpoints.approveFollowRequest("u 1")).toBe("/follow-requests/u%201/approve");
+    expect(endpoints.rejectFollowRequest("u1")).toBe("/follow-requests/u1/reject");
   });
 
   it("joins absolute URLs without double slashes", () => {

@@ -26,6 +26,8 @@ jest.mock("expo-splash-screen", () => ({
   preventAutoHideAsync: jest.fn(async () => {}),
 }));
 
+
+
 // Inlined to respect the entity-to-entity boundary, even in tests.
 const author = {
   id: "u-1",
@@ -60,7 +62,7 @@ describe("PostCard", () => {
 
     expect(screen.getByText(mockPost1.body)).toBeTruthy();
     expect(screen.getByText("Ava Stone")).toBeTruthy();
-    expect(screen.getByText("@ava")).toBeTruthy();
+    expect(screen.getByText(/^@ava ·/)).toBeTruthy();
   });
 
   it("renders fallback for unknown posts (no crash)", async () => {

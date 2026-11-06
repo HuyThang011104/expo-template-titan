@@ -73,7 +73,7 @@ export async function uploadMedia(
   options: UploadOptions = {},
 ): Promise<UploadedMedia> {
   const fieldName = options.fileFieldName ?? "file";
-  const path = endpoints.uploadSessions();
+  const path = endpoints.uploadSessions(asset.kind);
 
   try {
     const data = await client.post<unknown>(path, buildForm(asset, fieldName), {

@@ -1,6 +1,5 @@
-import { StyleSheet } from "react-native";
-
-import { Button, Screen, Text } from "@/shared/ui";
+import { useMe } from "@/entities/user";
+import { ErrorState, Screen } from "@/shared/ui";
 
 import { logFeedRefresh } from "../analytics";
 import { FeedList } from "../components/feed-list";
@@ -10,11 +9,14 @@ import { useHomeFeed } from "../queries/use-home-feed";
 /**
  * Home feed screen — reads posts with optimistic like through the cache.
  *
- * - First-page pending shows a skeleton; errors show text plus retry.
+ * - First-page pending shows a skeleton; errors use the shared error state.
  * - Likes go through `PostActions` without manual list patching.
+ * - `useMe` warms the `me` entry so owner menus (`PostOwnerMenu`) can
+ *   resolve without fetching (fail-closed when unknown).
  */
 export function HomeFeedScreen() {
   const feed = useHomeFeed();
+  useMe();
 
   if (feed.isPending) {
     return (
@@ -26,13 +28,13 @@ export function HomeFeedScreen() {
 
   if (feed.isError) {
     return (
-      <Screen style={styles.center}>
-        <Text variant="title">Home</Text>
-        <Text variant="body">Couldn&apos;t load your feed.</Text>
-        <Button
-          title="Retry"
-          testID="feed-retry-button"
-          onPress={() => {
+      <Screen>
+        <ErrorState
+          title="Couldn't load your feed"
+          message="Check your connection and try again."
+          testID="feed-error"
+          retryTestID="feed-retry-button"
+          onRetry={() => {
             void feed.refetch();
           }}
         />
@@ -58,11 +60,3 @@ export function HomeFeedScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  center: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
-});
